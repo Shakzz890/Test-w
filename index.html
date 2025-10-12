@@ -21,17 +21,17 @@
         #player, video { z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0; background: transparent; cursor: none; }
         .fullscreen { display: none; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 40; background: rgba(0, 0, 0, 0.7); }
 
-        /* UPDATED: Transparent loader background */
-        #loader { z-index: 50; background: transparent; }
+        /* MODIFIED: Loader background is now semi-opaque */
+        #loader { z-index: 50; background: rgba(0, 0, 0, 0.85); }
 
         #spinner { height: 100%; width: 100%; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='xMidYMid' style='background:none' width='200' height='200'%3E%3Ccircle cx='50' cy='50' r='32' stroke-width='8' stroke='royalblue' stroke-dasharray='50.26 50.26' fill='none' stroke-linecap='round'%3E%3CanimateTransform attributeName='transform' type='rotate' repeatCount='indefinite' dur='1s' keyTimes='0;1' values='0 50 50;360 50 50'%3E%3C/animateTransform%3E%3C/circle%3E%3C/svg%3E") no-repeat 50% 50%; background-size: 80px; }
         .close-button { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M13.41,12l6.3-6.29a1,1,0,1,0-1.42-1.42L12,10.59,5.71,4.29A1,1,0,0,0,4.29,5.71L10.59,12l-6.3,6.29a1,1,0,0,0,0,1.42,1,1,0,0,0,1.42,0L12,13.41l6.29,6.3a1,1,0,0,0,1.42,0,1,1,0,0,0,0-1.42Z'/%3E%3C/svg%3E"); background-size: cover; cursor: pointer; position: absolute; z-index: 11; top: 10px; right: 10px; height: 40px; width: 40px; }
         .HIDDEN { display: none !important; }
 
-        /* MODIFIED: Responsive side panels */
+        /* MODIFIED: Panels are now wider on desktop using clamp() for better responsiveness */
         #nav, #channel_settings {
             z-index: 31; position: fixed; top: 0;
-            width: 320px; /* Base width for panels */
+            width: clamp(320px, 25vw, 400px); /* Base width, scales with viewport, max width */
             max-width: 90%; /* Ensure it doesn't exceed screen width on small devices */
             overflow: hidden; height: 100%;
             transition: transform 0.5s;
@@ -44,9 +44,12 @@
         #list_container { display: flex; width: 200%; height: 100%; color: #fff; transition: transform 0.5s; transform: translateX(-50%); }
         #list_container.groups-opened { transform: translateX(0); }
         #group_list, #channel_list, #channel_settings_list { height: 100%; width: 50%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-        #channel_list { transition: opacity 0.6s ease, transform 0.6s ease; opacity: 1; transform: translateX(0); }
-        #channel_list.fade-out { opacity: 0; transform: translateX(-12px); pointer-events: none; }
-        #channel_list.fade-in { opacity: 1; transform: translateX(0); pointer-events: auto; }
+        
+        /* MODIFIED: Simplified transition for a smoother animation */
+        #channel_list { transition: opacity 0.4s ease; opacity: 1; }
+        #channel_list.fade-out { opacity: 0; pointer-events: none; }
+        #channel_list.fade-in { opacity: 1; pointer-events: auto; }
+
         h2.list_headline { margin: 20px 30px; font-size: clamp(24px, 3vw, 28px); color: #ccc;}
         #group_list ul, #channel_list, #channel_settings_list { list-style: none; margin: 0; padding: 0; }
         #group_list li, #channel_list li, #channel_settings_list li { padding: 4px 20px; margin: 2px 0; white-space: nowrap; cursor: pointer; height: 50px; line-height: 50px; display: flex; align-items: center; }
@@ -981,10 +984,9 @@ function animateChannelListSwap(callback) {
         });
     };
     oChannelList.addEventListener('transitionend', onEnd);
-    setTimeout(() => { if (oChannelList.classList.contains('fade-out')) onEnd(); }, 800);
+    setTimeout(() => { if (oChannelList.classList.contains('fade-out')) onEnd(); }, 500); /* MODIFIED: adjusted timeout */
 }
 
-// MODIFIED: This function now builds the group list from the 'provider' property of each channel.
 function buildGroupNav() {
     const dynamicGroupsList = getEl('dynamic_groups_list');
 
@@ -1128,15 +1130,14 @@ oSearchField.addEventListener('input', () => {
     }
 });
 
-/***********************************************
- * Touch Controls for Mobile (MODIFIED & FIXED)
- ***********************************************/
+/**************************************************************
+ * Touch Controls for Mobile (MODIFIED & REWRITTEN FOR FIXES)
+ **************************************************************/
 function handleTouchStart(e) {
     const firstTouch = e.touches[0];
     touchStartX = firstTouch.clientX;
     touchStartY = firstTouch.clientY;
-    // Reset end coordinates to prevent misinterpretation of old data
-    touchEndX = firstTouch.clientX;
+    touchEndX = firstTouch.clientX; // Reset end coordinates
     touchEndY = firstTouch.clientY;
 }
 
@@ -1148,7 +1149,7 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd(e) {
-    if (touchStartX === 0) return;
+    if (touchStartX === 0) return; // Exit if the touch didn't start properly
 
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
@@ -1157,59 +1158,67 @@ function handleTouchEnd(e) {
 
     const swipeThreshold = 50; // Minimum distance for a swipe
     const tapThreshold = 15;   // Maximum distance for a tap
-    const edgeZoneWidth = window.innerWidth * 0.25; // 25% of screen width for edge swipes
+    const edgeZoneWidth = window.innerWidth * 0.25; // Area on screen edges for swipe-to-open
 
-    // --- 1. Check for a Tap ---
+    // --- 1. HANDLE TAPS ---
     if (absDeltaX < tapThreshold && absDeltaY < tapThreshold) {
         const target = e.target;
-        // If play button is visible, click it
         if (oPlayButton && oPlayButton.contains(target) && !oPlayButton.classList.contains('HIDDEN')) {
             unmuteOnFirstUserAction();
             if (aFilteredChannelKeys.length > 0) loadChannel(iCurrentChannel);
         }
-        // If any panel is open, tap outside to close it
         else if (bGuideOpened && !oGuide.querySelector('.fullscreen-popup').contains(target)) hideGuide();
         else if (bNavOpened && !oNav.contains(target)) hideNav();
         else if (bChannelSettingsOpened && !oChannelSettings.contains(target)) hideChannelSettings();
-        // If no panels are open, show the channel info
         else if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened) {
             showChannelName();
         }
     }
-    // --- 2. Check for a Swipe ---
+    // --- 2. HANDLE SWIPES ---
     else if (absDeltaX > swipeThreshold || absDeltaY > swipeThreshold) {
-        // --- 2a. Horizontal Swipe (more horizontal than vertical) ---
-        if (absDeltaX > absDeltaY) {
-            // Swipe came from the LEFT edge
-            if (touchStartX < edgeZoneWidth && deltaX > swipeThreshold) {
-                if (!bNavOpened) showNav();
+        // --- 2a. Handle swipes INSIDE an already open panel first ---
+        if (bNavOpened && absDeltaX > absDeltaY) { // Horizontal swipe inside Nav panel
+            const navRect = oNav.getBoundingClientRect();
+            if (touchStartX <= navRect.right) { // Check if swipe started within the panel's width
+                if (deltaX > swipeThreshold && !bGroupsOpened) { // Swipe Right to open Groups
+                    showGroups();
+                } else if (deltaX < -swipeThreshold) { // Swipe Left to close Groups or Nav
+                    if (bGroupsOpened) hideGroups();
+                    else hideNav();
+                }
+                // Reset and exit, as we've handled the action
+                touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
+                return;
             }
-            // Swipe came from the RIGHT edge
-            else if (touchStartX > (window.innerWidth - edgeZoneWidth) && deltaX < -swipeThreshold) {
-                if (!bChannelSettingsOpened) showChannelSettings();
+        }
+        
+        // --- 2b. If no panel swipe was handled, check for other swipes ---
+        if (absDeltaX > absDeltaY) { // More horizontal than vertical
+            // Swipe from LEFT edge to open nav
+            if (touchStartX < edgeZoneWidth && deltaX > swipeThreshold && !bNavOpened) {
+                showNav();
             }
-            // Swipe in the middle to close panels
-            else if (deltaX < -swipeThreshold && bNavOpened) {
-                hideNav();
+            // Swipe from RIGHT edge to open settings
+            else if (touchStartX > (window.innerWidth - edgeZoneWidth) && deltaX < -swipeThreshold && !bChannelSettingsOpened) {
+                showChannelSettings();
             }
+            // Swipe to close settings panel
             else if (deltaX > swipeThreshold && bChannelSettingsOpened) {
                 hideChannelSettings();
             }
-        }
-        // --- 2b. Vertical Swipe (more vertical than horizontal) ---
-        else {
-            // Only change channels if no panels are open
+        } else { // More vertical than horizontal
+            // Change channels only if no panels are open
             if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened) {
-                if (deltaY > swipeThreshold) { // Swipe Down
-                    loadChannel(iCurrentChannel + 1);
-                } else if (deltaY < -swipeThreshold) { // Swipe Up
+                if (deltaY < -swipeThreshold) { // Swipe Up
                     loadChannel(iCurrentChannel - 1);
+                } else if (deltaY > swipeThreshold) { // Swipe Down
+                    loadChannel(iCurrentChannel + 1);
                 }
             }
         }
     }
 
-    // Reset coordinates for the next touch
+    // Reset coordinates for the next touch event
     touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
 }
 
