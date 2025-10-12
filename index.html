@@ -53,7 +53,17 @@
         h2.list_headline { margin: 20px 30px; font-size: clamp(24px, 3vw, 28px); color: #ccc;}
         #group_list ul, #channel_list, #channel_settings_list { list-style: none; margin: 0; padding: 0; }
         #group_list li, #channel_list li, #channel_settings_list li { padding: 4px 20px; margin: 2px 0; white-space: nowrap; cursor: pointer; height: 50px; line-height: 50px; display: flex; align-items: center; }
-        #channel_settings_list li { color: #fff; font-size: clamp(20px, 2.8vw, 26px); }
+        
+        /* --- FIX: Allow text in channel settings to wrap --- */
+        #channel_settings_list li {
+            color: #fff;
+            font-size: clamp(20px, 2.8vw, 26px);
+            white-space: normal;      /* Allow text wrapping */
+            height: auto;             /* Auto-adjust height for content */
+            line-height: 1.35;        /* Improve readability for wrapped lines */
+            padding: 10px 20px;       /* Adjust padding for better spacing */
+        }
+
         #list_container li:hover, #channel_settings li:hover { color: #fff; }
         .selected { background: linear-gradient(to right, rgba(65, 105, 225, 0.75), rgba(0, 0, 0, 0)) !important; font-weight: bold; }
         #group_list li.selected, #channel_settings_list li.selected { color: #fff !important; }
@@ -154,6 +164,53 @@
             margin-left: 10px; /* Optical centering for play icon */
         }
 
+        /* --- NEW: Channel Loading Animation --- */
+        #channel_loader_overlay {
+            z-index: 60; /* Higher than other overlays */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            transition: opacity 0.5s ease;
+            opacity: 1;
+        }
+        .loader-content {
+            text-align: center;
+            color: white;
+        }
+        .loading-text {
+            font-size: clamp(24px, 4vw, 32px);
+            font-weight: bold;
+            text-shadow: 2px 2px 5px #000;
+            display: block;
+            margin-bottom: 20px;
+        }
+        .loader-bar {
+            width: 250px;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .loader-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 50%;
+            background: royalblue;
+            border-radius: 2px;
+            animation: loading-bar-animation 1.5s linear infinite;
+        }
+        @keyframes loading-bar-animation {
+            0% { left: -50%; }
+            100% { left: 100%; }
+        }
+
         /* --- Skeleton Loader --- */
         .skeleton-item {
             display: flex; align-items: center; padding: 6px 30px; margin: 2px 0;
@@ -186,6 +243,12 @@
  <body>
   <video id="player" autoplay="" muted playsinline=""></video>
   <div id="ui_elements">
+   <div id="channel_loader_overlay" class="fullscreen" style="display: flex;">
+        <div class="loader-content">
+            <span class="loading-text">Tuning Channels...</span>
+            <div class="loader-bar"></div>
+        </div>
+    </div>
    <div id="idle_animation">
     <div class="idle-branding">
      <h1>SHAKZZ TV</h1>
@@ -481,7 +544,7 @@ let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 
 const EPG_INDEX = { byId: {}, byName: {} };
 
-const oBody = document.body, getEl = (id) => document.getElementById(id), oAvPlayer = getEl("player"), oNav = getEl("nav"), oChannelSettings = getEl("channel_settings"), oChannelSettingsList = getEl("channel_settings_list"), oChannelList = getEl("channel_list"), oChannelInfo = getEl("channel_info"), oStreamInfo = getEl("stream-info"), oGuide = getEl("guide"), oLoader = getEl("loader"), oSearchField = getEl("search_field"), oIdleAnimation = getEl("idle_animation"), oPlayButton = getEl("play_button_overlay");
+const oBody = document.body, getEl = (id) => document.getElementById(id), oAvPlayer = getEl("player"), oNav = getEl("nav"), oChannelSettings = getEl("channel_settings"), oChannelSettingsList = getEl("channel_settings_list"), oChannelList = getEl("channel_list"), oChannelInfo = getEl("channel_info"), oStreamInfo = getEl("stream-info"), oGuide = getEl("guide"), oLoader = getEl("loader"), oSearchField = getEl("search_field"), oIdleAnimation = getEl("idle_animation"), oPlayButton = getEl("play_button_overlay"), oChannelLoader = getEl("channel_loader_overlay");
 
 /*******************************
  * Helpers
@@ -735,6 +798,13 @@ async function initPlayer() {
     loadAllEpg().catch(err => console.warn('EPG load failed', err));
 }
 function playlistReadyHandler() {
+    if (oChannelLoader) {
+        oChannelLoader.style.opacity = '0';
+        setTimeout(() => {
+            oChannelLoader.classList.add('HIDDEN');
+        }, 500); // Match CSS transition duration
+    }
+
     buildNav();
     if (aFilteredChannelKeys.length > 0 && !preventAutoPlay) {
         iCurrentChannel = 0;
