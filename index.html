@@ -1,3 +1,4 @@
+<!doctype html>
 <html>
  <head>
   <meta charset="utf-8">
@@ -117,12 +118,15 @@
         #play_button_overlay:hover { background: rgba(65, 105, 225, 0.8); }
         #play_button_overlay svg { width: 60px; height: 60px; fill: white; margin-left: 10px; }
 
+        /* make loader visually present but allow clicks to pass through (so nav remains usable) */
         #channel_loader_overlay {
             z-index: 60; display: flex; justify-content: center; align-items: center;
             background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
             transition: opacity 0.5s ease;
+            pointer-events: none; /* allow clicks through */
         }
-        .loader-content { text-align: center; color: white; }
+        /* only the inner loader content will receive pointer events */
+        .loader-content { text-align: center; color: white; pointer-events: auto; }
         .loading-text { font-size: clamp(24px, 4vw, 32px); font-weight: bold; text-shadow: 2px 2px 5px #000; display: block; margin-bottom: 20px; }
         .loader-bar { width: 250px; height: 4px; background-color: rgba(255, 255, 255, 0.3); border-radius: 2px; position: relative; overflow: hidden; margin: 0 auto; }
         .loader-bar::after {
@@ -270,7 +274,7 @@ const channels = {
 
 const EPG_URLS = [ "https://raw.githubusercontent.com/AqFad2811/epg/main/epg.xml", "https://raw.githubusercontent.com/AqFad2811/epg/main/unifitv.xml", "https://raw.githubusercontent.com/AqFad2811/epg/main/astro.xml", "https://raw.githubusercontent.com/azimabid00/epg/main/unifi_epg.xml", "https://i.mjh.nz/PlutoTV/all.xml", "https://raw.githubusercontent.com/azimabid00/epg/main/astro_epg.xml", "https://azimabid00.github.io/epg/astro_epg.xml", "https://corsproxy.io/?https://epgshare01.online/epgshare01/epg_ripper_PH1.xml.gz", "https://corsproxy.io/?https://epgshare01.online/epgshare01/epg_ripper_PH2.xml.gz", "https://corsproxy.io/?https://epgshare01.online/epgshare01/epg_ripper_ID1.xml.gz", "https://corsproxy.io/?https://epgshare01.online/epgshare01/epg_ripper_MY1.xml.gz", "https://corsproxy.io/?https://epgshare01.online/epgshare01/epg_ripper_HK1.xml.gz", "https://corsproxy.io/?https://epgshare01.online/epgshare01/epg_ripper_US1.xml.gz", "https://raw.githubusercontent.com/atone77721/CIGNAL_EPG/refs/heads/main/cignal_epg.xml", "https://raw.githubusercontent.com/atone77721/CIGNAL_EPG/refs/heads/main/sky_epg.xml" ];
 const i18n = { en: { guideControls: "<li><kbd>M</kbd> - Settings</li><li><kbd>E</kbd> - EPG</li><li><kbd>H</kbd> - User Manual</li><li><kbd>&#8593;</kbd>/<kbd>&#8595;</kbd> - Change channel</li><li><kbd>&#8592;</kbd> - open channel list</li><li><kbd>&#8592;</kbd><kbd>&#8592;</kbd> - open group list</li><li><kbd>&#8594;</kbd> - open channel settings</li><li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li><li><kbd>ESC</kbd> - Go Back</li>", settings_menu: "Settings", allChannels: "ALL CHANNELS", epg_menu: "EPG", guide_menu: "GUIDE", guideControlsHeadline: "Controls", groups: "PROVIDERS", channelSettings: "Channel settings", channelSettingSubtitle: "subtitle / audio", channelSettingFavs: "Add to Favorites", favourites: "FAVORITE" } };
-const channelSettingsOptions = [ { id: 'channel-setting-subs', langid: 'channelSettingSubtitle'}, { id: 'channel-setting-favourite', langid: 'channelSettingFavs'} ];
+const channelSettingsOptions = [ { id: 'channel-setting-res', langid: 'Resolution' }, { id: 'channel-setting-subs', langid: 'channelSettingSubtitle'}, { id: 'channel-setting-favourite', langid: 'channelSettingFavs'} ];
 
 let player, iCurrentChannel = 0, aFilteredChannelKeys = [], sSelectedGroup = '__all', bNavOpened = false, bGroupsOpened = false, bGuideOpened = false, bChannelSettingsOpened = false, iChannelSettingsIndex = 0, channelNameTimeout, isFirstPlay = true;
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
@@ -279,8 +283,8 @@ const getEl = (id) => document.getElementById(id), oAvPlayer = getEl("player"), 
 
 function showIdleAnimation() { oIdleAnimation.classList.remove('HIDDEN'); }
 function hideIdleAnimation() { oIdleAnimation.classList.add('HIDDEN'); }
-function loadFavoritesFromStorage() { const stored = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]"); Object.keys(channels).forEach(key => { channels[key].favorite = stored.includes(key); }); }
-function saveFavoritesToStorage() { const favorites = Object.entries(channels).filter(([key, ch]) => ch.favorite).map(([key]) => key); localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favorites)); }
+function loadFavoritesFromStorage() { try { const stored = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]"); Object.keys(channels).forEach(key => { channels[key].favorite = stored.includes(key); }); } catch(e) {} }
+function saveFavoritesToStorage() { try { const favorites = Object.entries(channels).filter(([key, ch]) => ch.favorite).map(([key]) => key); localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favorites)); } catch(e) {} }
 function normalizeForMatch(s) { return s ? s.toString().toLowerCase().replace(/[^a-z0-9]/g, '') : ""; }
 
 async function fetchTextOrGz(url) { try { const res = await fetch(url); if (!res.ok) throw new Error('bad response'); const buf = await res.arrayBuffer(); try { const text = new TextDecoder('utf-8', {fatal:false}).decode(buf); if (text.trim().startsWith('<')) return text; } catch(e){} try { return new TextDecoder().decode(pako.ungzip(new Uint8Array(buf))); } catch(e) { return new TextDecoder().decode(buf); } } catch (err) { console.warn('Failed EPG fetch:', url, err); return null; } }
@@ -289,36 +293,234 @@ async function loadAllEpg() { await Promise.all(EPG_URLS.map(async u => { const 
 function findEpgForChannel(channelObj) { return (channelObj.key && EPG_INDEX.byId[channelObj.key]) ? EPG_INDEX.byId[channelObj.key] : null; }
 function getNowAndNextFromProgList(progs) { if (!progs?.length) return { now: null, next: null }; const nowTime = Date.now(); for (let i = 0; i < progs.length; i++) { const p = progs[i]; const s = p.start?.getTime(); const e = p.stop?.getTime(); if (s && e && nowTime >= s && nowTime < e) return { now: p, next: progs[i+1] || null }; if (s && nowTime < s) return { now: null, next: p }; } return { now: null, next: null }; }
 
-function toggleFavourite() { const key = aFilteredChannelKeys[iCurrentChannel]; if (!key) return; channels[key].favorite = !channels[key].favorite; saveFavoritesToStorage(); renderChannelSettings(); buildNav(); const newIndex = aFilteredChannelKeys.indexOf(key); if (newIndex !== -1) iCurrentChannel = newIndex; else if (sSelectedGroup === '__fav') iCurrentChannel = 0; if (aFilteredChannelKeys.length === 0) { player.unload(); showIdleAnimation(); } updateSelectedChannelInNav(); }
-function unmuteOnFirstUserAction() { if (oAvPlayer.muted) oAvPlayer.muted = false; if (oPlayButton) oPlayButton.classList.add('HIDDEN'); document.removeEventListener('click', unmuteOnFirstUserAction); document.removeEventListener('keydown', unmuteOnFirstUserAction); document.removeEventListener('touchstart', unmuteOnFirstUserAction); }
-async function initPlayer() { oAvPlayer.muted = true; await shaka.polyfill.installAll(); if (!shaka.Player.isBrowserSupported()) return; player = new shaka.Player(oAvPlayer); player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 }}); player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); showIdleAnimation(); }); player.addEventListener('adaptation', updateStreamInfo); let i = 1; for (const key in channels) { channels[key].number = i++; channels[key].key = key; } loadFavoritesFromStorage(); buildNav(); loadAllEpg().then(playlistReadyHandler); }
+function toggleFavourite() { const key = aFilteredChannelKeys[iCurrentChannel]; if (!key) return; channels[key].favorite = !channels[key].favorite; saveFavoritesToStorage(); renderChannelSettings(); buildNav(); const newIndex = aFilteredChannelKeys.indexOf(key); if (newIndex !== -1) iCurrentChannel = newIndex; else if (sSelectedGroup === '__fav') iCurrentChannel = 0; if (aFilteredChannelKeys.length === 0) { player?.unload(); showIdleAnimation(); } updateSelectedChannelInNav(); }
 
-/** * THIS FUNCTION IS MODIFIED FOR AUTOPLAY
+// unmute on any user action (only run once)
+function unmuteOnFirstUserAction() {
+    if (!oAvPlayer) return;
+    if (oAvPlayer.muted) oAvPlayer.muted = false;
+    if (oPlayButton) oPlayButton.classList.add('HIDDEN');
+    document.removeEventListener('click', unmuteOnFirstUserAction);
+    document.removeEventListener('keydown', unmuteOnFirstUserAction);
+    document.removeEventListener('touchstart', unmuteOnFirstUserAction);
+}
+
+async function initPlayer() {
+    oAvPlayer.muted = true;
+    await shaka.polyfill.installAll();
+    if (!shaka.Player.isBrowserSupported()) return;
+    player = new shaka.Player(oAvPlayer);
+    player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 }});
+    player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); showIdleAnimation(); });
+    player.addEventListener('adaptation', updateStreamInfo);
+
+    // generate numbers and keys
+    let i = 1;
+    for (const key in channels) { channels[key].number = i++; channels[key].key = key; }
+
+    loadFavoritesFromStorage();
+    buildNav();
+    buildGroupNav();
+    applyLang();
+
+    // prepare 'playing' handler to hide idle only when actual play begins
+    oAvPlayer.addEventListener('playing', () => {
+        if (isFirstPlay) {
+            isFirstPlay = false;
+        }
+        hideIdleAnimation();
+    });
+
+    // Start EPG fetch asynchronously (don't wait)
+    loadAllEpg().then(() => { buildNav(); }).catch(()=>{});
+
+    // Start autoplay/resume logic
+    playlistReadyHandler();
+}
+
+/** playlistReadyHandler:
+ * - If returning visitor and last-watched exists -> resume that channel
+ * - Else new visitor -> autoplay 'aniplus'
  */
 function playlistReadyHandler() {
-    const aniplusKey = 'aniplus';
-    let startIndex = aFilteredChannelKeys.indexOf(aniplusKey);
+    // Rebuild filtered list (in case search/group not open) so aFilteredChannelKeys exists
+    const searchTerm = oSearchField.value?.toLowerCase?.() || '';
+    aFilteredChannelKeys = Object.keys(channels).filter(key => {
+        const ch = channels[key];
+        const inGroup = sSelectedGroup === '__all' || (sSelectedGroup === '__fav' && ch.favorite) || (ch.provider === sSelectedGroup);
+        const inSearch = !searchTerm || ch.name.toLowerCase().includes(searchTerm);
+        return inGroup && inSearch;
+    }).sort((a,b) => channels[a].number - channels[b].number);
 
-    // If aniplus is not found, default to the first channel in the list
-    if (startIndex === -1) {
-        startIndex = 0;
+    // determine start index based on whether we have a stored last-watched
+    const storedLast = localStorage.getItem('iptvLastWatched');
+    let startIndex = -1;
+    if (storedLast && aFilteredChannelKeys.includes(storedLast)) {
+        // resume previous session for returning visitor
+        startIndex = aFilteredChannelKeys.indexOf(storedLast);
+    } else {
+        // new visitor or stored channel not available -> autoplay 'aniplus' if present
+        const aniplusKey = 'aniplus';
+        startIndex = aFilteredChannelKeys.indexOf(aniplusKey);
+        if (startIndex === -1) startIndex = 0; // fallback to first entry
     }
 
     if (aFilteredChannelKeys.length > 0) {
-        // Directly load the determined channel
-        loadChannel(startIndex);
+        // keep idle visible until playback actually starts for better UX
+        oChannelLoader.classList.remove('HIDDEN');
+        loadChannel(startIndex, { keepIdleUntilPlaying: true });
     } else {
-        // If no channels exist at all, show the idle screen
         showIdleAnimation();
     }
 }
 
 function updateSelectedChannelInNav() { const current = oChannelList.querySelector('.selected'); if (current) current.classList.remove('selected'); const newSel = oChannelList.querySelectorAll('li.channel-item')[iCurrentChannel]; if (newSel) { newSel.classList.add('selected'); if(bNavOpened) newSel.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
-async function loadChannel(index) { if (aFilteredChannelKeys.length === 0) return; iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length; const channelKey = aFilteredChannelKeys[iCurrentChannel]; const channel = channels[channelKey]; if (!player || !channel) return; oChannelLoader.classList.remove('HIDDEN'); showChannelName(); updateSelectedChannelInNav(); player.configure('drm.clearKeys', {}); if (channel.type === 'clearkey') player.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } }); player.getNetworkingEngine().clearAllRequestFilters(); if (channel.userAgent) player.getNetworkingEngine().registerRequestFilter((type, request) => { request.headers['User-Agent'] = channel.userAgent; }); try { await player.load(channel.manifestUri); hideIdleAnimation(); if (isFirstPlay) { oAvPlayer.muted = true; isFirstPlay = false; } await oAvPlayer.play(); } catch (error) { console.error(`Error loading: ${channel.name}`, error); showIdleAnimation(); } finally { oChannelLoader.classList.add('HIDDEN'); } }
-function buildNav() { const searchTerm = oSearchField.value.toLowerCase(); aFilteredChannelKeys = Object.keys(channels).filter(key => { const ch = channels[key]; const inGroup = sSelectedGroup === '__all' || (sSelectedGroup === '__fav' && ch.favorite) || (ch.provider === sSelectedGroup); const inSearch = !searchTerm || ch.name.toLowerCase().includes(searchTerm); return inGroup && inSearch; }).sort((a, b) => channels[a].number - channels[b].number); oChannelList.innerHTML = ''; if (aFilteredChannelKeys.length === 0) { oChannelList.innerHTML = `<li style="justify-content:center; color:#888;">No channels found.</li>`; return; } const frag = document.createDocumentFragment(); aFilteredChannelKeys.forEach((key, index) => { const ch = channels[key]; const item = document.createElement('li'); item.className = 'channel-item'; item.onclick = () => { loadChannel(index); setTimeout(hideNav, 100); }; const logo = ch.logo ? `<div class="nav_logo"><img src="${ch.logo}" alt=""></div>` : ''; const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : ''; item.innerHTML = `${fav}<span class="list-ch">${ch.number}</span><span class="list-title">${ch.name}</span>${logo}`; frag.appendChild(item); }); oChannelList.appendChild(frag); updateSelectedChannelInNav(); }
-function renderChannelSettings() { oChannelSettingsList.innerHTML = ''; if (aFilteredChannelKeys.length === 0) return; const channel = channels[aFilteredChannelKeys[iCurrentChannel]]; channelSettingsOptions.forEach((opt, index) => { const item = document.createElement('li'); let text = opt.id === 'channel-setting-favourite' ? (channel?.favorite ? 'Remove from Favourites' : 'Add to Favorites') : getLang(opt.langid); item.textContent = text; if(index === iChannelSettingsIndex) item.classList.add('selected'); oChannelSettingsList.appendChild(item); }); }
-function updateStreamInfo() { const track = player?.getVariantTracks().find(t => t.active); if(track) oStreamInfo.innerHTML = `codecs: ${track.videoCodec||track.audioCodec}<br>res: ${track.width}x${track.height}<br>bps: ${(track.bandwidth/1e6).toFixed(2)}M`; }
-function showChannelName() { clearTimeout(channelNameTimeout); if (aFilteredChannelKeys.length === 0) return; const ch = channels[aFilteredChannelKeys[iCurrentChannel]]; if (!ch) return; getEl('channel_name').textContent = ch.name; const progs = findEpgForChannel(ch); let epgText = 'EPG not available'; if (progs) { const { now, next } = getNowAndNextFromProgList(progs); if (now) { const s = now.start.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); epgText = `Now: ${now.title} (${s})`; } else if (next) epgText = `Next: ${next.title}`; } getEl('channel_epg').innerHTML = epgText; getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="">` : ''; oChannelInfo.classList.add('visible'); channelNameTimeout = setTimeout(hideChannelName, 5000); }
+
+async function loadChannel(index, options = {}) {
+    if (Object.keys(channels).length === 0) return;
+    if (!Array.isArray(aFilteredChannelKeys) || aFilteredChannelKeys.length === 0) {
+        buildNav();
+    }
+    if (aFilteredChannelKeys.length === 0) return;
+
+    iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
+    const channelKey = aFilteredChannelKeys[iCurrentChannel];
+    const channel = channels[channelKey];
+    if (!player || !channel) return;
+
+    // save last watched immediately (so returning users resume here)
+    try { localStorage.setItem('iptvLastWatched', channelKey); } catch(e) {}
+
+    // show loader (pointer-events none - nav usable)
+    oChannelLoader.classList.remove('HIDDEN');
+    showChannelName();
+    updateSelectedChannelInNav();
+
+    try {
+        // configure clearkey if needed
+        player.configure('drm.clearKeys', {});
+        if (channel.type === 'clearkey') {
+            const ck = {};
+            ck[channel.keyId] = channel.key;
+            player.configure({ drm: { clearKeys: ck }});
+        }
+
+        // clear previous request filters to avoid duplicates
+        try { player.getNetworkingEngine().clearAllRequestFilters(); } catch(e) {}
+
+        if (channel.userAgent) {
+            player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                request.headers['User-Agent'] = channel.userAgent;
+            });
+        }
+
+        // ensure ABR enabled by default
+        player.configure({ abr: { enabled: true } });
+
+        // load manifest
+        await player.load(channel.manifestUri);
+
+        // After load, populate settings (resolution/subtitles)
+        populateSettingsForChannel();
+
+        // attempt play (muted)
+        try { await oAvPlayer.play(); } catch (playErr) { console.warn('Play attempt failed (autoplay policy):', playErr); }
+
+        // If we didn't request to keep idle, hide it now; otherwise wait for 'playing' event
+        if (!options.keepIdleUntilPlaying) hideIdleAnimation();
+
+    } catch (error) {
+        console.error(`Error loading: ${channel?.name}`, error);
+        showIdleAnimation();
+    } finally {
+        oChannelLoader.classList.add('HIDDEN');
+    }
+}
+
+function buildNav() {
+    const searchTerm = oSearchField.value.toLowerCase();
+    aFilteredChannelKeys = Object.keys(channels).filter(key => {
+        const ch = channels[key];
+        const inGroup = sSelectedGroup === '__all' || (sSelectedGroup === '__fav' && ch.favorite) || (ch.provider === sSelectedGroup);
+        const inSearch = !searchTerm || ch.name.toLowerCase().includes(searchTerm);
+        return inGroup && inSearch;
+    }).sort((a, b) => channels[a].number - channels[b].number);
+
+    oChannelList.innerHTML = '';
+    if (aFilteredChannelKeys.length === 0) {
+        oChannelList.innerHTML = `<li style="justify-content:center; color:#888;">No channels found.</li>`;
+        return;
+    }
+    const frag = document.createDocumentFragment();
+    aFilteredChannelKeys.forEach((key, index) => {
+        const ch = channels[key];
+        const item = document.createElement('li');
+        item.className = 'channel-item';
+        item.onclick = () => { loadChannel(index); setTimeout(hideNav, 100); };
+        const logo = ch.logo ? `<div class="nav_logo"><img src="${ch.logo}" alt=""></div>` : '';
+        const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : '';
+        item.innerHTML = `${fav}<span class="list-ch">${ch.number}</span><span class="list-title">${ch.name}</span>${logo}`;
+        frag.appendChild(item);
+    });
+    oChannelList.appendChild(frag);
+    updateSelectedChannelInNav();
+}
+
+function renderChannelSettings() {
+    oChannelSettingsList.innerHTML = '';
+    if (aFilteredChannelKeys.length === 0) return;
+    const channel = channels[aFilteredChannelKeys[iCurrentChannel]];
+    // resolution
+    const resItem = document.createElement('li');
+    resItem.id = 'setting-resolution';
+    resItem.textContent = 'Resolution: detecting...';
+    resItem.onclick = () => { showResolutionOptions(); };
+    oChannelSettingsList.appendChild(resItem);
+
+    // subtitles
+    const subItem = document.createElement('li');
+    subItem.id = 'setting-subtitles';
+    subItem.textContent = 'Subtitles: detecting...';
+    subItem.onclick = () => { toggleSubtitleList(); };
+    oChannelSettingsList.appendChild(subItem);
+
+    // favorite toggle
+    const favItem = document.createElement('li');
+    favItem.id = 'setting-fav';
+    favItem.textContent = channel?.favorite ? 'Remove from Favourites' : 'Add to Favorites';
+    favItem.onclick = () => { toggleFavourite(); renderChannelSettings(); };
+    oChannelSettingsList.appendChild(favItem);
+
+    // mark selection
+    const items = Array.from(oChannelSettingsList.querySelectorAll('li'));
+    items.forEach((li, idx) => { if (idx === iChannelSettingsIndex) li.classList.add('selected'); else li.classList.remove('selected'); });
+}
+
+function updateStreamInfo() {
+    const track = player?.getVariantTracks().find(t => t.active);
+    if(track) oStreamInfo.innerHTML = `codecs: ${track.videoCodec||track.audioCodec}<br>res: ${track.width}x${track.height}<br>bps: ${(track.bandwidth/1e6).toFixed(2)}M`;
+}
+
+function showChannelName() {
+    clearTimeout(channelNameTimeout);
+    if (aFilteredChannelKeys.length === 0) return;
+    const ch = channels[aFilteredChannelKeys[iCurrentChannel]];
+    if (!ch) return;
+    getEl('channel_name').textContent = ch.name;
+    const progs = findEpgForChannel(ch);
+    let epgText = 'EPG not available';
+    if (progs) {
+        const { now, next } = getNowAndNextFromProgList(progs);
+        if (now) {
+            const s = now.start.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+            epgText = `Now: ${now.title} (${s})`;
+        } else if (next) epgText = `Next: ${next.title}`;
+    }
+    getEl('channel_epg').innerHTML = epgText;
+    getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="">` : '';
+    oChannelInfo.classList.add('visible');
+    channelNameTimeout = setTimeout(hideChannelName, 5000);
+}
 function hideChannelName() { oChannelInfo.classList.remove('visible'); }
 
 function getLang(sKey) { return i18n.en?.[sKey] || sKey; }
@@ -334,15 +536,206 @@ function showGuide() { bGuideOpened = true; renderGuideContent(); oGuide.style.d
 function hideGuide() { bGuideOpened = false; oGuide.style.display = 'none'; }
 function renderGuideContent() { getEl('guide_content').innerHTML = `<h2>${getLang('guideControlsHeadline')}</h2><ul>${getLang('guideControls')}</ul>`; }
 
-function buildGroupNav() { const list = getEl('dynamic_groups_list'); list.querySelectorAll('li:not(#favourites_group):not(#all_channels_group)').forEach(el => el.remove()); const providers = [...new Set(Object.values(channels).map(ch => ch.provider).filter(Boolean))].sort(); providers.forEach(name => { const item = document.createElement('li'); item.dataset.group = name; item.textContent = name.toUpperCase(); item.onclick = (e) => selectGroupListItem(e.currentTarget); list.appendChild(item); }); }
-function selectGroupListItem(item) { document.querySelectorAll('#group_list li.selected').forEach(el => el.classList.remove('selected')); item.classList.add('selected'); if (item.id === 'guide_group') { showGuide(); } else { sSelectedGroup = item.dataset.group; buildNav(); hideGroups(); } }
-document.addEventListener('keydown', (e) => { if (document.activeElement === oSearchField) return; e.preventDefault(); if (bNavOpened) { if(bGroupsOpened) { if(e.key==='ArrowRight') hideGroups(); else if(e.key==='Escape') hideNav(); } else { switch(e.key) { case 'ArrowUp': loadChannel(iCurrentChannel - 1); break; case 'ArrowDown': loadChannel(iCurrentChannel + 1); break; case 'ArrowRight': hideNav(); break; case 'ArrowLeft': showGroups(); break; case 'Enter': loadChannel(iCurrentChannel); hideNav(); break; case 'Escape': hideNav(); break; } } } else if (bChannelSettingsOpened) { switch(e.key) { case 'ArrowLeft': case 'Escape': hideChannelSettings(); break; case 'Enter': if(channelSettingsOptions[iChannelSettingsIndex].id==='channel-setting-favourite') toggleFavourite(); break; } } else { switch(e.key) { case 'ArrowLeft': showNav(); break; case 'ArrowRight': showChannelSettings(); break; case 'Enter': showChannelName(); break; case 'ArrowUp': loadChannel(iCurrentChannel - 1); break; case 'ArrowDown': loadChannel(iCurrentChannel + 1); break; case 'h': showGuide(); break; case 'Escape': hideChannelName(); break; } } });
-oSearchField.addEventListener('input', () => { buildNav(); if (aFilteredChannelKeys.length > 0) loadChannel(0); else { player?.unload(); showIdleAnimation(); } });
+function buildGroupNav() {
+    const list = getEl('dynamic_groups_list');
+    Array.from(list.querySelectorAll('li')).forEach(li => { if (li.id !== 'favourites_group' && li.id !== 'all_channels_group') li.remove(); });
+    const providers = [...new Set(Object.values(channels).map(ch => ch.provider).filter(Boolean))].sort();
+    providers.forEach(name => {
+        const item = document.createElement('li');
+        item.dataset.group = name;
+        item.textContent = name.toUpperCase();
+        item.onclick = (e) => selectGroupListItem(e.currentTarget);
+        list.appendChild(item);
+    });
+}
+
+function selectGroupListItem(item) {
+    document.querySelectorAll('#group_list li.selected').forEach(el => el.classList.remove('selected'));
+    item.classList.add('selected');
+    if (item.id === 'guide_group') { showGuide(); } else {
+        sSelectedGroup = item.dataset.group;
+        buildNav();
+        hideGroups();
+    }
+}
+
+/* ---------- Settings helpers: resolutions & subtitles ---------- */
+
+function populateSettingsForChannel() {
+    const resEl = getEl('setting-resolution');
+    const subEl = getEl('setting-subtitles');
+
+    try {
+        const tracks = player?.getVariantTracks() || [];
+        const resOptions = [...new Map(tracks
+            .filter(t => t.height)
+            .map(t => [t.height, { width: t.width, height: t.height, bandwidth: t.bandwidth, track: t }])
+        ).values()].sort((a,b) => b.height - a.height);
+
+        if (resOptions.length > 0) {
+            const active = tracks.find(t => t.active && t.height) || {};
+            resEl.textContent = `Resolution: ${active.height ? active.height + 'p' : 'Auto'}`;
+            resEl._options = resOptions;
+        } else {
+            resEl.textContent = 'Resolution: Auto';
+            resEl._options = [];
+        }
+    } catch (e) {
+        resEl.textContent = 'Resolution: Auto';
+        resEl._options = [];
+    }
+
+    try {
+        const textTracks = player?.getTextTracks?.() || [];
+        const htmlTextTracks = Array.from(oAvPlayer.textTracks || []);
+        const combined = [...textTracks, ...htmlTextTracks];
+        if (combined.length > 0) {
+            const active = combined.find(t => t.active) || combined[0];
+            subEl.textContent = `Subtitles: ${active?.language || active?.label || 'on'}`;
+            subEl._tracks = combined;
+        } else {
+            subEl.textContent = 'Subtitles: Off';
+            subEl._tracks = [];
+        }
+    } catch(e) {
+        subEl.textContent = 'Subtitles: Off';
+        subEl._tracks = [];
+    }
+
+    updateStreamInfo();
+}
+
+function showResolutionOptions() {
+    const resEl = getEl('setting-resolution');
+    const opts = resEl?._options || [];
+    if (!opts.length) {
+        alert('No explicit resolutions available (Adaptive/Auto).');
+        return;
+    }
+    const listText = opts.map((o, idx) => `${idx+1}. ${o.height}p (${(o.bandwidth/1e6).toFixed(2)} Mbps)`).join('\n');
+    const pick = prompt('Select resolution (enter number) or cancel to return:\n' + listText);
+    if (!pick) return;
+    const idx = parseInt(pick.trim(), 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= opts.length) { alert('Invalid selection'); return; }
+    const target = opts[idx];
+    player.configure({ abr: { enabled: false }});
+    const variantToSelect = player.getVariantTracks().find(t => t.height === target.height);
+    if (variantToSelect) {
+        player.selectVariantTrack(variantToSelect, /* clearBuffer */ true);
+        getEl('setting-resolution').textContent = `Resolution: ${target.height}p`;
+    } else {
+        alert('Could not find a matching track to set.');
+    }
+}
+
+function toggleSubtitleList() {
+    const subEl = getEl('setting-subtitles');
+    const tracks = subEl?._tracks || [];
+    if (!tracks.length) {
+        alert('No subtitles available for this stream.');
+        return;
+    }
+    const listText = ['0. Off'].concat(tracks.map((t, idx) => `${idx+1}. ${t.language || t.label || ('Track ' + (idx+1))}`)).join('\n');
+    const pick = prompt('Choose subtitle track:\n' + listText);
+    if (pick === null) return;
+    const num = parseInt(pick.trim(), 10);
+    if (isNaN(num)) { alert('Invalid selection'); return; }
+    if (num === 0) {
+        try {
+            const htmlTracks = Array.from(oAvPlayer.textTracks || []);
+            htmlTracks.forEach(t => t.mode = 'disabled');
+            (player.getTextTracks?.() || []).forEach(t => player.setTextTrackVisibility(false));
+        } catch(e) {}
+        subEl.textContent = 'Subtitles: Off';
+        return;
+    }
+    const sel = tracks[num-1];
+    if (!sel) { alert('Selection not found'); return; }
+    try {
+        if (sel.mode !== undefined) {
+            Array.from(oAvPlayer.textTracks || []).forEach(t => t.mode = 'disabled');
+            sel.mode = 'showing';
+        } else {
+            (player.getTextTracks?.() || []).forEach(t => {
+                if (t === sel) player.setTextTrackVisibility(true);
+            });
+        }
+        subEl.textContent = `Subtitles: ${sel.language || sel.label || 'on'}`;
+    } catch(e) {
+        console.warn('Could not set subtitle track', e);
+    }
+}
+
+/* ---------- end settings helpers ---------- */
+
+document.addEventListener('keydown', (e) => {
+    if (document.activeElement === oSearchField) return;
+    e.preventDefault();
+    if (bNavOpened) {
+        if(bGroupsOpened) {
+            if(e.key==='ArrowRight') hideGroups();
+            else if(e.key==='Escape') hideNav();
+        } else {
+            switch(e.key) {
+                case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
+                case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
+                case 'ArrowRight': hideNav(); break;
+                case 'ArrowLeft': showGroups(); break;
+                case 'Enter': loadChannel(iCurrentChannel); hideNav(); break;
+                case 'Escape': hideNav(); break;
+            }
+        }
+    } else if (bChannelSettingsOpened) {
+        switch(e.key) {
+            case 'ArrowLeft':
+            case 'Escape': hideChannelSettings(); break;
+            case 'Enter':
+                const opt = channelSettingsOptions[iChannelSettingsIndex];
+                if (!opt) break;
+                if (opt.id === 'channel-setting-favourite') toggleFavourite();
+                if (opt.id === 'channel-setting-subs') toggleSubtitleList();
+                if (opt.id === 'channel-setting-res') showResolutionOptions();
+                break;
+            case 'ArrowUp': iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1); renderChannelSettings(); break;
+            case 'ArrowDown': iChannelSettingsIndex = Math.min(channelSettingsOptions.length - 1, iChannelSettingsIndex + 1); renderChannelSettings(); break;
+        }
+    } else {
+        switch(e.key) {
+            case 'ArrowLeft': showNav(); break;
+            case 'ArrowRight': showChannelSettings(); break;
+            case 'Enter': showChannelName(); break;
+            case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
+            case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
+            case 'h': showGuide(); break;
+            case 'Escape': hideChannelName(); break;
+        }
+    }
+});
+
+oSearchField.addEventListener('input', () => {
+    buildNav();
+    if (aFilteredChannelKeys.length > 0) loadChannel(0);
+    else { player?.unload(); showIdleAnimation(); }
+});
 
 function handleTouchStart(e) { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }
 function handleTouchMove(e) { touchEndX = e.touches[0].clientX; touchEndY = e.touches[0].clientY; }
-function handleTouchEnd() { const deltaX = touchEndX - touchStartX; const deltaY = touchEndY - touchStartY; if (Math.abs(deltaX) > Math.abs(deltaY)) { if (deltaX > 50) { if (bChannelSettingsOpened) hideChannelSettings(); else showNav(); } else if (deltaX < -50) { if (bNavOpened) hideNav(); else showChannelSettings(); } } else { if (deltaY > 50) loadChannel(iCurrentChannel + 1); else if (deltaY < -50) loadChannel(iCurrentChannel - 1); } if (Math.abs(deltaX)<10 && Math.abs(deltaY)<10) showChannelName(); }
+function handleTouchEnd() {
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX > 50) { if (bChannelSettingsOpened) hideChannelSettings(); else showNav(); }
+        else if (deltaX < -50) { if (bNavOpened) hideNav(); else showChannelSettings(); }
+    } else {
+        if (deltaY > 50) loadChannel(iCurrentChannel + 1);
+        else if (deltaY < -50) loadChannel(iCurrentChannel - 1);
+    }
+    if (Math.abs(deltaX)<10 && Math.abs(deltaY)<10) showChannelName();
+}
 
+document.removeEventListener('click', unmuteOnFirstUserAction);
+document.removeEventListener('keydown', unmuteOnFirstUserAction);
+document.removeEventListener('touchstart', unmuteOnFirstUserAction);
 document.addEventListener('click', unmuteOnFirstUserAction);
 document.addEventListener('keydown', unmuteOnFirstUserAction);
 document.addEventListener('touchstart', unmuteOnFirstUserAction);
@@ -351,7 +744,12 @@ document.addEventListener('touchmove', handleTouchMove);
 document.addEventListener('touchend', handleTouchEnd);
 oPlayButton.addEventListener('click', () => { unmuteOnFirstUserAction(); if (aFilteredChannelKeys.length > 0) loadChannel(iCurrentChannel); });
 
-(function initDefaults() { getEl('all_channels_group')?.classList.add('selected'); buildGroupNav(); applyLang(); initPlayer(); })();
+(function initDefaults() {
+    getEl('all_channels_group')?.classList.add('selected');
+    buildGroupNav();
+    applyLang();
+    initPlayer();
+})();
 Array.from(document.querySelectorAll('#group_list li')).forEach(li => li.addEventListener('click', (e) => selectGroupListItem(e.currentTarget)));
 });
 </script>
