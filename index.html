@@ -16,7 +16,7 @@
     html,body { height:100%; margin:0; padding:0; background:#000; -webkit-font-smoothing:antialiased; }
     body { font-size: 28px; -moz-user-select:none; -webkit-user-select:none; user-select:none; touch-action:none; }
 
-    /* background layer - persistent (your anime wallpaper) */
+    /* persistent anime wallpaper */
     #background-layer {
       position: fixed; inset: 0;
       z-index: 0;
@@ -38,27 +38,29 @@
     }
     #player.visible { opacity: 1; }
 
-    /* ui containers sit above player */
+    /* UI containers */
     .fullscreen { display:none; position:fixed; inset:0; z-index:40; background: rgba(0,0,0,0.7); }
     .HIDDEN { display:none !important; }
 
-    /* Loader overlay: visible while loading but non-blocking (pointer-events none).
-       Inner .loader-content has pointer-events:auto so buttons inside it work. */
+    /* loader overlay (non-blocking) */
     #channel_loader_overlay {
       z-index: 60;
       display:flex; align-items:center; justify-content:center;
       background: rgba(0,0,0,0.55);
       backdrop-filter: blur(4px);
       pointer-events: none; /* allow clicks to pass through to nav/panels */
-      transition: opacity 0.4s ease;
+      transition: opacity 0.35s ease;
+      opacity: 0;
     }
+    #channel_loader_overlay.active { opacity: 1; pointer-events: none; } /* still non-blocking */
+
     .loader-content { text-align:center; color:#fff; pointer-events: auto; }
     .loading-text { font-size: clamp(24px, 4vw, 32px); font-weight:bold; margin-bottom:14px; text-shadow: 2px 2px 4px #000; }
     .loader-bar { width:250px; height:4px; background: rgba(255,255,255,0.2); border-radius:2px; position:relative; overflow:hidden; margin: 0 auto; }
     .loader-bar::after { content:''; position:absolute; top:0; left:0; width:50%; height:100%; background:royalblue; animation: loader-bar 1.5s linear infinite; }
     @keyframes loader-bar { 0% { left:-50%; } 100% { left:100%; } }
 
-    /* Keep idle animation present (on top of background) */
+    /* idle branding kept visible above background */
     #idle_animation { z-index:2; display:flex; justify-content:flex-end; align-items:center; padding-right:40px; pointer-events: none; }
     .idle-branding { color:white; text-shadow: 3px 3px 8px rgba(0,0,0,0.9); text-align:right; }
     .idle-branding h1 { font-size:5vw; margin:0; font-weight:bold; animation: pulseText 3s infinite; }
@@ -69,7 +71,7 @@
     #play_button_overlay:hover { background: rgba(65,105,225,0.8); }
     #play_button_overlay svg { width:60px; height:60px; fill:#fff; }
 
-    /* nav and side panels - unchanged layout but ensure they are above loader */
+    /* nav and side panels - unchanged layout but above loader */
     #nav, #channel_settings {
       z-index: 70;
       position: fixed; top:0;
@@ -87,12 +89,6 @@
     #list_container.groups-opened { transform: translateX(0); }
     #group_list, #channel_list, #channel_settings_list { height:100%; width:50%; overflow-y:auto; -webkit-overflow-scrolling: touch; }
     #channel_list { transition: opacity .4s ease; }
-
-    /* text + small UI bits */
-    h2.list_headline { margin:20px 30px; font-size: clamp(24px,3vw,28px); color:#ccc; }
-    .list-ch { min-width: 50px; font-weight:bold; margin-right:8px; }
-    .fav-star { margin-right:10px; font-size:16px; color:gold; }
-    .nav_logo img { max-height:100%; object-fit:contain; }
 
     /* channel info box on right */
     #channel_info {
@@ -113,15 +109,15 @@
   </style>
 </head>
 <body>
-  <!-- persistent background that must remain visible while loading -->
+  <!-- persistent background -->
   <div id="background-layer"></div>
 
   <!-- video player (Shaka) -->
   <video id="player" autoplay muted playsinline></video>
 
-  <!-- UI elements on top of player -->
+  <!-- UI elements -->
   <div id="ui_elements">
-    <!-- loader overlay: visible while we load but non-blocking -->
+    <!-- loader overlay: non-blocking (pointer-events: none) -->
     <div id="channel_loader_overlay" class="fullscreen">
       <div class="loader-content">
         <span class="loading-text">Loading Channel...</span>
@@ -129,7 +125,7 @@
       </div>
     </div>
 
-    <!-- idle branding shown on top of background until playing -->
+    <!-- idle branding -->
     <div id="idle_animation" class="fullscreen">
       <div class="idle-branding">
         <h1>SHAKZZ TV</h1>
@@ -157,16 +153,17 @@
         <div id="list_container">
           <div id="group_list" class="custom-scrollbar">
             <ul id="main_nav" style="list-style:none;padding:0;margin:0;">
-              <li id="epg_group" data-langid="epg_menu" style="padding:6px 20px;cursor:pointer;"></li>
-              <li id="guide_group" data-langid="guide_menu" style="padding:6px 20px;cursor:pointer;"></li>
+              <li id="epg_group" data-langid="epg_menu" style="padding:6px 20px;cursor:pointer;" tabindex="0"></li>
+              <li id="guide_group" data-langid="guide_menu" style="padding:6px 20px;cursor:pointer;" tabindex="0"></li>
             </ul>
 
             <div style="margin:16px 6px;height:1px;background:linear-gradient(to right, rgba(0,0,0,0), rgba(65,105,225,0.75), rgba(0,0,0,0));"></div>
 
             <h2 class="list_headline i18n" data-langid="groups"></h2>
             <ul id="dynamic_groups_list" style="list-style:none;margin:0;padding:0;">
-              <li id="favourites_group" data-group="__fav" data-langid="favourites" style="padding:6px 20px;cursor:pointer;"></li>
-              <li id="all_channels_group" data-group="__all" data-langid="allChannels" style="padding:6px 20px;cursor:pointer;"></li>
+              <li id="favourites_group" data-group="__fav" data-langid="favourites" style="padding:6px 20px;cursor:pointer;" tabindex="0"></li>
+              <li id="all_channels_group" data-group="__all" data-langid="allChannels" style="padding:6px 20px;cursor:pointer;" tabindex="0"></li>
+              <!-- provider items inserted dynamically with tabindex=0 -->
             </ul>
           </div>
 
@@ -184,7 +181,7 @@
       </div>
     </div>
 
-    <!-- channel info pane on the right center -->
+    <!-- channel info -->
     <div id="channel_info">
       <div id="ch_logo"></div>
       <div id="channel_text_container">
@@ -204,26 +201,24 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  /***************
-   * Config & data
-   ***************/
+  /*******************************
+   * Channels + Config (put your full list here)
+   *******************************/
   const channels = {
-    // short sample; keep your full list in your actual file (I include the ones from your original)
+    /* Replace/extend with your full original 'channels' object */
     one_ph: { name: "One PH", type: "hls", manifestUri: "https://edge-stream-01-sg.vidio.com/live/201/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/One_PH_logo.svg/2560px-One_PH_logo.svg.png", provider: "Cignal" },
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", provider: "Cignal" },
     buko: { name: "BuKo", type: "hls", manifestUri: "https://yt-live.slay.one/watch?v=kPh2wePj5I4&hls=1", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/8/87/BuKo_channel_logo.svg/1200px-BuKo_channel_logo.svg.png", provider: "Cignal" },
     aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://corsproxy.io/?https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", provider: "Anime" },
-    anione: { name: "Ani One", type: "hls", manifestUri: "https://corsproxy.io/?https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", provider: "Anime" },
-    // ... add the rest exactly as in your original channels object ...
+    anione: { name: "Ani One", type: "hls", manifestUri: "https://corsproxy.io/?https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", provider: "Anime" }
+    /* ...rest... */
   };
 
   const EPG_URLS = [
     "https://raw.githubusercontent.com/AqFad2811/epg/main/epg.xml",
     "https://raw.githubusercontent.com/AqFad2811/epg/main/unifitv.xml",
-    "https://raw.githubusercontent.com/AqFad2811/epg/main/astro.xml",
-    "https://raw.githubusercontent.com/azimabid00/epg/main/unifi_epg.xml",
-    "https://i.mjh.nz/PlutoTV/all.xml"
-    // ... rest of your EPG urls ...
+    "https://raw.githubusercontent.com/AqFad2811/epg/main/astro.xml"
+    // ...your EPG list...
   ];
 
   const i18n = {
@@ -266,16 +261,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const oChName = getEl('channel_name');
   const oChEpg = getEl('channel_epg');
   const oSearch = getEl('search_field');
+  const oGroupList = getEl('dynamic_groups_list');
+  const oMainNav = getEl('main_nav');
 
   let player = null;
   let aFilteredChannelKeys = [];
   let iCurrentChannel = 0;
   let sSelectedGroup = '__all';
   let isFirstPlay = true;
+  let bNavOpened = false;
+  let bGroupsOpened = false;
   const EPG_INDEX = { byId: {} };
 
   /***********************
-   * helper storage utils
+   * favorites storage
    ***********************/
   function loadFavoritesFromStorage() {
     try {
@@ -298,12 +297,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(url);
       if (!res.ok) throw new Error('bad response');
       const buf = await res.arrayBuffer();
-      // try plain text
       try {
         const text = new TextDecoder('utf-8',{fatal:false}).decode(buf);
         if (text.trim().startsWith('<')) return text;
       } catch(e){}
-      // try gunzip
       try {
         return new TextDecoder().decode(pako.ungzip(new Uint8Array(buf)));
       } catch(e) {
@@ -386,7 +383,9 @@ document.addEventListener('DOMContentLoaded', () => {
       li.style.display = 'flex';
       li.style.alignItems = 'center';
       li.style.cursor = 'pointer';
+      li.tabIndex = 0;
       li.onclick = () => { loadChannel(idx); setTimeout(hideNav, 100); };
+      li.onkeydown = (ev) => { if (ev.key === 'Enter') li.click(); };
       const fav = ch.favorite ? '<span class="fav-star">⭐</span>' : '';
       const logo = ch.logo ? `<div class="nav_logo" style="margin-left:auto;"><img src="${ch.logo}" alt="" style="max-height:35px;"/></div>` : '';
       li.innerHTML = `${fav}<span class="list-ch">${ch.number}</span><span class="list-title">${ch.name}</span>${logo}`;
@@ -402,7 +401,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const newSel = oChannelList.querySelectorAll('li.channel-item')[iCurrentChannel];
     if (newSel) {
       newSel.classList.add('selected');
-      // scroll only if nav opened
       if (oNav.classList.contains('visible')) newSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
@@ -442,7 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ch) return;
     oChName.textContent = ch.name;
     oChLogo.innerHTML = ch.logo ? `<img src="${ch.logo}" alt="" style="max-width:100%;max-height:100%"/>` : '';
-    // EPG short
     const progs = findEpgForChannel(ch);
     let epgText = 'EPG not available';
     if (progs) {
@@ -474,77 +471,56 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /*******************************
-   * Shaka player initialization
+   * Shaka player init & handlers
    *******************************/
-  async function initPlayer() {
+  async function initPlayerOnce() {
+    if (player) return;
     if (!oPlayer) return;
     oPlayer.muted = true;
-
-    // install polyfills
     await shaka.polyfill.installAll();
     if (!shaka.Player.isBrowserSupported()) { console.warn('Shaka not supported'); return; }
 
     player = new shaka.Player(oPlayer);
     player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal:2, bufferingGoal:8 } });
 
-    // handle errors
     player.addEventListener('error', e => {
       console.error('Shaka error', e.detail);
-      // keep background and show idle
       showIdle();
     });
 
-    // when adaptation occurs, update stream info
+    // show background during buffering events
+    player.addEventListener('buffering', (e) => {
+      if (e.buffering) {
+        // show background & loader while buffering
+        oBackground.style.opacity = '1';
+        oLoader.classList.add('active');
+      } else {
+        // hiding loader only when playing will be handled by media events
+      }
+    });
+
+    // when adaptation occurs update info
     player.addEventListener('adaptation', () => updateStreamInfo());
 
-    // detect actual playback start and reveal video + hide loader/background
+    // media element events
     oPlayer.addEventListener('loadeddata', onMediaReady);
     oPlayer.addEventListener('playing', onMediaReady);
-    oPlayer.addEventListener('error', () => console.warn('HTMLMediaElement error'));
-
-    // assign incremental numbers/keys for channels
-    let i = 1;
-    for (const k in channels) { channels[k].number = i++; channels[k].key = k; }
-
-    // load favorites and UI
-    loadFavoritesFromStorage();
-    buildNav();
-    renderChannelSettings();
-    populateGroupNav();
-    applyLang();
-
-    // fetch EPG in background
-    loadAllEpg().then(() => { buildNav(); }).catch(()=>{});
-
-    // start playlist logic (autoplay aniplus for new visitors / resume last watched)
-    playlistReadyHandler();
   }
 
   function onMediaReady() {
-    // reveal the video player and hide the loader after a short fade
-    if (!oPlayer.classList.contains('visible')) oPlayer.classList.add('visible');
-
-    // fade loader out
-    oLoader.style.opacity = '0';
-    setTimeout(() => { if (oLoader) oLoader.classList.add('HIDDEN'); }, 420);
-
-    // fade out idle overlay (but keep background)
+    // reveal video, hide loader, fade out background
+    oPlayer.classList.add('visible');
+    oLoader.classList.remove('active');
     if (oIdle) oIdle.classList.add('HIDDEN');
-
-    // optionally fade the persistent background (subtle)
-    setTimeout(() => { oBackground.style.opacity = '0'; }, 600);
-
+    // subtle delay to avoid flicker
+    setTimeout(() => { oBackground.style.opacity = '0'; }, 260);
     isFirstPlay = false;
   }
 
   function showIdle() {
-    // show idle animation (keeps background visible)
-    oIdle.classList.remove('HIDDEN');
-    // ensure player not visible
+    if (oIdle) oIdle.classList.remove('HIDDEN');
     oPlayer.classList.remove('visible');
-    // ensure loader hidden
-    oLoader.classList.add('HIDDEN');
-    // background stays
+    oLoader.classList.remove('active');
     oBackground.style.opacity = '1';
   }
 
@@ -552,7 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
    * autoplay/resume behavior
    *****************************/
   function playlistReadyHandler() {
-    // build filtered list based on search/group (ensures aFilteredChannelKeys exists)
     const q = (oSearch.value || '').toLowerCase();
     aFilteredChannelKeys = Object.keys(channels).filter(k => {
       const ch = channels[k];
@@ -561,28 +536,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return inGroup && inSearch;
     }).sort((a,b) => channels[a].number - channels[b].number);
 
-    if (!aFilteredChannelKeys.length) {
-      showIdle();
-      return;
-    }
+    if (!aFilteredChannelKeys.length) { showIdle(); return; }
 
     const stored = localStorage.getItem('iptvLastWatched');
     let startIdx = 0;
-    if (stored && aFilteredChannelKeys.includes(stored)) {
-      startIdx = aFilteredChannelKeys.indexOf(stored);
-    } else {
-      // autoplay aniplus for new visitor
+    if (stored && aFilteredChannelKeys.includes(stored)) startIdx = aFilteredChannelKeys.indexOf(stored);
+    else {
       const anKey = 'aniplus';
       const idx = aFilteredChannelKeys.indexOf(anKey);
       startIdx = idx !== -1 ? idx : 0;
     }
 
-    // show loader but allow interactions (pointer-events none)
-    oLoader.classList.remove('HIDDEN'); oLoader.style.opacity = '1';
-    // keep idle displayed until playing for smoothness
-    oIdle.classList.remove('HIDDEN');
-
-    // non-blocking load
+    // show loader overlay while the channel loads (non-blocking)
+    oLoader.classList.add('active');
+    oBackground.style.opacity = '1';
     loadChannel(startIdx, { keepIdleUntilPlaying: true });
   }
 
@@ -598,70 +565,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const ch = channels[key];
     if (!ch) return;
 
-    // store last watched so next visit resumes
     try { localStorage.setItem('iptvLastWatched', key); } catch(e){}
 
-    // UI updates while loading
-    oLoader.classList.remove('HIDDEN'); oLoader.style.opacity = '1';
+    // show background immediately and keep it while stream loads
+    oBackground.style.opacity = '1';
+    oLoader.classList.add('active');
+    oPlayer.classList.remove('visible');
     showChannelName();
     updateSelectedChannelInNav();
 
-    // configure DRM & filters safely
     try {
-      if (!player) {
-        // initialize player lazily if not created yet
-        await initPlayer(); // initPlayer handles idempotent init path (it will short-circuit appropriately)
-      }
+      await initPlayerOnce();
 
-      // clear previous clearKeys
+      // clear clearKeys if any
       player.configure('drm.clearKeys', {});
       if (ch.type === 'clearkey' && ch.keyId && ch.key) {
         const ck = {}; ck[ch.keyId] = ch.key;
         player.configure({ drm: { clearKeys: ck }});
       }
 
-      // clear request filters to avoid duplicates
       try { player.getNetworkingEngine().clearAllRequestFilters(); } catch(e){}
 
       if (ch.userAgent) {
-        player.getNetworkingEngine().registerRequestFilter((type, request) => {
-          request.headers['User-Agent'] = ch.userAgent;
-        });
+        player.getNetworkingEngine().registerRequestFilter((type, req) => { req.headers['User-Agent'] = ch.userAgent; });
       }
 
-      // ensure ABR enabled by default
       player.configure({ abr: { enabled: true } });
-
-      // call load (Shaka)
       await player.load(ch.manifestUri);
-
-      // populate settings (res/subs) from the loaded stream
       populateSettingsForChannel();
 
-      // attempt playback (muted). Browsers may block unmuted autoplay, so we keep it muted.
       try { await oPlayer.play(); } catch(playErr) { console.warn('Autoplay blocked or failed:', playErr); }
 
-      // only hide idle when playback starts (we rely on loadeddata/playing events)
+      // if not keeping idle until playing, we hide idle overlay earlier
       if (!options.keepIdleUntilPlaying) {
-        oIdle.classList.add('HIDDEN');
-        // small fade
-        setTimeout(()=>{ oBackground.style.opacity = '0'; }, 600);
+        if (oIdle) oIdle.classList.add('HIDDEN');
+        setTimeout(()=>{ oBackground.style.opacity = '0'; }, 360);
       }
-
     } catch (err) {
       console.error('Error loading channel', ch.name, err);
-      // show idle (keep background). Keep panels accessible.
       showIdle();
     } finally {
-      // keep loader visible briefly for better UX; final hide is handled in onMediaReady
+      // final hide of loader is handled by onMediaReady (when playing)
+      // but if play failed keep loader off after a timeout
       setTimeout(() => {
-        if (oLoader && !oPlayer.classList.contains('visible')) {
-          // if not playing yet, keep loader until playing
-          // do nothing: we want loader until playing
+        if (!oPlayer.classList.contains('visible')) {
+          // keep loader active until playing — intentionally do nothing
         } else {
-          if (oLoader) { oLoader.classList.add('HIDDEN'); oLoader.style.opacity = '0'; }
+          oLoader.classList.remove('active');
         }
-      }, 600);
+      }, 800);
     }
   }
 
@@ -779,8 +731,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function populateGroupNav() {
-    const list = document.getElementById('dynamic_groups_list');
-    // clear custom providers
+    const list = oGroupList;
+    // remove non-core list items (providers will be re-inserted)
     Array.from(list.querySelectorAll('li')).forEach(li => {
       if (li.id !== 'favourites_group' && li.id !== 'all_channels_group') li.remove();
     });
@@ -790,8 +742,10 @@ document.addEventListener('DOMContentLoaded', () => {
       li.dataset.group = name;
       li.style.padding = '6px 20px';
       li.style.cursor = 'pointer';
+      li.tabIndex = 0;
       li.textContent = name.toUpperCase();
       li.onclick = (e) => selectGroupListItem(e.currentTarget);
+      li.onkeydown = (ev) => { if (ev.key === 'Enter') li.click(); };
       list.appendChild(li);
     });
   }
@@ -806,10 +760,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function showNav() { hideAllPopups('nav'); oNav.classList.add('visible'); document.getElementById('all_channels_group')?.classList.add('selected'); buildNav(); populateGroupNav(); }
-  function hideNav() { oNav.classList.remove('visible'); }
-  function showGroups() { if (oNav.classList.contains('visible')) { document.getElementById('list_container').classList.add('groups-opened'); } }
-  function hideGroups() { document.getElementById('list_container').classList.remove('groups-opened'); }
+  function showNav() { hideAllPopups('nav'); bNavOpened = true; oNav.classList.add('visible'); document.getElementById('all_channels_group')?.classList.add('selected'); buildNav(); populateGroupNav(); }
+  function hideNav() { bNavOpened = false; bGroupsOpened = false; oNav.classList.remove('visible'); document.getElementById('list_container').classList.remove('groups-opened'); }
+  function showGroups() { if (oNav.classList.contains('visible')) { bGroupsOpened = true; document.getElementById('list_container').classList.add('groups-opened'); focusFirstGroupItem(); } }
+  function hideGroups() { bGroupsOpened = false; document.getElementById('list_container').classList.remove('groups-opened'); }
+
+  function focusFirstGroupItem() {
+    const first = document.querySelector('#dynamic_groups_list li');
+    if (first) { first.focus(); }
+  }
 
   function showChannelSettings() { hideAllPopups('channelSettings'); oChannelSettings.classList.add('visible'); renderChannelSettings(); updateStreamInfo(); }
   function hideChannelSettings() { oChannelSettings.classList.remove('visible'); }
@@ -831,34 +790,48 @@ document.addEventListener('DOMContentLoaded', () => {
   /****************
    * keyboard/touch
    ****************/
+  let iChannelSettingsIndex = 0;
   document.addEventListener('keydown', (e) => {
     if (document.activeElement === oSearch) return;
-    // Allow keys to work while loader visible
-    if (oNav.classList.contains('visible')) {
-      if (e.key === 'ArrowUp') loadChannel(iCurrentChannel - 1);
-      else if (e.key === 'ArrowDown') loadChannel(iCurrentChannel + 1);
-      else if (e.key === 'ArrowLeft') showGroups();
-      else if (e.key === 'ArrowRight') hideNav();
-      else if (e.key === 'Enter') { loadChannel(iCurrentChannel); hideNav(); }
-      else if (e.key === 'Escape') hideNav();
-      e.preventDefault();
+
+    // When nav is open and groups are opened
+    if (bNavOpened && bGroupsOpened) {
+      const items = Array.from(document.querySelectorAll('#dynamic_groups_list li'));
+      if (!items.length) return;
+      let idx = items.findIndex(i => i === document.activeElement || i.classList.contains('selected'));
+      if (idx === -1) idx = 0;
+      if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(items.length-1, idx+1); items[idx].focus(); items.forEach(x=>x.classList.remove('selected')); items[idx].classList.add('selected'); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(0, idx-1); items[idx].focus(); items.forEach(x=>x.classList.remove('selected')); items[idx].classList.add('selected'); }
+      else if (e.key === 'Enter') { e.preventDefault(); items[idx]?.click(); }
+      else if (e.key === 'Escape' || e.key === 'ArrowLeft') { e.preventDefault(); hideGroups(); }
       return;
     }
+
+    // When nav is open normally (channel list navigation)
+    if (bNavOpened) {
+      if (e.key === 'ArrowUp') { e.preventDefault(); loadChannel(iCurrentChannel - 1); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); loadChannel(iCurrentChannel + 1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); showGroups(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); hideNav(); }
+      else if (e.key === 'Enter') { e.preventDefault(); loadChannel(iCurrentChannel); hideNav(); }
+      else if (e.key === 'Escape') { e.preventDefault(); hideNav(); }
+      return;
+    }
+
+    // Channel settings navigation
     if (oChannelSettings.classList.contains('visible')) {
-      if (e.key === 'Escape' || e.key === 'ArrowLeft') hideChannelSettings();
+      if (e.key === 'Escape' || e.key === 'ArrowLeft') { e.preventDefault(); hideChannelSettings(); }
       else if (e.key === 'Enter') {
         const opt = channelSettingsOptions[iChannelSettingsIndex];
         if (!opt) return;
         if (opt.id === 'channel-setting-favourite') toggleFavourite();
         if (opt.id === 'channel-setting-subs') toggleSubtitleList();
         if (opt.id === 'channel-setting-res') showResolutionOptions();
-      }
-      else if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
-      else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(channelSettingsOptions.length - 1, iChannelSettingsIndex + 1);
-      renderChannelSettings();
-      e.preventDefault();
+      } else if (e.key === 'ArrowUp') { e.preventDefault(); iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1); renderChannelSettings(); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); iChannelSettingsIndex = Math.min(channelSettingsOptions.length - 1, iChannelSettingsIndex + 1); renderChannelSettings(); }
       return;
     }
+
     // global keys
     switch (e.key) {
       case 'ArrowLeft': showNav(); break;
@@ -879,10 +852,10 @@ document.addEventListener('DOMContentLoaded', () => {
     else { player?.unload?.(); showIdle(); }
   });
 
-  // touch gestures (minimal)
-  let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
-  document.addEventListener('touchstart', (ev) => { touchStartX = ev.touches[0].clientX; touchStartY = ev.touches[0].clientY; });
-  document.addEventListener('touchmove', (ev) => { touchEndX = ev.touches[0].clientX; touchEndY = ev.touches[0].clientY; });
+  // touch gestures (kept)
+  let touchStartX=0, touchStartY=0, touchEndX=0, touchEndY=0;
+  document.addEventListener('touchstart', (ev) => { touchStartX=ev.touches[0].clientX; touchStartY=ev.touches[0].clientY; });
+  document.addEventListener('touchmove', (ev) => { touchEndX=ev.touches[0].clientX; touchEndY=ev.touches[0].clientY; });
   document.addEventListener('touchend', () => {
     const dx = touchEndX - touchStartX, dy = touchEndY - touchStartY;
     if (Math.abs(dx) > Math.abs(dy)) {
@@ -907,7 +880,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('touchstart', unmuteOnFirstUserAction);
   document.addEventListener('keydown', unmuteOnFirstUserAction);
 
-  // play button overlay click
   oPlayBtn?.addEventListener('click', () => {
     unmuteOnFirstUserAction();
     if (aFilteredChannelKeys.length) loadChannel(iCurrentChannel);
@@ -917,25 +889,26 @@ document.addEventListener('DOMContentLoaded', () => {
    * init + start point
    **********************/
   (function init() {
-    // apply static language text
     applyLang();
     document.getElementById('all_channels_group')?.classList.add('selected');
 
-    // populate provider groups and build nav
     populateGroupNav();
     buildNav();
+    loadFavoritesFromStorage();
 
-    // call player init (async) - non-blocking UI stays usable
-    initPlayer().catch(err => console.warn('initPlayer error', err));
+    // init player async and non-blocking
+    initPlayerOnce().catch(()=>{});
+
+    // init EPG in background
+    loadAllEpg().then(()=>{ buildNav(); }).catch(()=>{});
+
+    // start playlist logic
+    playlistReadyHandler();
   })();
 
-  /**********************
-   * small utilities
-   **********************/
+  // small utilities
   function hideChannelName() { oChannelInfo.classList.remove('visible'); }
-  function showChannelName() { showChannelName(); }
-
-  // Expose some functions for inline onclicks
+  // expose functions
   window.showGuide = showGuide;
   window.hideGuide = hideGuide;
   window.showNav = showNav;
