@@ -135,11 +135,10 @@
      <div id="list_container">
       <div id="group_list" class="custom-scrollbar">
        <ul id="main_nav">
-        <li id="epg_group" data-langid="epg_menu">EPG</li>
         <li id="guide_group" data-langid="guide_menu">GUIDE</li>
        </ul>
        <div class="HR" style="margin:16px 6px; height:1px; background: linear-gradient(to right, rgba(0,0,0,0), rgba(65, 105, 225, 0.75), rgba(0,0,0,0));"></div>
-       <h2 class="list_headline i18n" data-langid="groups">PROVIDERS</h2>
+       <h2 class="list_headline" data-langid="groups">PROVIDERS</h2>
        <ul id="dynamic_groups_list">
         <li id="favourites_group" data-group="__fav" data-langid="favourites">FAVORITE</li>
         <li id="all_channels_group" data-group="__all" data-langid="allChannels">ALL CHANNELS</li>
@@ -151,8 +150,8 @@
    </div>
    <div id="channel_settings">
     <div id="list_container_right_scrollarea">
-     <div id="stream-info" class="HIDDEN"></div>
-     <h2 class="list_headline i18n" data-langid="channelSettings">Channel settings</h2>
+     <div id="stream-info"></div>
+     <h2 class="list_headline" data-langid="channelSettings">Channel settings</h2>
      <ul id="channel_settings_list"></ul>
     </div>
    </div>
@@ -202,8 +201,8 @@ const channels = {
     animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", provider: "Documentary" },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://i.imgur.com/XsvAk5H.png", provider: "Documentary" },
 };
-const i18n = { en: { guideControls: "<li><kbd>M</kbd> - Settings</li><li><kbd>H</kbd> - User Manual</li><li><kbd>&#8593;</kbd>/<kbd>&#8595;</kbd> - Change channel</li><li><kbd>&#8592;</kbd> - Channel List</li><li><kbd>&#8592;</kbd><kbd>&#8592;</kbd> - Providers</li><li><kbd>&#8594;</kbd> - Channel Settings</li><li><kbd>OK</kbd> - Show Info</li><li><kbd>ESC</kbd> - Go Back</li>", allChannels: "ALL CHANNELS", guide_menu: "GUIDE", guideControlsHeadline: "Controls", groups: "PROVIDERS", channelSettings: "Channel settings", channelSettingFavs: "Add to Favorites", favourites: "FAVORITE" } };
-const channelSettingsOptions = [ { id: 'channel-setting-favourite', langid: 'channelSettingFavs'} ];
+const i18n = { en: { guideControls: "<li><kbd>M</kbd> - Settings</li><li><kbd>H</kbd> - Guide Controls</li><li><kbd>&#8593;</kbd>/<kbd>&#8595;</kbd> - Change channel</li><li><kbd>&#8592;</kbd> - Channel List</li><li><kbd>&#8592;</kbd><kbd>&#8592;</kbd> - Providers</li><li><kbd>&#8594;</kbd> - Channel Settings</li><li><kbd>OK</kbd> - Show Info</li><li><kbd>ESC</kbd> - Go Back</li>", allChannels: "ALL CHANNELS", guide_menu: "GUIDE", guideControlsHeadline: "Guide Controls", groups: "PROVIDERS", channelSettings: "Channel settings", channelSettingSubtitle: "Audio / Subtitle", channelSettingFavs: "Add to Favorites", favourites: "FAVORITE" } };
+const channelSettingsOptions = [ { id: 'channel-setting-subs', langid: 'channelSettingSubtitle'}, { id: 'channel-setting-favourite', langid: 'channelSettingFavs'} ];
 
 let player, iCurrentChannel = 0, aFilteredChannelKeys = [], sSelectedGroup = '__all', bNavOpened = false, bGroupsOpened = false, bGuideOpened = false, bChannelSettingsOpened = false, iChannelSettingsIndex = 0, channelNameTimeout;
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
@@ -214,7 +213,7 @@ function saveFavoritesToStorage() { const favorites = Object.entries(channels).f
 
 function toggleFavourite() { const key = aFilteredChannelKeys[iCurrentChannel]; if (!key) return; channels[key].favorite = !channels[key].favorite; saveFavoritesToStorage(); renderChannelSettings(); buildNav(); const newIndex = aFilteredChannelKeys.indexOf(key); iCurrentChannel = newIndex !== -1 ? newIndex : 0; if (aFilteredChannelKeys.length === 0) { player.unload(); oIdleAnimation.classList.remove('HIDDEN'); } updateSelectedChannelInNav(); }
 function unmuteOnFirstUserAction() { if (oAvPlayer.muted) oAvPlayer.muted = false; document.removeEventListener('click', unmuteOnFirstUserAction); document.removeEventListener('keydown', unmuteOnFirstUserAction); document.removeEventListener('touchstart', unmuteOnFirstUserAction); }
-async function initPlayer() { oAvPlayer.muted = true; await shaka.polyfill.installAll(); if (!shaka.Player.isBrowserSupported()) return; player = new shaka.Player(oAvPlayer); player.configure({ abr: { defaultBandwidthEstimate: 1e6 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8, retryParameters: { timeout: 8000, maxAttempts: 3, backoffFactor: 2 } }}); player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); oChannelLoader.classList.add('HIDDEN'); oIdleAnimation.classList.remove('HIDDEN'); }); let i = 1; for (const key in channels) { channels[key].number = i++; channels[key].key = key; } loadFavoritesFromStorage(); buildNav(); playlistReadyHandler(); }
+async function initPlayer() { oAvPlayer.muted = true; await shaka.polyfill.installAll(); if (!shaka.Player.isBrowserSupported()) return; player = new shaka.Player(oAvPlayer); player.configure({ abr: { defaultBandwidthEstimate: 1e6 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8, retryParameters: { timeout: 8000, maxAttempts: 3, backoffFactor: 2 } }}); player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); oChannelLoader.classList.add('HIDDEN'); oIdleAnimation.classList.remove('HIDDEN'); }); player.addEventListener('adaptation', updateStreamInfo); let i = 1; for (const key in channels) { channels[key].number = i++; channels[key].key = key; } loadFavoritesFromStorage(); buildNav(); playlistReadyHandler(); }
 
 function playlistReadyHandler() {
     const aniplusKey = 'aniplus';
@@ -231,38 +230,21 @@ function updateSelectedChannelInNav() { const current = oChannelList.querySelect
 
 async function loadChannel(index, isInitialLoad = false) {
     if (aFilteredChannelKeys.length === 0) return;
-    
-    // Set UI to loading state
     oIdleAnimation.classList.add('HIDDEN');
     oChannelLoader.classList.remove('HIDDEN');
-
     iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
     const channelKey = aFilteredChannelKeys[iCurrentChannel];
     const channel = channels[channelKey];
-    
-    if (!player || !channel) {
-        oChannelLoader.classList.add('HIDDEN');
-        oIdleAnimation.classList.remove('HIDDEN');
-        return;
-    }
-
+    if (!player || !channel) { oChannelLoader.classList.add('HIDDEN'); oIdleAnimation.classList.remove('HIDDEN'); return; }
     if (isInitialLoad) { showChannelName(); } else { setTimeout(showChannelName, 200); }
     updateSelectedChannelInNav();
-
     player.getNetworkingEngine().clearAllRequestFilters();
-    if (channel.userAgent) {
-        player.getNetworkingEngine().registerRequestFilter((type, request) => {
-            request.headers['User-Agent'] = channel.userAgent;
-        });
-    }
-
+    if (channel.userAgent) { player.getNetworkingEngine().registerRequestFilter((type, request) => { request.headers['User-Agent'] = channel.userAgent; }); }
     try {
         await player.load(channel.manifestUri);
-        // Success: hide loader and play
         oChannelLoader.classList.add('HIDDEN');
         await oAvPlayer.play();
     } catch (error) {
-        // Failure: unload player, hide loader, show idle screen
         console.error(`Error loading: ${channel.name}`, error);
         await player.unload();
         oChannelLoader.classList.add('HIDDEN');
@@ -272,7 +254,7 @@ async function loadChannel(index, isInitialLoad = false) {
 
 function buildNav() { const searchTerm = oSearchField.value.toLowerCase(); aFilteredChannelKeys = Object.keys(channels).filter(key => { const ch = channels[key]; const inGroup = sSelectedGroup === '__all' || (sSelectedGroup === '__fav' && ch.favorite) || (ch.provider === sSelectedGroup); const inSearch = !searchTerm || ch.name.toLowerCase().includes(searchTerm); return inGroup && inSearch; }).sort((a, b) => channels[a].number - channels[b].number); oChannelList.innerHTML = ''; if (aFilteredChannelKeys.length === 0) { oChannelList.innerHTML = `<li style="justify-content:center; color:#888;">No channels found.</li>`; return; } const frag = document.createDocumentFragment(); aFilteredChannelKeys.forEach((key, index) => { const ch = channels[key]; const item = document.createElement('li'); item.className = 'channel-item'; item.onclick = () => { loadChannel(index); setTimeout(hideNav, 100); }; const logo = ch.logo ? `<div class="nav_logo"><img src="${ch.logo}" alt=""></div>` : ''; const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : ''; item.innerHTML = `${fav}<span class="list-ch">${ch.number}</span><span class="list-title">${ch.name}</span>${logo}`; frag.appendChild(item); }); oChannelList.appendChild(frag); updateSelectedChannelInNav(); }
 function renderChannelSettings() { oChannelSettingsList.innerHTML = ''; if (aFilteredChannelKeys.length === 0) return; const channel = channels[aFilteredChannelKeys[iCurrentChannel]]; channelSettingsOptions.forEach((opt, index) => { const item = document.createElement('li'); let text = opt.id === 'channel-setting-favourite' ? (channel?.favorite ? 'Remove from Favourites' : 'Add to Favorites') : getLang(opt.langid); item.textContent = text; if(index === iChannelSettingsIndex) item.classList.add('selected'); oChannelSettingsList.appendChild(item); }); }
-function updateStreamInfo() { const track = player?.getVariantTracks().find(t => t.active); if(track) oStreamInfo.innerHTML = `Resolution: ${track.width}x${track.height}<br>Bitrate: ${(track.bandwidth/1e6).toFixed(2)} Mbps`; }
+function updateStreamInfo() { const track = player?.getVariantTracks().find(t => t.active); if(track) oStreamInfo.innerHTML = `Resolution: ${track.width}x${track.height}<br>Bitrate: ${(track.bandwidth/1e6).toFixed(2)} Mbps`; else oStreamInfo.innerHTML = "Stream info not available"; }
 function showChannelName() { clearTimeout(channelNameTimeout); if (aFilteredChannelKeys.length === 0) return; const ch = channels[aFilteredChannelKeys[iCurrentChannel]]; if (!ch) return; getEl('channel_name').textContent = ch.name; getEl('channel_epg').innerHTML = "EPG not available"; getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="">` : ''; oChannelInfo.classList.add('visible'); channelNameTimeout = setTimeout(hideChannelName, 5000); }
 function hideChannelName() { oChannelInfo.classList.remove('visible'); }
 
@@ -290,7 +272,7 @@ function buildGroupNav() { const list = getEl('dynamic_groups_list'); list.query
 function selectGroupListItem(item) { if(!item) item = document.querySelector('#group_list li.selected'); if(!item) return; document.querySelectorAll('#group_list li.selected').forEach(el => el.classList.remove('selected')); item.classList.add('selected'); if (item.id === 'guide_group') { showGuide(); } else { sSelectedGroup = item.dataset.group; buildNav(); hideGroups(); } }
 function navigateGroupList(direction) { const items = document.querySelectorAll('#group_list ul > li'); let currentIndex = Array.from(items).findIndex(item => item.classList.contains('selected')); if (currentIndex === -1) currentIndex = 0; items[currentIndex].classList.remove('selected'); if (direction === 'up') { currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1; } else if (direction === 'down') { currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0; } items[currentIndex].classList.add('selected'); items[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 
-document.addEventListener('keydown', (e) => { if (document.activeElement === oSearchField) return; if (bGuideOpened) { if(e.key === 'Escape') hideGuide(); return; } e.preventDefault(); if (bNavOpened) { if(bGroupsOpened) { switch(e.key) { case 'ArrowUp': navigateGroupList('up'); break; case 'ArrowDown': navigateGroupList('down'); break; case 'ArrowRight': case 'Escape': hideGroups(); break; case 'Enter': selectGroupListItem(); break; } } else { switch(e.key) { case 'ArrowUp': loadChannel(iCurrentChannel - 1); break; case 'ArrowDown': loadChannel(iCurrentChannel + 1); break; case 'ArrowRight': hideNav(); break; case 'ArrowLeft': showGroups(); break; case 'Enter': hideNav(); break; case 'Escape': hideNav(); break; } } } else if (bChannelSettingsOpened) { switch(e.key) { case 'ArrowLeft': case 'Escape': hideChannelSettings(); break; case 'Enter': if(channelSettingsOptions[iChannelSettingsIndex].id==='channel-setting-favourite') toggleFavourite(); break; } } else { switch(e.key) { case 'ArrowLeft': showNav(); break; case 'ArrowRight': showChannelSettings(); break; case 'Enter': showChannelName(); break; case 'ArrowUp': loadChannel(iCurrentChannel - 1); break; case 'ArrowDown': loadChannel(iCurrentChannel + 1); break; case 'h': showGuide(); break; case 'Escape': hideChannelName(); break; } } });
+document.addEventListener('keydown', (e) => { if (document.activeElement === oSearchField) return; if (bGuideOpened) { if(e.key === 'Escape') hideGuide(); return; } e.preventDefault(); if (bNavOpened) { if(bGroupsOpened) { switch(e.key) { case 'ArrowUp': navigateGroupList('up'); break; case 'ArrowDown': navigateGroupList('down'); break; case 'ArrowRight': case 'Escape': hideGroups(); break; case 'Enter': selectGroupListItem(); break; } } else { switch(e.key) { case 'ArrowUp': loadChannel(iCurrentChannel - 1); break; case 'ArrowDown': loadChannel(iCurrentChannel + 1); break; case 'ArrowRight': hideNav(); break; case 'ArrowLeft': showGroups(); break; case 'Enter': hideNav(); break; case 'Escape': hideNav(); break; } } } else if (bChannelSettingsOpened) { switch(e.key) { case 'ArrowLeft': case 'Escape': hideChannelSettings(); break; case 'Enter': { const optId = channelSettingsOptions[iChannelSettingsIndex].id; if(optId === 'channel-setting-favourite') toggleFavourite(); else if(optId === 'channel-setting-subs') alert('Audio/Subtitle selection not yet implemented.'); break; } } } else { switch(e.key) { case 'ArrowLeft': showNav(); break; case 'ArrowRight': showChannelSettings(); break; case 'Enter': showChannelName(); break; case 'ArrowUp': loadChannel(iCurrentChannel - 1); break; case 'ArrowDown': loadChannel(iCurrentChannel + 1); break; case 'h': showGuide(); break; case 'Escape': hideChannelName(); break; } } });
 oSearchField.addEventListener('input', () => { buildNav(); if (aFilteredChannelKeys.length > 0) loadChannel(0); else { player?.unload(); oIdleAnimation.classList.remove('HIDDEN'); } });
 
 function handleTouchStart(e) { const firstTouch = e.touches[0]; touchStartX = firstTouch.clientX; touchStartY = firstTouch.clientY; touchEndX = firstTouch.clientX; touchEndY = firstTouch.clientY; }
