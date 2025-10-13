@@ -22,18 +22,24 @@
       z-index: 0;
       background: url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop') center/cover no-repeat;
       transition: opacity 0.45s ease;
-      opacity: 1;
+      opacity: 1; /* MODIFIED: Always visible unless video is playing on top */
       pointer-events: none;
+    }
+
+    /* ADDED: Main content wrapper to contain player/loader behind panels */
+    #main_content_wrapper {
+      position: fixed;
+      inset: 0;
+      z-index: 1; /* Lower than nav panels */
     }
 
     /* player */
     #player {
-      z-index: 1;
-      position: fixed; inset: 0;
+      position: absolute; inset: 0; /* MODIFIED: Positioned within wrapper */
       width:100%; height:100%;
       background: transparent;
       cursor: none;
-      opacity: 0;           /* hidden until playing */
+      opacity: 0; /* hidden until playing */
       transition: opacity 0.45s ease;
     }
     #player.visible { opacity: 1; }
@@ -44,6 +50,7 @@
 
     /* loader overlay (non-blocking) */
     #channel_loader_overlay {
+      position: absolute; inset: 0; /* MODIFIED: Positioned within wrapper */
       z-index: 60;
       display:flex; align-items:center; justify-content:center;
       background: rgba(0,0,0,0.55);
@@ -52,16 +59,19 @@
       transition: opacity 0.35s ease;
       opacity: 0;
     }
-    #channel_loader_overlay.active { opacity: 1; pointer-events: none; } /* still non-blocking */
+    #channel_loader_overlay.active { opacity: 1; }
 
-    .loader-content { text-align:center; color:#fff; pointer-events: auto; }
+    .loader-content { text-align:center; color:#fff; }
     .loading-text { font-size: clamp(24px, 4vw, 32px); font-weight:bold; margin-bottom:14px; text-shadow: 2px 2px 4px #000; }
     .loader-bar { width:250px; height:4px; background: rgba(255,255,255,0.2); border-radius:2px; position:relative; overflow:hidden; margin: 0 auto; }
     .loader-bar::after { content:''; position:absolute; top:0; left:0; width:50%; height:100%; background:royalblue; animation: loader-bar 1.5s linear infinite; }
     @keyframes loader-bar { 0% { left:-50%; } 100% { left:100%; } }
 
     /* idle branding kept visible above background */
-    #idle_animation { z-index:2; display:flex; justify-content:flex-end; align-items:center; padding-right:40px; pointer-events: none; }
+    #idle_animation {
+      position: absolute; inset: 0; /* MODIFIED: Positioned within wrapper */
+      z-index:2; display:flex; justify-content:flex-end; align-items:center; padding-right:40px; pointer-events: none;
+    }
     .idle-branding { color:white; text-shadow: 3px 3px 8px rgba(0,0,0,0.9); text-align:right; }
     .idle-branding h1 { font-size:5vw; margin:0; font-weight:bold; animation: pulseText 3s infinite; }
     .idle-branding p { margin:0; color:#00ff7f; font-weight:bold; }
@@ -71,9 +81,9 @@
     #play_button_overlay:hover { background: rgba(65,105,225,0.8); }
     #play_button_overlay svg { width:60px; height:60px; fill:#fff; }
 
-    /* nav and side panels - unchanged layout but above loader */
+    /* nav and side panels - z-index raised to be above the new main wrapper */
     #nav, #channel_settings {
-      z-index: 70;
+      z-index: 70; /* MODIFIED */
       position: fixed; top:0;
       width: clamp(320px, 25vw, 400px);
       max-width: 90%; height:100%;
@@ -90,6 +100,11 @@
     #group_list, #channel_list, #channel_settings_list { height:100%; width:50%; overflow-y:auto; -webkit-overflow-scrolling: touch; }
     #channel_list { transition: opacity .4s ease; }
 
+    /* Style for selected items in navigation */
+    #group_list li.selected, #channel_list li.selected {
+        background-color: rgba(65, 105, 225, 0.4); /* royalblue with alpha */
+    }
+
     /* channel info box on right */
     #channel_info {
       z-index: 75;
@@ -105,25 +120,18 @@
 
     /* floating center modal */
     .modal {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      position: fixed; inset: 0;
+      display: flex; justify-content: center; align-items: center;
       background: rgba(0,0,0,0.6);
       z-index: 120;
-      visibility: hidden;
-      opacity: 0;
+      visibility: hidden; opacity: 0;
       transition: opacity 0.18s ease, visibility 0.18s;
     }
     .modal.visible { visibility: visible; opacity: 1; }
     .modal-box {
       background: linear-gradient(180deg, rgba(20,20,20,0.98), rgba(12,12,12,0.96));
-      color: #fff;
-      padding: 18px;
-      border-radius: 12px;
-      min-width: 260px;
-      max-width: 720px;
+      color: #fff; padding: 18px; border-radius: 12px;
+      min-width: 260px; max-width: 720px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.6);
     }
     .modal-box h3 { margin: 0 0 12px 0; font-size: 20px; }
@@ -137,24 +145,19 @@
   </style>
 </head>
 <body>
-  <!-- persistent background -->
   <div id="background-layer" aria-hidden="true"></div>
 
-  <!-- video player (Shaka) -->
-  <video id="player" autoplay muted playsinline></video>
+  <main id="main_content_wrapper">
+    <video id="player" autoplay muted playsinline></video>
 
-  <!-- UI elements -->
-  <div id="ui_elements">
-    <!-- loader overlay: non-blocking (pointer-events: none) -->
-    <div id="channel_loader_overlay" class="fullscreen" role="status" aria-live="polite">
+    <div id="channel_loader_overlay" role="status" aria-live="polite">
       <div class="loader-content">
         <span class="loading-text">Loading Channel...</span>
         <div class="loader-bar" aria-hidden="true"></div>
       </div>
     </div>
 
-    <!-- idle branding -->
-    <div id="idle_animation" class="fullscreen" aria-hidden="false">
+    <div id="idle_animation" aria-hidden="false">
       <div class="idle-branding">
         <h1>SHAKZZ TV</h1>
         <p>FOR FREE</p>
@@ -163,10 +166,11 @@
         <svg viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>
       </div>
     </div>
+  </main>
 
-    <!-- left nav -->
+  <div id="ui_elements">
     <div id="nav" aria-hidden="true">
-      <div id="brand-header">
+      <div id="brand-header" style="padding: 20px; display: flex; align-items: center;">
         <svg viewBox="0 0 24 24" fill="white" style="width:35px;height:35px;margin-right:14px;">
           <path d="M21,3H3C1.89,3,1,3.89,1,5V17C1,18.11,1.89,19,3,19H8V21H16V19H21C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17M16,11L11,15V7L16,11Z"></path>
         </svg>
@@ -187,29 +191,25 @@
 
             <div style="margin:16px 6px;height:1px;background:linear-gradient(to right, rgba(0,0,0,0), rgba(65,105,225,0.75), rgba(0,0,0,0));"></div>
 
-            <h2 class="list_headline i18n" data-langid="groups">CATEGORY</h2>
+            <h2 class="list_headline i18n" data-langid="groups" style="padding:6px 20px; margin: 0;">CATEGORY</h2>
             <ul id="dynamic_groups_list" style="list-style:none;margin:0;padding:0;">
               <li id="favourites_group" data-group="__fav" data-langid="favourites" style="padding:6px 20px;cursor:pointer;" tabindex="0">FAVORITE</li>
               <li id="all_channels_group" data-group="__all" data-langid="allChannels" style="padding:6px 20px;cursor:pointer;" tabindex="0">ALL CHANNELS</li>
-              <!-- provider items inserted dynamically with tabindex=0 -->
-            </ul>
+              </ul>
           </div>
-
-          <div id="channel_list" class="custom-scrollbar" style="width:50%;" role="listbox" aria-label="Channels"></div>
+          <div id="channel_list" class="custom-scrollbar" role="listbox" aria-label="Channels"></div>
         </div>
       </div>
     </div>
 
-    <!-- right channel settings -->
     <div id="channel_settings" aria-hidden="true">
-      <div id="list_container_right_scrollarea" style="height:100%;overflow:auto;">
-        <div id="stream-info" class="HIDDEN" style="color:#fff;padding:20px 30px 0;font-size:14px;"></div>
-        <h2 class="list_headline i18n" data-langid="channelSettings">Channel settings</h2>
-        <ul id="channel_settings_list" style="list-style:none;margin:0;padding:0;"></ul>
-      </div>
+        <div id="list_container_right_scrollarea" class="custom-scrollbar" style="height:100%;">
+            <div id="stream-info" class="HIDDEN" style="color:#fff;padding:20px 30px 0;font-size:14px;"></div>
+            <h2 class="list_headline i18n" data-langid="channelSettings" style="padding: 20px; margin: 0;">Channel settings</h2>
+            <ul id="channel_settings_list" style="list-style:none;margin:0;padding:0;"></ul>
+        </div>
     </div>
 
-    <!-- channel info -->
     <div id="channel_info" aria-hidden="true">
       <div id="ch_logo"></div>
       <div id="channel_text_container">
@@ -218,16 +218,14 @@
       </div>
     </div>
 
-    <!-- guide popup -->
     <div id="guide" class="fullscreen" aria-hidden="true">
-      <div class="fullscreen-popup" style="z-index:80;">
-        <div class="close-button" onclick="hideGuide()" style="position:absolute;right:10px;top:10px;width:40px;height:40px;cursor:pointer;background-size:cover;"></div>
+      <div class="fullscreen-popup" style="z-index:80; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; color: white;">
+        <div class="close-button" onclick="hideGuide()" style="position:absolute;right:10px;top:10px;width:40px;height:40px;cursor:pointer; font-size: 24px; text-align: center; line-height: 40px;">&times;</div>
         <div id="guide_content"></div>
       </div>
     </div>
   </div>
 
-  <!-- Floating center modals -->
   <div id="videoTrackModal" class="modal" role="dialog" aria-hidden="true" aria-label="Video Tracks">
     <div class="modal-box" role="document">
       <h3>Video Track</h3>
@@ -246,789 +244,657 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  /*******************************
-   * Channels + Config
-   *******************************/
-  const channels = {
-    one_ph: { name: "One PH", type: "hls", manifestUri: "https://edge-stream-01-sg.vidio.com/live/201/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/One_PH_logo.svg/2560px-One_PH_logo.svg.png", provider: "Cignal" },
-    pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", provider: "Cignal" },
-    buko: { name: "BuKo", type: "hls", manifestUri: "https://yt-live.slay.one/watch?v=kPh2wePj5I4&hls=1", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/8/87/BuKo_channel_logo.svg/1200px-BuKo_channel_logo.svg.png", provider: "Cignal" },
-    aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://corsproxy.io/?https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", provider: "Anime" },
-    anione: { name: "Ani One", type: "hls", manifestUri: "https://corsproxy.io/?https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", provider: "Anime" }
-    // ... add the rest of your channels ...
-  };
+ /*******************************
+  * Channels + Config
+  *******************************/
+ const channels = {
+   one_ph: { name: "One PH", type: "hls", manifestUri: "https://edge-stream-01-sg.vidio.com/live/201/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/One_PH_logo.svg/2560px-One_PH_logo.svg.png", provider: "Cignal" },
+   pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", provider: "Cignal" },
+   buko: { name: "BuKo", type: "hls", manifestUri: "https://yt-live.slay.one/watch?v=kPh2wePj5I4&hls=1", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/8/87/BuKo_channel_logo.svg/1200px-BuKo_channel_logo.svg.png", provider: "Cignal" },
+   aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://corsproxy.io/?https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", provider: "Anime" },
+   anione: { name: "Ani One", type: "hls", manifestUri: "https://corsproxy.io/?https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", provider: "Anime" }
+   // ... add the rest of your channels ...
+ };
 
-  const EPG_URLS = [
-    "https://raw.githubusercontent.com/AqFad2811/epg/main/epg.xml",
-    "https://raw.githubusercontent.com/AqFad2811/epg/main/unifitv.xml",
-    "https://raw.githubusercontent.com/AqFad2811/epg/main/astro.xml"
-    // ... your EPG urls ...
-  ];
+ const EPG_URLS = [
+   "https://raw.githubusercontent.com/AqFad2811/epg/main/epg.xml",
+   "https://raw.githubusercontent.com/AqFad2811/epg/main/unifitv.xml",
+   "https://raw.githubusercontent.com/AqFad2811/epg/main/astro.xml"
+   // ... your EPG urls ...
+ ];
 
-  const i18n = {
-    en: {
-      guideControls: "<li><kbd>M</kbd> - Settings</li><li><kbd>E</kbd> - EPG</li><li><kbd>H</kbd> - User Manual</li><li><kbd>&#8593;</kbd>/<kbd>&#8595;</kbd> - Change channel</li><li><kbd>&#8592;</kbd> - open channel list</li><li><kbd>&#8592;</kbd><kbd>&#8592;</kbd> - open group list</li><li><kbd>&#8594;</kbd> - open channel settings</li><li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li><li><kbd>ESC</kbd> - Go Back</li>",
-      settings_menu: "Settings",
-      allChannels: "ALL CHANNELS",
-      epg_menu: "EPG",
-      guide_menu: "GUIDE",
-      guideControlsHeadline: "Controls",
-      groups: "CATEGORY",
-      channelSettings: "Channel settings",
-      channelSettingSubtitle: "subtitle / audio",
-      channelSettingFavs: "Add to Favorites",
-      favourites: "FAVORITE"
-    }
-  };
+ const i18n = {
+   en: {
+     guideControls: "<li><kbd>M</kbd> - Settings</li><li><kbd>E</kbd> - EPG</li><li><kbd>H</kbd> - User Manual</li><li><kbd>&#8593;</kbd>/<kbd>&#8595;</kbd> - Change channel</li><li><kbd>&#8592;</kbd> - open channel list</li><li><kbd>&#8592;</kbd><kbd>&#8592;</kbd> - open group list</li><li><kbd>&#8594;</kbd> - open channel settings</li><li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li><li><kbd>ESC</kbd> - Go Back</li>",
+     settings_menu: "Settings",
+     allChannels: "ALL CHANNELS",
+     epg_menu: "EPG",
+     guide_menu: "GUIDE",
+     guideControlsHeadline: "Controls",
+     groups: "CATEGORY",
+     channelSettings: "Channel settings",
+     channelSettingSubtitle: "subtitle / audio",
+     channelSettingFavs: "Add to Favorites",
+     favourites: "FAVORITE"
+   }
+ };
 
-  const channelSettingsOptions = [
-    { id: 'channel-setting-video', langid: 'Video Track' },
-    { id: 'channel-setting-audio', langid: 'Audio/Subtitles' },
-    { id: 'channel-setting-favourite', langid: 'channelSettingFavs' }
-  ];
+ const channelSettingsOptions = [
+   { id: 'channel-setting-video', langid: 'Video Track' },
+   { id: 'channel-setting-audio', langid: 'Audio/Subtitles' },
+   { id: 'channel-setting-favourite', langid: 'channelSettingFavs' }
+ ];
 
-  /********************
-   * element shortcuts
-   ********************/
-  const getEl = id => document.getElementById(id);
-  const oPlayer = getEl('player');
-  const oBackground = getEl('background-layer');
-  const oLoader = getEl('channel_loader_overlay');
-  const oIdle = getEl('idle_animation');
-  const oPlayBtn = getEl('play_button_overlay');
-  const oNav = getEl('nav');
-  const oChannelList = getEl('channel_list');
-  const oChannelSettings = getEl('channel_settings');
-  const oChannelSettingsList = getEl('channel_settings_list');
-  const oChannelInfo = getEl('channel_info');
-  const oChLogo = getEl('ch_logo');
-  const oChName = getEl('channel_name');
-  const oChEpg = getEl('channel_epg');
-  const oSearch = getEl('search_field');
-  const oGroupList = getEl('dynamic_groups_list');
+ /********************
+  * element shortcuts
+  ********************/
+ const getEl = id => document.getElementById(id);
+ const oPlayer = getEl('player');
+ const oLoader = getEl('channel_loader_overlay');
+ const oIdle = getEl('idle_animation');
+ const oPlayBtn = getEl('play_button_overlay');
+ const oNav = getEl('nav');
+ const oChannelList = getEl('channel_list');
+ const oChannelSettings = getEl('channel_settings');
+ const oChannelSettingsList = getEl('channel_settings_list');
+ const oChannelInfo = getEl('channel_info');
+ const oChLogo = getEl('ch_logo');
+ const oChName = getEl('channel_name');
+ const oChEpg = getEl('channel_epg');
+ const oSearch = getEl('search_field');
+ const oGroupList = getEl('dynamic_groups_list');
 
-  const videoTrackModal = getEl('videoTrackModal');
-  const audioSubModal = getEl('audioSubModal');
-  const videoTrackList = getEl('videoTrackList');
-  const audioTrackList = getEl('audioTrackList');
-  const textTrackList = getEl('textTrackList');
+ const videoTrackModal = getEl('videoTrackModal');
+ const audioSubModal = getEl('audioSubModal');
+ const videoTrackList = getEl('videoTrackList');
+ const audioTrackList = getEl('audioTrackList');
+ const textTrackList = getEl('textTrackList');
 
-  let player = null;
-  let aFilteredChannelKeys = [];
-  let iCurrentChannel = 0;
-  let sSelectedGroup = '__all';
-  let isFirstPlay = true;
-  let bNavOpened = false;
-  let bGroupsOpened = false;
-  const EPG_INDEX = { byId: {} };
+ let player = null;
+ let aFilteredChannelKeys = [];
+ let iCurrentChannel = 0;
+ let sSelectedGroup = '__all';
+ let isFirstPlay = true;
+ let bNavOpened = false;
+ let bGroupsOpened = false;
+ const EPG_INDEX = { byId: {} };
 
-  /***********************
-   * favorites storage
-   ***********************/
-  function loadFavoritesFromStorage() {
-    try {
-      const stored = JSON.parse(localStorage.getItem('iptvFavoriteChannels') || '[]');
-      Object.keys(channels).forEach(k => channels[k].favorite = stored.includes(k));
-    } catch(e) {}
-  }
-  function saveFavoritesToStorage() {
-    try {
-      const favs = Object.entries(channels).filter(([k,ch]) => ch.favorite).map(([k]) => k);
-      localStorage.setItem('iptvFavoriteChannels', JSON.stringify(favs));
-    } catch(e) {}
-  }
+ /***********************
+  * favorites storage
+  ***********************/
+ function loadFavoritesFromStorage() {
+   try {
+     const stored = JSON.parse(localStorage.getItem('iptvFavoriteChannels') || '[]');
+     Object.keys(channels).forEach(k => channels[k].favorite = stored.includes(k));
+   } catch(e) {}
+ }
+ function saveFavoritesToStorage() {
+   try {
+     const favs = Object.entries(channels).filter(([k,ch]) => ch.favorite).map(([k]) => k);
+     localStorage.setItem('iptvFavoriteChannels', JSON.stringify(favs));
+   } catch(e) {}
+ }
 
-  /**********************
-   * EPG helpers (async)
-   **********************/
-  async function fetchTextOrGz(url) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('bad response');
-      const buf = await res.arrayBuffer();
-      try {
-        const text = new TextDecoder('utf-8',{fatal:false}).decode(buf);
-        if (text.trim().startsWith('<')) return text;
-      } catch(e){}
-      try {
-        return new TextDecoder().decode(pako.ungzip(new Uint8Array(buf)));
-      } catch(e) {
-        return new TextDecoder().decode(buf);
-      }
-    } catch(err) {
-      console.warn('Failed EPG fetch:', url, err);
-      return null;
-    }
-  }
+ /**********************
+  * EPG helpers (async)
+  **********************/
+ async function fetchTextOrGz(url) {
+   try {
+     const res = await fetch(url);
+     if (!res.ok) throw new Error('bad response');
+     const buf = await res.arrayBuffer();
+     try {
+       const text = new TextDecoder('utf-8',{fatal:false}).decode(buf);
+       if (text.trim().startsWith('<')) return text;
+     } catch(e){}
+     try {
+       return new TextDecoder().decode(pako.ungzip(new Uint8Array(buf)));
+     } catch(e) {
+       return new TextDecoder().decode(buf);
+     }
+   } catch(err) {
+     console.warn('Failed EPG fetch:', url, err);
+     return null;
+   }
+ }
 
-  function parseXmltvTime(str) {
-    if (!str) return null;
-    const m = str.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
-    return m ? new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6])) : new Date(str);
-  }
+ function parseXmltvTime(str) {
+   if (!str) return null;
+   const m = str.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+   return m ? new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6])) : new Date(str);
+ }
 
-  async function loadAllEpg() {
-    await Promise.all(EPG_URLS.map(async u => {
-      const xmlText = await fetchTextOrGz(u);
-      if (!xmlText) return;
-      const doc = new DOMParser().parseFromString(xmlText, "application/xml");
-      doc.querySelectorAll('programme').forEach(pn => {
-        const ch = pn.getAttribute('channel');
-        const prog = {
-          start: parseXmltvTime(pn.getAttribute('start')),
-          stop: parseXmltvTime(pn.getAttribute('stop')),
-          title: pn.querySelector('title')?.textContent.trim() || ''
-        };
-        if (ch) {
-          if (!EPG_INDEX.byId[ch]) EPG_INDEX.byId[ch] = [];
-          EPG_INDEX.byId[ch].push(prog);
-        }
-      });
-    }));
-    for (const k in EPG_INDEX.byId) {
-      EPG_INDEX.byId[k].sort((a,b) => (a.start?.getTime()||0) - (b.start?.getTime()||0));
-    }
-  }
+ async function loadAllEpg() {
+   await Promise.all(EPG_URLS.map(async u => {
+     const xmlText = await fetchTextOrGz(u);
+     if (!xmlText) return;
+     const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+     doc.querySelectorAll('programme').forEach(pn => {
+       const ch = pn.getAttribute('channel');
+       const prog = {
+         start: parseXmltvTime(pn.getAttribute('start')),
+         stop: parseXmltvTime(pn.getAttribute('stop')),
+         title: pn.querySelector('title')?.textContent.trim() || ''
+       };
+       if (ch) {
+         if (!EPG_INDEX.byId[ch]) EPG_INDEX.byId[ch] = [];
+         EPG_INDEX.byId[ch].push(prog);
+       }
+     });
+   }));
+   for (const k in EPG_INDEX.byId) {
+     EPG_INDEX.byId[k].sort((a,b) => (a.start?.getTime()||0) - (b.start?.getTime()||0));
+   }
+ }
 
-  function findEpgForChannel(chObj) {
-    return (chObj.key && EPG_INDEX.byId[chObj.key]) ? EPG_INDEX.byId[chObj.key] : null;
-  }
+ function findEpgForChannel(chObj) {
+   return (chObj.key && EPG_INDEX.byId[chObj.key]) ? EPG_INDEX.byId[chObj.key] : null;
+ }
 
-  function getNowAndNextFromProgList(progs) {
-    if (!progs?.length) return { now:null, next:null };
-    const now = Date.now();
-    for (let i=0;i<progs.length;i++){
-      const p = progs[i];
-      const s = p.start?.getTime(), e = p.stop?.getTime();
-      if (s && e && now >= s && now < e) return { now:p, next:progs[i+1]||null };
-      if (s && now < s) return { now:null, next:p };
-    }
-    return { now:null, next:null };
-  }
+ function getNowAndNextFromProgList(progs) {
+   if (!progs?.length) return { now:null, next:null };
+   const now = Date.now();
+   for (let i=0;i<progs.length;i++){
+     const p = progs[i];
+     const s = p.start?.getTime(), e = p.stop?.getTime();
+     if (s && e && now >= s && now < e) return { now:p, next:progs[i+1]||null };
+     if (s && now < s) return { now:null, next:p };
+   }
+   return { now:null, next:null };
+ }
 
-  /***********************
-   * UI rendering helpers
-   ***********************/
-  function buildNav() {
-    const q = (oSearch.value || '').toLowerCase();
-    aFilteredChannelKeys = Object.keys(channels).filter(k => {
-      const ch = channels[k];
-      const inGroup = sSelectedGroup === '__all' || (sSelectedGroup === '__fav' && ch.favorite) || (ch.provider === sSelectedGroup);
-      const inSearch = !q || ch.name.toLowerCase().includes(q);
-      return inGroup && inSearch;
-    }).sort((a,b) => channels[a].number - channels[b].number);
+ /***********************
+  * UI rendering helpers
+  ***********************/
+ function buildNav() {
+   const q = (oSearch.value || '').toLowerCase();
+   aFilteredChannelKeys = Object.keys(channels).filter(k => {
+     const ch = channels[k];
+     const inGroup = sSelectedGroup === '__all' || (sSelectedGroup === '__fav' && ch.favorite) || (ch.provider === sSelectedGroup);
+     const inSearch = !q || ch.name.toLowerCase().includes(q);
+     return inGroup && inSearch;
+   }).sort((a,b) => channels[a].number - channels[b].number);
 
-    oChannelList.innerHTML = '';
-    if (aFilteredChannelKeys.length === 0) {
-      oChannelList.innerHTML = '<li style="justify-content:center;color:#888;">No channels found.</li>';
-      return;
-    }
-    const frag = document.createDocumentFragment();
-    aFilteredChannelKeys.forEach((key, idx) => {
-      const ch = channels[key];
-      const li = document.createElement('li');
-      li.className = 'channel-item';
-      li.style.padding = '6px 20px';
-      li.style.display = 'flex';
-      li.style.alignItems = 'center';
-      li.style.cursor = 'pointer';
-      li.tabIndex = 0;
-      li.onclick = () => { loadChannel(idx); setTimeout(hideNav, 100); };
-      li.onkeydown = (ev) => { if (ev.key === 'Enter') li.click(); };
-      const fav = ch.favorite ? '<span class="fav-star">⭐</span>' : '';
-      const logo = ch.logo ? `<div class="nav_logo" style="margin-left:auto;"><img src="${ch.logo}" alt="" style="max-height:35px;"/></div>` : '';
-      li.innerHTML = `${fav}<span class="list-ch">${ch.number}</span><span class="list-title">${ch.name}</span>${logo}`;
-      frag.appendChild(li);
-    });
-    oChannelList.appendChild(frag);
-    updateSelectedChannelInNav();
-  }
+   oChannelList.innerHTML = '';
+   if (aFilteredChannelKeys.length === 0) {
+     oChannelList.innerHTML = '<li style="padding: 20px; text-align: center; color:#888;">No channels found.</li>';
+     return;
+   }
+   const frag = document.createDocumentFragment();
+   aFilteredChannelKeys.forEach((key, idx) => {
+     const ch = channels[key];
+     const li = document.createElement('li');
+     li.className = 'channel-item';
+     li.style.cssText = `padding: 6px 20px; display: flex; align-items: center; cursor: pointer;`;
+     li.tabIndex = 0;
+     li.onclick = () => { loadChannel(idx); setTimeout(hideNav, 100); };
+     li.onkeydown = (ev) => { if (ev.key === 'Enter') li.click(); };
+     const fav = ch.favorite ? '<span class="fav-star" style="margin-right: 8px;">⭐</span>' : '';
+     const logo = ch.logo ? `<div class="nav_logo" style="margin-left:auto; width: 60px; text-align: right;"><img src="${ch.logo}" alt="" style="max-height:35px; max-width: 100%;"/></div>` : '';
+     li.innerHTML = `${fav}<span class="list-title">${ch.name}</span>${logo}`;
+     frag.appendChild(li);
+   });
+   oChannelList.appendChild(frag);
+   updateSelectedChannelInNav();
+ }
 
-  function updateSelectedChannelInNav() {
-    const old = oChannelList.querySelector('.selected');
-    if (old) old.classList.remove('selected');
-    const newSel = oChannelList.querySelectorAll('li.channel-item')[iCurrentChannel];
-    if (newSel) {
-      newSel.classList.add('selected');
-      if (oNav.classList.contains('visible')) newSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }
+ function updateSelectedChannelInNav() {
+   const old = oChannelList.querySelector('.selected');
+   if (old) old.classList.remove('selected');
+   const newSel = oChannelList.querySelectorAll('li.channel-item')[iCurrentChannel];
+   if (newSel) {
+     newSel.classList.add('selected');
+     if (oNav.classList.contains('visible')) newSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+   }
+ }
 
-  function renderChannelSettings() {
+ function renderChannelSettings() {
     oChannelSettingsList.innerHTML = '';
     if (!aFilteredChannelKeys.length) return;
     const ch = channels[aFilteredChannelKeys[iCurrentChannel]];
 
-    const videoItem = document.createElement('li');
-    videoItem.id = 'setting-video';
-    videoItem.style.padding = '10px 20px';
-    videoItem.style.cursor = 'pointer';
-    videoItem.textContent = 'Video Track';
-    videoItem.onclick = () => openVideoTrackModal();
-    oChannelSettingsList.appendChild(videoItem);
-
-    const audioItem = document.createElement('li');
-    audioItem.id = 'setting-audio';
-    audioItem.style.padding = '10px 20px';
-    audioItem.style.cursor = 'pointer';
-    audioItem.textContent = 'Audio / Subtitles';
-    audioItem.onclick = () => openAudioSubModal();
-    oChannelSettingsList.appendChild(audioItem);
-
-    const favItem = document.createElement('li');
-    favItem.id = 'setting-fav';
-    favItem.style.padding = '10px 20px';
-    favItem.style.cursor = 'pointer';
-    favItem.textContent = ch.favorite ? 'Remove from Favourites' : 'Add to Favorites';
-    favItem.onclick = () => { toggleFavourite(); renderChannelSettings(); };
-    oChannelSettingsList.appendChild(favItem);
-  }
-
-  function showChannelName() {
-    if (!aFilteredChannelKeys.length) return;
-    const ch = channels[aFilteredChannelKeys[iCurrentChannel]];
-    if (!ch) return;
-    oChName.textContent = ch.name;
-    oChLogo.innerHTML = ch.logo ? `<img src="${ch.logo}" alt="" style="max-width:100%;max-height:100%"/>` : '';
-    const progs = findEpgForChannel(ch);
-    let epgText = 'EPG not available';
-    if (progs) {
-      const { now, next } = getNowAndNextFromProgList(progs);
-      if (now) {
-        const s = now.start.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-        epgText = `Now: ${now.title} (${s})`;
-      } else if (next) epgText = `Next: ${next.title}`;
-    }
-    oChEpg.innerHTML = epgText;
-    oChannelInfo.classList.add('visible');
-    clearTimeout(window._channelNameTimeout);
-    window._channelNameTimeout = setTimeout(() => oChannelInfo.classList.remove('visible'), 5000);
-  }
-
-  function hideChannelName() { oChannelInfo.classList.remove('visible'); }
-
-  /******************
-   * favorite toggle
-   ******************/
-  function toggleFavourite() {
-    const key = aFilteredChannelKeys[iCurrentChannel];
-    if (!key) return;
-    channels[key].favorite = !channels[key].favorite;
-    saveFavoritesToStorage();
-    buildNav();
-    renderChannelSettings();
-    updateSelectedChannelInNav();
-  }
-
-  /*******************************
-   * Shaka player init & handlers
-   *******************************/
-  async function initPlayerOnce() {
-    if (player) return;
-    if (!oPlayer) return;
-    oPlayer.muted = true;
-    await shaka.polyfill.installAll();
-    if (!shaka.Player.isBrowserSupported()) { console.warn('Shaka not supported'); return; }
-
-    player = new shaka.Player(oPlayer);
-    player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal:2, bufferingGoal:8 } });
-
-    player.addEventListener('error', e => {
-      console.error('Shaka error', e.detail);
-      showIdle();
-    });
-
-    // buffering events: show loader + keep background visible
-    player.addEventListener('buffering', (e) => {
-      if (e.buffering) {
-        oBackground.style.opacity = '1';
-        oLoader.classList.add('active');
-      } else {
-        // after buffering ends we'll wait for playing/loadeddata to hide loader
-      }
-    });
-
-    player.addEventListener('adaptation', () => updateStreamInfo());
-
-    // media element events
-    oPlayer.addEventListener('loadeddata', onMediaReady);
-    oPlayer.addEventListener('playing', onMediaReady);
-    oPlayer.addEventListener('error', () => console.warn('HTMLMediaElement error'));
-  }
-
-  function onMediaReady() {
-    // reveal video, hide loader, fade out background
-    if (!oPlayer.classList.contains('visible')) oPlayer.classList.add('visible');
-    oLoader.classList.remove('active');
-    if (oIdle) oIdle.classList.add('HIDDEN');
-    setTimeout(() => { oBackground.style.opacity = '0'; }, 260);
-    isFirstPlay = false;
-  }
-
-  function showIdle() {
-    if (oIdle) oIdle.classList.remove('HIDDEN');
-    oPlayer.classList.remove('visible');
-    oLoader.classList.remove('active');
-    oBackground.style.opacity = '1';
-  }
-
-  /*****************************
-   * autoplay/resume behavior
-   *****************************/
-  function playlistReadyHandler() {
-    const q = (oSearch.value || '').toLowerCase();
-    aFilteredChannelKeys = Object.keys(channels).filter(k => {
-      const ch = channels[k];
-      const inGroup = sSelectedGroup === '__all' || (sSelectedGroup === '__fav' && ch.favorite) || (ch.provider === sSelectedGroup);
-      const inSearch = !q || ch.name.toLowerCase().includes(q);
-      return inGroup && inSearch;
-    }).sort((a,b) => channels[a].number - channels[b].number);
-
-    if (!aFilteredChannelKeys.length) { showIdle(); return; }
-
-    const stored = localStorage.getItem('iptvLastWatched');
-    let startIdx = 0;
-    if (stored && aFilteredChannelKeys.includes(stored)) startIdx = aFilteredChannelKeys.indexOf(stored);
-    else {
-      const anKey = 'aniplus';
-      const idx = aFilteredChannelKeys.indexOf(anKey);
-      startIdx = idx !== -1 ? idx : 0;
-    }
-
-    // show loader overlay while the channel loads (non-blocking)
-    oLoader.classList.add('active');
-    oBackground.style.opacity = '1';
-    loadChannel(startIdx, { keepIdleUntilPlaying: true });
-  }
-
-  /**************************
-   * loadChannel (async safe)
-   **************************/
-  async function loadChannel(index, options = {}) {
-    if (!Array.isArray(aFilteredChannelKeys) || !aFilteredChannelKeys.length) buildNav();
-    if (!aFilteredChannelKeys.length) { showIdle(); return; }
-
-    iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
-    const key = aFilteredChannelKeys[iCurrentChannel];
-    const ch = channels[key];
-    if (!ch) return;
-
-    try { localStorage.setItem('iptvLastWatched', key); } catch(e){}
-
-    // show background immediately and keep it while stream loads
-    oBackground.style.opacity = '1';
-    oLoader.classList.add('active');
-    oPlayer.classList.remove('visible');
-    showChannelName();
-    updateSelectedChannelInNav();
-
-    try {
-      await initPlayerOnce();
-
-      // clear clearKeys if any
-      player.configure('drm.clearKeys', {});
-      if (ch.type === 'clearkey' && ch.keyId && ch.key) {
-        const ck = {}; ck[ch.keyId] = ch.key;
-        player.configure({ drm: { clearKeys: ck }});
-      }
-
-      try { player.getNetworkingEngine().clearAllRequestFilters(); } catch(e){}
-
-      if (ch.userAgent) {
-        player.getNetworkingEngine().registerRequestFilter((type, req) => { req.headers['User-Agent'] = ch.userAgent; });
-      }
-
-      player.configure({ abr: { enabled: true } });
-      await player.load(ch.manifestUri);
-      populateSettingsForChannel();
-
-      try { await oPlayer.play(); } catch(playErr) { console.warn('Autoplay blocked or failed:', playErr); }
-
-      // hide idle earlier unless we explicitly keep it until playing
-      if (!options.keepIdleUntilPlaying) {
-        if (oIdle) oIdle.classList.add('HIDDEN');
-        setTimeout(()=>{ oBackground.style.opacity = '0'; }, 360);
-      }
-    } catch (err) {
-      console.error('Error loading channel', ch.name, err);
-      showIdle();
-    } finally {
-      // final hide of loader is handled by onMediaReady (when playing)
-      setTimeout(() => {
-        if (oPlayer.classList.contains('visible')) {
-          oLoader.classList.remove('active');
-        }
-      }, 900);
-    }
-  }
-
-  /**************************
-   * resolution & subtitles (settings)
-   **************************/
-  function populateSettingsForChannel() {
-    // Update right panel text (stream-info and channel settings items)
-    updateStreamInfo();
-    renderChannelSettings();
-  }
-
-  function updateStreamInfo() {
-    const streamInfoEl = getEl('stream-info');
-    try {
-      const track = player?.getVariantTracks()?.find(t => t.active);
-      if (track && streamInfoEl) {
-        streamInfoEl.innerHTML = `codecs: ${track.videoCodec || track.audioCodec}<br>res: ${track.width}×${track.height}<br>bps: ${(track.bandwidth/1e6).toFixed(2)}M`;
-        streamInfoEl.classList.remove('HIDDEN');
-      } else if (streamInfoEl) {
-        streamInfoEl.classList.add('HIDDEN');
-      }
-    } catch(e){}
-  }
-
-  /* ---- floating modal helpers ---- */
-  function openVideoTrackModal() {
-    if (!player) return;
-    videoTrackList.innerHTML = '';
-    // Auto option
-    const autoEl = document.createElement('div');
-    autoEl.className = 'modal-item';
-    autoEl.tabIndex = 0;
-    autoEl.textContent = 'Auto (Adaptive)';
-    autoEl.onclick = () => {
-      player.configure({ abr: { enabled: true }});
-      closeVideoModal();
+    const createSettingItem = (text, onClick) => {
+        const item = document.createElement('li');
+        item.style.cssText = 'padding: 10px 20px; cursor: pointer;';
+        item.textContent = text;
+        item.onclick = onClick;
+        item.tabIndex = 0;
+        item.onkeydown = (e) => { if (e.key === 'Enter') onClick(); };
+        return item;
     };
-    videoTrackList.appendChild(autoEl);
 
-    // Unique resolutions
-    const variants = player.getVariantTracks() || [];
-    const resols = [...new Map(variants.filter(v => v.height).map(v => [v.height, v.height])).values()].sort((a,b)=>b-a);
-    resols.forEach(h => {
-      const li = document.createElement('div');
-      li.className = 'modal-item';
-      li.tabIndex = 0;
-      li.textContent = `${h}p`;
-      li.onclick = () => {
-        player.configure({ abr: { enabled: false }});
-        // choose a variant that matches height (pick highest bandwidth for that height)
-        const variant = variants.filter(v => v.height === h).sort((a,b)=>b.bandwidth - a.bandwidth)[0];
-        if (variant) player.selectVariantTrack(variant, true);
-        closeVideoModal();
-      };
-      videoTrackList.appendChild(li);
-    });
+    oChannelSettingsList.appendChild(createSettingItem('Video Track', openVideoTrackModal));
+    oChannelSettingsList.appendChild(createSettingItem('Audio / Subtitles', openAudioSubModal));
+    oChannelSettingsList.appendChild(createSettingItem(
+        ch.favorite ? 'Remove from Favourites' : 'Add to Favorites',
+        () => { toggleFavourite(); renderChannelSettings(); }
+    ));
+ }
 
-    showModal(videoTrackModal);
-  }
+ function showChannelName() {
+   if (!aFilteredChannelKeys.length) return;
+   const ch = channels[aFilteredChannelKeys[iCurrentChannel]];
+   if (!ch) return;
+   oChName.textContent = ch.name;
+   oChLogo.innerHTML = ch.logo ? `<img src="${ch.logo}" alt=""/>` : '';
+   const progs = findEpgForChannel(ch);
+   let epgText = 'EPG not available';
+   if (progs) {
+     const { now, next } = getNowAndNextFromProgList(progs);
+     if (now) {
+       const s = now.start.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+       epgText = `Now: ${now.title} (${s})`;
+     } else if (next) epgText = `Next: ${next.title}`;
+   }
+   oChEpg.innerHTML = epgText;
+   oChannelInfo.classList.add('visible');
+   clearTimeout(window._channelNameTimeout);
+   window._channelNameTimeout = setTimeout(() => oChannelInfo.classList.remove('visible'), 5000);
+ }
 
-  function closeVideoModal() { hideModal(videoTrackModal); }
+ function hideChannelName() { oChannelInfo.classList.remove('visible'); }
 
-  function openAudioSubModal() {
-    if (!player) return;
-    audioTrackList.innerHTML = '';
-    textTrackList.innerHTML = '';
+ /******************
+  * favorite toggle
+  ******************/
+ function toggleFavourite() {
+   const key = aFilteredChannelKeys[iCurrentChannel];
+   if (!key) return;
+   channels[key].favorite = !channels[key].favorite;
+   saveFavoritesToStorage();
+   buildNav();
+   renderChannelSettings();
+   updateSelectedChannelInNav();
+ }
 
-    // Audio tracks (from variants)
-    const variants = player.getVariantTracks() || [];
-    const audioLangs = [...new Set(variants.map(v => v.audioLanguage).filter(Boolean))];
-    if (audioLangs.length) {
-      audioLangs.forEach(lang => {
-        const li = document.createElement('div');
-        li.className = 'modal-item';
-        li.tabIndex = 0;
-        li.textContent = `Audio: ${lang}`;
-        li.onclick = () => {
-          try { player.selectAudioLanguage(lang); } catch(e){ console.warn(e); }
-          hideModal(audioSubModal);
-        };
-        audioTrackList.appendChild(li);
-      });
-    } else {
-      const none = document.createElement('div');
-      none.className = 'modal-item';
-      none.textContent = 'No alternate audio tracks';
-      audioTrackList.appendChild(none);
-    }
+ /*******************************
+  * Shaka player init & handlers
+  *******************************/
+ async function initPlayerOnce() {
+   if (player) return;
+   if (!oPlayer) return;
+   oPlayer.muted = true;
+   await shaka.polyfill.installAll();
+   if (!shaka.Player.isBrowserSupported()) { console.warn('Shaka not supported'); return; }
 
-    // Text tracks (player.getTextTracks) + HTML tracks
-    const textTracks = player.getTextTracks?.() || [];
-    const htmlTracks = Array.from(oPlayer.textTracks || []);
-    if (textTracks.length || htmlTracks.length) {
-      textTracks.forEach((t, idx) => {
-        const li = document.createElement('div');
-        li.className = 'modal-item';
-        li.tabIndex = 0;
-        li.textContent = `Subtitle: ${t.language || t.id || ('Track ' + (idx+1))}`;
-        li.onclick = () => {
-          try { player.setTextTrackVisibility(true); player.selectTextTrack(t); } catch(e){ console.warn(e); }
-          hideModal(audioSubModal);
-        };
-        textTrackList.appendChild(li);
-      });
-      // also include HTML native text tracks if present
-      htmlTracks.forEach((t, idx) => {
-        const li = document.createElement('div');
-        li.className = 'modal-item';
-        li.tabIndex = 0;
-        li.textContent = `Subtitle: ${t.language || t.label || ('Track ' + (idx+1))}`;
-        li.onclick = () => {
-          // disable all then enable this
-          Array.from(oPlayer.textTracks).forEach(tt => tt.mode = 'disabled');
-          t.mode = 'showing';
-          hideModal(audioSubModal);
-        };
-        textTrackList.appendChild(li);
-      });
+   player = new shaka.Player(oPlayer);
+   player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal:2, bufferingGoal:8 } });
 
-      // off option
-      const off = document.createElement('div');
-      off.className = 'modal-item';
-      off.tabIndex = 0;
-      off.textContent = 'Turn Off Subtitles';
-      off.onclick = () => {
-        try { player.setTextTrackVisibility(false); } catch(e){ Array.from(oPlayer.textTracks||[]).forEach(tt => tt.mode='disabled'); }
-        hideModal(audioSubModal);
-      };
-      textTrackList.appendChild(off);
-    } else {
-      const none = document.createElement('div');
-      none.className = 'modal-item';
-      none.textContent = 'No subtitles available';
-      textTrackList.appendChild(none);
-    }
+   player.addEventListener('error', e => {
+     console.error('Shaka error', e.detail);
+     showIdle();
+   });
 
-    showModal(audioSubModal);
-  }
+   player.addEventListener('buffering', (e) => {
+     oLoader.classList.toggle('active', e.buffering);
+   });
 
-  function showModal(modal) {
-    modal.classList.add('visible');
-    modal.setAttribute('aria-hidden','false');
-    // focus first reachable item
-    const first = modal.querySelector('.modal-item');
-    if (first) first.focus();
-    // close on Esc
-    const onEsc = (ev) => { if (ev.key === 'Escape') { hideModal(modal); document.removeEventListener('keydown', onEsc); } };
-    document.addEventListener('keydown', onEsc);
-  }
+   player.addEventListener('adaptation', () => updateStreamInfo());
 
-  function hideModal(modal) {
-    modal.classList.remove('visible');
-    modal.setAttribute('aria-hidden','true');
-  }
+   oPlayer.addEventListener('loadeddata', onMediaReady);
+   oPlayer.addEventListener('playing', onMediaReady);
+   oPlayer.addEventListener('error', () => console.warn('HTMLMediaElement error'));
+ }
 
-  // Click outside to close modals
-  [videoTrackModal, audioSubModal].forEach(m => {
-    m.addEventListener('click', (ev) => { if (ev.target === m) hideModal(m); });
-  });
+ function onMediaReady() {
+   if (!oPlayer.classList.contains('visible')) oPlayer.classList.add('visible');
+   oLoader.classList.remove('active');
+   if (oIdle) oIdle.classList.add('HIDDEN');
+   isFirstPlay = false;
+ }
 
-  /****************
-   * stream info
-   ****************/
-  /* updateStreamInfo already defined above */
+ function showIdle() {
+   if (oIdle) oIdle.classList.remove('HIDDEN');
+   oPlayer.classList.remove('visible');
+   oLoader.classList.remove('active');
+ }
 
-  /****************
-   * navigation UI
-   ****************/
-  function applyLang() {
-    document.querySelectorAll('[data-langid]').forEach(el => {
-      const k = el.dataset.langid;
-      el.innerHTML = i18n.en?.[k] || k;
-    });
-    // force category label
-    document.querySelectorAll('.list_headline.i18n').forEach(el => {
-      if (el.dataset.langid === 'groups') el.textContent = i18n.en.groups;
-    });
-  }
+ /**************************
+  * loadChannel (async safe)
+  **************************/
+ async function loadChannel(index, options = {}) {
+   if (!Array.isArray(aFilteredChannelKeys) || !aFilteredChannelKeys.length) buildNav();
+   if (!aFilteredChannelKeys.length) { showIdle(); return; }
 
-  function populateGroupNav() {
-    const list = oGroupList;
-    // remove non-core list items (providers will be re-inserted)
-    Array.from(list.querySelectorAll('li')).forEach(li => {
-      if (li.id !== 'favourites_group' && li.id !== 'all_channels_group') li.remove();
-    });
-    const providers = [...new Set(Object.values(channels).map(c => c.provider).filter(Boolean))].sort();
-    providers.forEach(name => {
-      const li = document.createElement('li');
-      li.dataset.group = name;
-      li.style.padding = '6px 20px';
-      li.style.cursor = 'pointer';
-      li.tabIndex = 0;
-      li.textContent = name.toUpperCase();
-      li.onclick = (e) => selectGroupListItem(e.currentTarget);
-      li.onkeydown = (ev) => { if (ev.key === 'Enter') li.click(); };
-      list.appendChild(li);
-    });
-  }
+   iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
+   const key = aFilteredChannelKeys[iCurrentChannel];
+   const ch = channels[key];
+   if (!ch) return;
 
-  function selectGroupListItem(item) {
-    document.querySelectorAll('#group_list li.selected').forEach(el => el.classList.remove('selected'));
-    item.classList.add('selected');
-    if (item.id === 'guide_group') { showGuide(); } else {
-      sSelectedGroup = item.dataset.group;
-      buildNav();
-      hideGroups();
-    }
-  }
+   try { localStorage.setItem('iptvLastWatched', key); } catch(e){}
 
-  function showNav() { hideAllPopups('nav'); bNavOpened = true; oNav.classList.add('visible'); document.getElementById('all_channels_group')?.classList.add('selected'); buildNav(); populateGroupNav(); }
-  function hideNav() { bNavOpened = false; bGroupsOpened = false; oNav.classList.remove('visible'); document.getElementById('list_container').classList.remove('groups-opened'); }
-  function showGroups() { if (oNav.classList.contains('visible')) { bGroupsOpened = true; document.getElementById('list_container').classList.add('groups-opened'); focusFirstGroupItem(); } }
-  function hideGroups() { bGroupsOpened = false; document.getElementById('list_container').classList.remove('groups-opened'); }
+   oLoader.classList.add('active');
+   oPlayer.classList.remove('visible');
+   showChannelName();
+   updateSelectedChannelInNav();
 
-  function focusFirstGroupItem() {
-    const first = document.querySelector('#dynamic_groups_list li:not(#favourites_group):not(#all_channels_group)');
-    if (first) { first.focus(); first.classList.add('selected'); }
-  }
+   try {
+     await initPlayerOnce();
 
-  function showChannelSettings() { hideAllPopups('channelSettings'); oChannelSettings.classList.add('visible'); renderChannelSettings(); updateStreamInfo(); }
-  function hideChannelSettings() { oChannelSettings.classList.remove('visible'); }
+     player.configure('drm.clearKeys', {});
+     if (ch.type === 'clearkey' && ch.keyId && ch.key) {
+       const ck = {}; ck[ch.keyId] = ch.key;
+       player.configure({ drm: { clearKeys: ck }});
+     }
 
-  function showGuide() { getEl('guide').style.display = 'block'; renderGuideContent(); }
-  function hideGuide() { getEl('guide').style.display = 'none'; }
+     try { player.getNetworkingEngine().clearAllRequestFilters(); } catch(e){}
 
-  function renderGuideContent() {
-    getEl('guide_content').innerHTML = `<h2 style="color:white">${i18n.en?.guideControlsHeadline}</h2><ul style="color:white">${i18n.en?.guideControls}</ul>`;
-  }
+     if (ch.userAgent) {
+       player.getNetworkingEngine().registerRequestFilter((type, req) => { req.headers['User-Agent'] = ch.userAgent; });
+     }
 
-  function hideAllPopups(exclude) {
-    if (exclude !== 'nav') hideNav();
-    if (exclude !== 'channelSettings') hideChannelSettings();
-    if (exclude !== 'guide') hideGuide();
-    if (exclude !== 'channelName') hideChannelName();
-  }
+     player.configure({ abr: { enabled: true } });
+     await player.load(ch.manifestUri);
+     populateSettingsForChannel();
 
-  /****************
-   * keyboard/touch
-   ****************/
-  let iChannelSettingsIndex = 0;
-  document.addEventListener('keydown', (e) => {
-    if (document.activeElement === oSearch) return;
+     try { await oPlayer.play(); } catch(playErr) { console.warn('Autoplay blocked or failed:', playErr); }
+     
+     if (!options.keepIdleUntilPlaying && oIdle) {
+         oIdle.classList.add('HIDDEN');
+     }
 
-    // When nav is open and groups are opened
-    if (bNavOpened && bGroupsOpened) {
-      const items = Array.from(document.querySelectorAll('#dynamic_groups_list li'));
-      if (!items.length) return;
-      let idx = items.findIndex(i => i === document.activeElement || i.classList.contains('selected'));
-      if (idx === -1) idx = 0;
-      if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(items.length-1, idx+1); items[idx].focus(); items.forEach(x=>x.classList.remove('selected')); items[idx].classList.add('selected'); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(0, idx-1); items[idx].focus(); items.forEach(x=>x.classList.remove('selected')); items[idx].classList.add('selected'); }
-      else if (e.key === 'Enter') { e.preventDefault(); items[idx]?.click(); }
-      else if (e.key === 'Escape' || e.key === 'ArrowLeft') { e.preventDefault(); hideGroups(); }
-      return;
-    }
+   } catch (err) {
+     console.error('Error loading channel', ch.name, err);
+     showIdle();
+   }
+ }
 
-    // When nav is open normally (channel list navigation)
-    if (bNavOpened) {
-      if (e.key === 'ArrowUp') { e.preventDefault(); loadChannel(iCurrentChannel - 1); }
-      else if (e.key === 'ArrowDown') { e.preventDefault(); loadChannel(iCurrentChannel + 1); }
-      else if (e.key === 'ArrowLeft') { e.preventDefault(); showGroups(); }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); hideNav(); }
-      else if (e.key === 'Enter') { e.preventDefault(); loadChannel(iCurrentChannel); hideNav(); }
-      else if (e.key === 'Escape') { e.preventDefault(); hideNav(); }
-      return;
-    }
+ /**************************
+  * resolution & subtitles (settings)
+  **************************/
+ function populateSettingsForChannel() {
+   updateStreamInfo();
+   renderChannelSettings();
+ }
 
-    // Channel settings navigation
-    if (oChannelSettings.classList.contains('visible')) {
-      if (e.key === 'Escape' || e.key === 'ArrowLeft') { e.preventDefault(); hideChannelSettings(); }
-      else if (e.key === 'Enter') {
-        const opt = channelSettingsOptions[iChannelSettingsIndex];
-        if (!opt) return;
-        if (opt.id === 'channel-setting-favourite') toggleFavourite();
-        if (opt.id === 'channel-setting-audio') openAudioSubModal();
-        if (opt.id === 'channel-setting-video') openVideoTrackModal();
-      } else if (e.key === 'ArrowUp') { e.preventDefault(); iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1); renderChannelSettings(); }
-      else if (e.key === 'ArrowDown') { e.preventDefault(); iChannelSettingsIndex = Math.min(channelSettingsOptions.length - 1, iChannelSettingsIndex + 1); renderChannelSettings(); }
-      return;
-    }
+ function updateStreamInfo() {
+   const streamInfoEl = getEl('stream-info');
+   try {
+     const track = player?.getVariantTracks()?.find(t => t.active);
+     if (track && streamInfoEl) {
+       streamInfoEl.innerHTML = `codecs: ${track.videoCodec || track.audioCodec}<br>res: ${track.width}×${track.height}<br>bps: ${(track.bandwidth/1e6).toFixed(2)}M`;
+       streamInfoEl.classList.remove('HIDDEN');
+     } else if (streamInfoEl) {
+       streamInfoEl.classList.add('HIDDEN');
+     }
+   } catch(e){}
+ }
 
-    // global keys
-    switch (e.key) {
-      case 'ArrowLeft': showNav(); break;
-      case 'ArrowRight': showChannelSettings(); break;
-      case 'Enter': showChannelName(); break;
-      case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
-      case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
-      case 'h': showGuide(); break;
-      case 'Escape': hideChannelName(); break;
-    }
-    e.preventDefault();
-  });
+ /* ---- floating modal helpers ---- */
+ function openVideoTrackModal() {
+   if (!player) return;
+   videoTrackList.innerHTML = '';
+   // Auto option
+   const autoEl = document.createElement('div');
+   autoEl.className = 'modal-item';
+   autoEl.tabIndex = 0;
+   autoEl.textContent = 'Auto (Adaptive)';
+   autoEl.onclick = () => {
+     player.configure({ abr: { enabled: true }});
+     closeVideoModal();
+   };
+   videoTrackList.appendChild(autoEl);
 
-  // search input
-  oSearch.addEventListener('input', () => {
-    buildNav();
-    if (aFilteredChannelKeys.length) loadChannel(0);
-    else { player?.unload?.(); showIdle(); }
-  });
+   // Unique resolutions
+   const variants = player.getVariantTracks() || [];
+   const resols = [...new Map(variants.filter(v => v.height).map(v => [v.height, v.height])).values()].sort((a,b)=>b-a);
+   resols.forEach(h => {
+     const li = document.createElement('div');
+     li.className = 'modal-item';
+     li.tabIndex = 0;
+     li.textContent = `${h}p`;
+     li.onclick = () => {
+       player.configure({ abr: { enabled: false }});
+       const variant = variants.filter(v => v.height === h).sort((a,b)=>b.bandwidth - a.bandwidth)[0];
+       if (variant) player.selectVariantTrack(variant, true);
+       closeVideoModal();
+     };
+     li.appendChild(li);
+   });
 
-  // touch gestures
-  let touchStartX=0, touchStartY=0, touchEndX=0, touchEndY=0;
-  document.addEventListener('touchstart', (ev) => { touchStartX=ev.touches[0].clientX; touchStartY=ev.touches[0].clientY; });
-  document.addEventListener('touchmove', (ev) => { touchEndX=ev.touches[0].clientX; touchEndY=ev.touches[0].clientY; });
-  document.addEventListener('touchend', () => {
-    const dx = touchEndX - touchStartX, dy = touchEndY - touchStartY;
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx > 50) { if (oChannelSettings.classList.contains('visible')) hideChannelSettings(); else showNav(); }
-      else if (dx < -50) { if (oNav.classList.contains('visible')) hideNav(); else showChannelSettings(); }
-    } else {
-      if (dy > 50) loadChannel(iCurrentChannel + 1);
-      else if (dy < -50) loadChannel(iCurrentChannel - 1);
-    }
-    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) showChannelName();
-  });
+   showModal(videoTrackModal);
+ }
 
-  // unmute on first interaction
-  function unmuteOnFirstUserAction() {
-    if (oPlayer && oPlayer.muted) oPlayer.muted = false;
-    if (oPlayBtn) oPlayBtn.classList.add('HIDDEN');
-    document.removeEventListener('click', unmuteOnFirstUserAction);
-    document.removeEventListener('touchstart', unmuteOnFirstUserAction);
-    document.removeEventListener('keydown', unmuteOnFirstUserAction);
-  }
-  document.addEventListener('click', unmuteOnFirstUserAction);
-  document.addEventListener('touchstart', unmuteOnFirstUserAction);
-  document.addEventListener('keydown', unmuteOnFirstUserAction);
+ function closeVideoModal() { hideModal(videoTrackModal); }
 
-  oPlayBtn?.addEventListener('click', () => {
-    unmuteOnFirstUserAction();
-    if (aFilteredChannelKeys.length) loadChannel(iCurrentChannel);
-  });
+ function openAudioSubModal() {
+   if (!player) return;
+   audioTrackList.innerHTML = '';
+   textTrackList.innerHTML = '';
 
-  /**********************
-   * init + start point
-   **********************/
-  (function init() {
-    // number channels
-    let i = 1;
-    for (const k in channels) { channels[k].number = i++; channels[k].key = k; }
+   // Audio tracks
+   const audioLangs = player.getAudioLanguages();
+   if (audioLangs.length > 1) {
+     audioLangs.forEach(lang => {
+       const li = document.createElement('div');
+       li.className = 'modal-item';
+       li.tabIndex = 0;
+       li.textContent = `Audio: ${lang}`;
+       li.onclick = () => {
+         try { player.selectAudioLanguage(lang); } catch(e){ console.warn(e); }
+         hideModal(audioSubModal);
+       };
+       audioTrackList.appendChild(li);
+     });
+   } else {
+     audioTrackList.innerHTML = '<div class="modal-item">No alternate audio tracks</div>';
+   }
 
-    applyLang();
-    document.getElementById('all_channels_group')?.classList.add('selected');
+   // Text tracks
+   const textTracks = player.getTextTracks();
+   if (textTracks.length) {
+     textTracks.forEach((t, idx) => {
+       const li = document.createElement('div');
+       li.className = 'modal-item';
+       li.tabIndex = 0;
+       li.textContent = `Subtitle: ${t.language || t.label || ('Track ' + (idx+1))}`;
+       li.onclick = () => {
+         try { player.setTextTrackVisibility(true); player.selectTextTrack(t); } catch(e){ console.warn(e); }
+         hideModal(audioSubModal);
+       };
+       textTrackList.appendChild(li);
+     });
+     // Off option
+     const off = document.createElement('div');
+     off.className = 'modal-item';
+     off.tabIndex = 0;
+     off.textContent = 'Turn Off Subtitles';
+     off.onclick = () => {
+       try { player.setTextTrackVisibility(false); } catch(e){}
+       hideModal(audioSubModal);
+     };
+     textTrackList.appendChild(off);
+   } else {
+    textTrackList.innerHTML = '<div class="modal-item">No subtitles available</div>';
+   }
+   showModal(audioSubModal);
+ }
 
-    populateGroupNav();
-    buildNav();
-    loadFavoritesFromStorage();
+ function showModal(modal) {
+   modal.classList.add('visible');
+   modal.setAttribute('aria-hidden','false');
+   modal.querySelector('.modal-item')?.focus();
+   const onEsc = (ev) => { if (ev.key === 'Escape') { hideModal(modal); document.removeEventListener('keydown', onEsc); } };
+   document.addEventListener('keydown', onEsc);
+ }
 
-    // init player (non-blocking)
-    initPlayerOnce().catch(()=>{});
+ function hideModal(modal) {
+   modal.classList.remove('visible');
+   modal.setAttribute('aria-hidden','true');
+ }
 
-    // init EPG in background
-    loadAllEpg().then(()=>{ buildNav(); }).catch(()=>{});
+ [videoTrackModal, audioSubModal].forEach(m => {
+   m.addEventListener('click', (ev) => { if (ev.target === m) hideModal(m); });
+ });
 
-    // start playlist logic: autoplay aniplus for new visitor else resume
-    playlistReadyHandler();
-  })();
+ /****************
+  * navigation UI
+  ****************/
+ function applyLang() {
+   document.querySelectorAll('[data-langid]').forEach(el => {
+     const k = el.dataset.langid;
+     el.innerHTML = i18n.en?.[k] || k;
+   });
+ }
 
-  // small utilities
-  function hideChannelName() { oChannelInfo.classList.remove('visible'); }
+ function populateGroupNav() {
+   const list = oGroupList;
+   Array.from(list.querySelectorAll('li:not(#favourites_group):not(#all_channels_group)')).forEach(li => li.remove());
+   const providers = [...new Set(Object.values(channels).map(c => c.provider).filter(Boolean))].sort();
+   providers.forEach(name => {
+     const li = document.createElement('li');
+     li.dataset.group = name;
+     li.style.cssText = 'padding: 6px 20px; cursor: pointer;';
+     li.tabIndex = 0;
+     li.textContent = name.toUpperCase();
+     li.onclick = (e) => selectGroupListItem(e.currentTarget);
+     li.onkeydown = (ev) => { if (ev.key === 'Enter') li.click(); };
+     list.appendChild(li);
+   });
+ }
 
-  // expose some global helpers
-  window.showGuide = showGuide;
-  window.hideGuide = hideGuide;
-  window.showNav = showNav;
-  window.hideNav = hideNav;
-  window.openVideoTrackModal = openVideoTrackModal;
-  window.openAudioSubModal = openAudioSubModal;
+ function selectGroupListItem(item) {
+   document.querySelectorAll('#group_list li.selected').forEach(el => el.classList.remove('selected'));
+   item.classList.add('selected');
+   if (item.id === 'guide_group') { showGuide(); } else {
+     sSelectedGroup = item.dataset.group;
+     buildNav();
+     hideGroups();
+   }
+ }
+
+ function showNav() { hideAllPopups('nav'); bNavOpened = true; oNav.classList.add('visible'); getEl('channel_list').querySelector('li')?.focus(); }
+ function hideNav() { bNavOpened = false; bGroupsOpened = false; oNav.classList.remove('visible'); getEl('list_container').classList.remove('groups-opened'); }
+ function showGroups() { if (bNavOpened) { bGroupsOpened = true; getEl('list_container').classList.add('groups-opened'); getEl('dynamic_groups_list').querySelector('li')?.focus(); } }
+ function hideGroups() { bGroupsOpened = false; getEl('list_container').classList.remove('groups-opened'); getEl('channel_list').querySelector('li')?.focus(); }
+
+ function showChannelSettings() { hideAllPopups('channelSettings'); oChannelSettings.classList.add('visible'); renderChannelSettings(); oChannelSettingsList.querySelector('li')?.focus(); }
+ function hideChannelSettings() { oChannelSettings.classList.remove('visible'); }
+
+ function showGuide() { getEl('guide').style.display = 'flex'; renderGuideContent(); }
+ function hideGuide() { getEl('guide').style.display = 'none'; }
+
+ function renderGuideContent() {
+   getEl('guide_content').innerHTML = `<h2 style="color:white">${i18n.en?.guideControlsHeadline}</h2><ul style="color:white; list-style: none; padding: 0;">${i18n.en?.guideControls}</ul>`;
+ }
+
+ function hideAllPopups(exclude) {
+   if (exclude !== 'nav') hideNav();
+   if (exclude !== 'channelSettings') hideChannelSettings();
+   if (exclude !== 'guide') hideGuide();
+   if (exclude !== 'channelName') hideChannelName();
+ }
+
+ /****************
+  * keyboard/touch
+  ****************/
+ document.addEventListener('keydown', (e) => {
+   if (document.activeElement === oSearch || getEl('videoTrackModal').classList.contains('visible') || getEl('audioSubModal').classList.contains('visible')) return;
+
+   // When nav is open and groups are opened
+   if (bNavOpened && bGroupsOpened) {
+     e.preventDefault();
+     const items = Array.from(document.querySelectorAll('#group_list li[data-group]'));
+     let idx = items.findIndex(i => i === document.activeElement);
+     if (e.key === 'ArrowDown') { idx = Math.min(items.length-1, idx+1); items[idx]?.focus(); }
+     else if (e.key === 'ArrowUp') { idx = Math.max(0, idx-1); items[idx]?.focus(); }
+     else if (e.key === 'Enter') { document.activeElement?.click(); }
+     else if (e.key === 'Escape' || e.key === 'ArrowRight') { hideGroups(); }
+     return;
+   }
+
+   // When nav is open normally (channel list navigation)
+   if (bNavOpened) {
+     e.preventDefault();
+     if (e.key === 'ArrowUp') { loadChannel(iCurrentChannel - 1); }
+     else if (e.key === 'ArrowDown') { loadChannel(iCurrentChannel + 1); }
+     else if (e.key === 'ArrowLeft') { showGroups(); }
+     else if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'Escape') { hideNav(); }
+     return;
+   }
+
+   // Channel settings navigation
+   if (oChannelSettings.classList.contains('visible')) {
+     e.preventDefault();
+     const items = Array.from(oChannelSettingsList.querySelectorAll('li'));
+     let idx = items.findIndex(i => i === document.activeElement);
+     if (e.key === 'ArrowUp') { idx = Math.max(0, idx - 1); items[idx]?.focus(); }
+     else if (e.key === 'ArrowDown') { idx = Math.min(items.length - 1, idx + 1); items[idx]?.focus(); }
+     else if (e.key === 'Enter') { document.activeElement?.click(); }
+     else if (e.key === 'Escape' || e.key === 'ArrowLeft') { hideChannelSettings(); }
+     return;
+   }
+
+   // global keys
+   e.preventDefault();
+   switch (e.key) {
+     case 'ArrowLeft': showNav(); break;
+     case 'ArrowRight': showChannelSettings(); break;
+     case 'Enter': showChannelName(); break;
+     case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
+     case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
+     case 'h': showGuide(); break;
+     case 'Escape': hideAllPopups(); break;
+   }
+ });
+
+ oSearch.addEventListener('input', () => {
+   buildNav();
+   if (aFilteredChannelKeys.length) loadChannel(0);
+   else { player?.unload?.(); showIdle(); }
+ });
+
+ let touchStartX=0, touchStartY=0;
+ document.addEventListener('touchstart', (ev) => { touchStartX=ev.touches[0].clientX; touchStartY=ev.touches[0].clientY; }, {passive: true});
+ document.addEventListener('touchend', (ev) => {
+   const touchEndX = ev.changedTouches[0].clientX, touchEndY = ev.changedTouches[0].clientY;
+   const dx = touchEndX - touchStartX, dy = touchEndY - touchStartY;
+   if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+     if (dx > 0) { bNavOpened ? hideNav() : showNav(); } else { showChannelSettings(); }
+   } else if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) {
+     if (dy > 0) loadChannel(iCurrentChannel - 1); else loadChannel(iCurrentChannel + 1);
+   } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+     showChannelName();
+   }
+ });
+
+ function unmuteOnFirstUserAction() {
+   if (oPlayer && oPlayer.muted) oPlayer.muted = false;
+   if (oPlayBtn) oPlayBtn.classList.add('HIDDEN');
+   document.removeEventListener('click', unmuteOnFirstUserAction);
+   document.removeEventListener('keydown', unmuteOnFirstUserAction);
+ }
+ document.addEventListener('click', unmuteOnFirstUserAction);
+ document.addEventListener('keydown', unmuteOnFirstUserAction);
+
+ oPlayBtn?.addEventListener('click', () => {
+   if (aFilteredChannelKeys.length) loadChannel(iCurrentChannel);
+ });
+
+ /**********************
+  * init + start point
+  **********************/
+ (async function init() {
+   let i = 1;
+   for (const k in channels) { channels[k].number = i++; channels[k].key = k; }
+   applyLang();
+   loadFavoritesFromStorage();
+   populateGroupNav();
+   buildNav();
+
+   await initPlayerOnce();
+   await loadAllEpg();
+   
+   const lastWatchedKey = localStorage.getItem('iptvLastWatched');
+   const startKey = aFilteredChannelKeys.includes(lastWatchedKey) ? lastWatchedKey : (aFilteredChannelKeys.includes('aniplus') ? 'aniplus' : aFilteredChannelKeys[0]);
+   const startIdx = aFilteredChannelKeys.indexOf(startKey);
+   
+   if (startIdx > -1) {
+       loadChannel(startIdx);
+   } else {
+       showIdle();
+   }
+ })();
 });
 </script>
 </body>
