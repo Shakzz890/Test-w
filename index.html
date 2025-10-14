@@ -21,7 +21,7 @@
       position: fixed; inset: 0;
       z-index: 0;
       background: url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop') center/cover no-repeat;
-      transition: opacity 0.45s ease;
+      transition: opacity 0.6s ease;
       opacity: 1;
       pointer-events: none;
     }
@@ -34,7 +34,7 @@
       background: transparent;
       cursor: none;
       opacity: 0;           /* hidden until playing */
-      transition: opacity 0.45s ease;
+      transition: opacity 0.6s ease;
     }
     #player.visible { opacity: 1; }
 
@@ -103,34 +103,6 @@
     #ch_logo { width:80px; height:80px; display:flex; align-items:center; justify-content:center; margin-right:15px; }
     #ch_logo img { max-width:100%; max-height:100%; object-fit:contain; }
 
-    /* floating center modal */
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: rgba(0,0,0,0.6);
-      z-index: 120;
-      visibility: hidden;
-      opacity: 0;
-      transition: opacity 0.18s ease, visibility 0.18s;
-    }
-    .modal.visible { visibility: visible; opacity: 1; }
-    .modal-box {
-      background: linear-gradient(180deg, rgba(20,20,20,0.98), rgba(12,12,12,0.96));
-      color: #fff;
-      padding: 18px;
-      border-radius: 12px;
-      min-width: 260px;
-      max-width: 720px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-    }
-    .modal-box h3 { margin: 0 0 12px 0; font-size: 20px; }
-    .modal-list { display:flex; flex-direction:column; gap:8px; max-height: 60vh; overflow:auto; padding-right:8px; }
-    .modal-item { padding:10px 12px; background: rgba(255,255,255,0.03); border-radius:8px; cursor:pointer; text-align:left; }
-    .modal-item:hover, .modal-item:focus { outline: none; background: rgba(65,105,225,0.12); }
-
     /* small helper */
     .custom-scrollbar::-webkit-scrollbar { width:10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: royalblue; border-radius:20px; border:2px solid darkblue; }
@@ -138,7 +110,7 @@
 </head>
 <body>
   <!-- persistent background -->
-  <div id="background-layer" aria-hidden="true"></div>
+  <div id="background-layer"></div>
 
   <!-- video player (Shaka) -->
   <video id="player" autoplay muted playsinline></video>
@@ -146,26 +118,26 @@
   <!-- UI elements -->
   <div id="ui_elements">
     <!-- loader overlay: non-blocking (pointer-events: none) -->
-    <div id="channel_loader_overlay" class="fullscreen" role="status" aria-live="polite">
+    <div id="channel_loader_overlay" class="fullscreen">
       <div class="loader-content">
         <span class="loading-text">Loading Channel...</span>
-        <div class="loader-bar" aria-hidden="true"></div>
+        <div class="loader-bar"></div>
       </div>
     </div>
 
     <!-- idle branding -->
-    <div id="idle_animation" class="fullscreen" aria-hidden="false">
+    <div id="idle_animation" class="fullscreen">
       <div class="idle-branding">
         <h1>SHAKZZ TV</h1>
         <p>FOR FREE</p>
       </div>
-      <div id="play_button_overlay" role="button" aria-label="Play" tabindex="0">
+      <div id="play_button_overlay">
         <svg viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>
       </div>
     </div>
 
     <!-- left nav -->
-    <div id="nav" aria-hidden="true">
+    <div id="nav">
       <div id="brand-header">
         <svg viewBox="0 0 24 24" fill="white" style="width:35px;height:35px;margin-right:14px;">
           <path d="M21,3H3C1.89,3,1,3.89,1,5V17C1,18.11,1.89,19,3,19H8V21H16V19H21C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17M16,11L11,15V7L16,11Z"></path>
@@ -179,38 +151,38 @@
 
       <div id="list_container_scrollarea" style="height:calc(100% - 95px - 64px);">
         <div id="list_container">
-          <div id="group_list" class="custom-scrollbar" role="menu">
+          <div id="group_list" class="custom-scrollbar">
             <ul id="main_nav" style="list-style:none;padding:0;margin:0;">
-              <li id="epg_group" data-langid="epg_menu" style="padding:6px 20px;cursor:pointer;" tabindex="0">EPG</li>
-              <li id="guide_group" data-langid="guide_menu" style="padding:6px 20px;cursor:pointer;" tabindex="0">GUIDE</li>
+              <li id="epg_group" data-langid="epg_menu" style="padding:6px 20px;cursor:pointer;" tabindex="0"></li>
+              <li id="guide_group" data-langid="guide_menu" style="padding:6px 20px;cursor:pointer;" tabindex="0"></li>
             </ul>
 
             <div style="margin:16px 6px;height:1px;background:linear-gradient(to right, rgba(0,0,0,0), rgba(65,105,225,0.75), rgba(0,0,0,0));"></div>
 
-            <h2 class="list_headline i18n" data-langid="groups">CATEGORY</h2>
+            <h2 class="list_headline i18n" data-langid="groups"></h2>
             <ul id="dynamic_groups_list" style="list-style:none;margin:0;padding:0;">
-              <li id="favourites_group" data-group="__fav" data-langid="favourites" style="padding:6px 20px;cursor:pointer;" tabindex="0">FAVORITE</li>
-              <li id="all_channels_group" data-group="__all" data-langid="allChannels" style="padding:6px 20px;cursor:pointer;" tabindex="0">ALL CHANNELS</li>
+              <li id="favourites_group" data-group="__fav" data-langid="favourites" style="padding:6px 20px;cursor:pointer;" tabindex="0"></li>
+              <li id="all_channels_group" data-group="__all" data-langid="allChannels" style="padding:6px 20px;cursor:pointer;" tabindex="0"></li>
               <!-- provider items inserted dynamically with tabindex=0 -->
             </ul>
           </div>
 
-          <div id="channel_list" class="custom-scrollbar" style="width:50%;" role="listbox" aria-label="Channels"></div>
+          <div id="channel_list" class="custom-scrollbar" style="width:50%;"></div>
         </div>
       </div>
     </div>
 
     <!-- right channel settings -->
-    <div id="channel_settings" aria-hidden="true">
+    <div id="channel_settings">
       <div id="list_container_right_scrollarea" style="height:100%;overflow:auto;">
         <div id="stream-info" class="HIDDEN" style="color:#fff;padding:20px 30px 0;font-size:14px;"></div>
-        <h2 class="list_headline i18n" data-langid="channelSettings">Channel settings</h2>
+        <h2 class="list_headline i18n" data-langid="channelSettings"></h2>
         <ul id="channel_settings_list" style="list-style:none;margin:0;padding:0;"></ul>
       </div>
     </div>
 
     <!-- channel info -->
-    <div id="channel_info" aria-hidden="true">
+    <div id="channel_info">
       <div id="ch_logo"></div>
       <div id="channel_text_container">
         <div id="channel_name" style="font-size:clamp(22px,3.5vw,32px);font-weight:bold;"></div>
@@ -227,42 +199,26 @@
     </div>
   </div>
 
-  <!-- Floating center modals -->
-  <div id="videoTrackModal" class="modal" role="dialog" aria-hidden="true" aria-label="Video Tracks">
-    <div class="modal-box" role="document">
-      <h3>Video Track</h3>
-      <div id="videoTrackList" class="modal-list"></div>
-    </div>
-  </div>
-
-  <div id="audioSubModal" class="modal" role="dialog" aria-hidden="true" aria-label="Audio and Subtitles">
-    <div class="modal-box" role="document">
-      <h3>Audio / Subtitles</h3>
-      <div id="audioTrackList" class="modal-list"></div>
-      <hr style="opacity:0.06;margin:10px 0;">
-      <div id="textTrackList" class="modal-list"></div>
-    </div>
-  </div>
-
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   /*******************************
-   * Channels + Config
+   * Channels + Config (put your full list here)
    *******************************/
   const channels = {
+    /* Replace/extend with your full original 'channels' object */
     one_ph: { name: "One PH", type: "hls", manifestUri: "https://edge-stream-01-sg.vidio.com/live/201/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/One_PH_logo.svg/2560px-One_PH_logo.svg.png", provider: "Cignal" },
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", provider: "Cignal" },
     buko: { name: "BuKo", type: "hls", manifestUri: "https://yt-live.slay.one/watch?v=kPh2wePj5I4&hls=1", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/8/87/BuKo_channel_logo.svg/1200px-BuKo_channel_logo.svg.png", provider: "Cignal" },
     aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://corsproxy.io/?https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", provider: "Anime" },
     anione: { name: "Ani One", type: "hls", manifestUri: "https://corsproxy.io/?https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", provider: "Anime" }
-    // ... add the rest of your channels ...
+    /* ...rest... */
   };
 
   const EPG_URLS = [
     "https://raw.githubusercontent.com/AqFad2811/epg/main/epg.xml",
     "https://raw.githubusercontent.com/AqFad2811/epg/main/unifitv.xml",
     "https://raw.githubusercontent.com/AqFad2811/epg/main/astro.xml"
-    // ... your EPG urls ...
+    // ...your EPG list...
   ];
 
   const i18n = {
@@ -273,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
       epg_menu: "EPG",
       guide_menu: "GUIDE",
       guideControlsHeadline: "Controls",
-      groups: "CATEGORY",
+      groups: "PROVIDERS",
       channelSettings: "Channel settings",
       channelSettingSubtitle: "subtitle / audio",
       channelSettingFavs: "Add to Favorites",
@@ -282,8 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const channelSettingsOptions = [
-    { id: 'channel-setting-video', langid: 'Video Track' },
-    { id: 'channel-setting-audio', langid: 'Audio/Subtitles' },
+    { id: 'channel-setting-res', langid: 'Resolution' },
+    { id: 'channel-setting-subs', langid: 'channelSettingSubtitle' },
     { id: 'channel-setting-favourite', langid: 'channelSettingFavs' }
   ];
 
@@ -306,12 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const oChEpg = getEl('channel_epg');
   const oSearch = getEl('search_field');
   const oGroupList = getEl('dynamic_groups_list');
-
-  const videoTrackModal = getEl('videoTrackModal');
-  const audioSubModal = getEl('audioSubModal');
-  const videoTrackList = getEl('videoTrackList');
-  const audioTrackList = getEl('audioTrackList');
-  const textTrackList = getEl('textTrackList');
+  const oMainNav = getEl('main_nav');
 
   let player = null;
   let aFilteredChannelKeys = [];
@@ -458,22 +409,21 @@ document.addEventListener('DOMContentLoaded', () => {
     oChannelSettingsList.innerHTML = '';
     if (!aFilteredChannelKeys.length) return;
     const ch = channels[aFilteredChannelKeys[iCurrentChannel]];
+    const resItem = document.createElement('li');
+    resItem.id = 'setting-resolution';
+    resItem.style.padding = '10px 20px';
+    resItem.style.cursor = 'pointer';
+    resItem.textContent = 'Resolution: detecting...';
+    resItem.onclick = () => showResolutionOptions();
+    oChannelSettingsList.appendChild(resItem);
 
-    const videoItem = document.createElement('li');
-    videoItem.id = 'setting-video';
-    videoItem.style.padding = '10px 20px';
-    videoItem.style.cursor = 'pointer';
-    videoItem.textContent = 'Video Track';
-    videoItem.onclick = () => openVideoTrackModal();
-    oChannelSettingsList.appendChild(videoItem);
-
-    const audioItem = document.createElement('li');
-    audioItem.id = 'setting-audio';
-    audioItem.style.padding = '10px 20px';
-    audioItem.style.cursor = 'pointer';
-    audioItem.textContent = 'Audio / Subtitles';
-    audioItem.onclick = () => openAudioSubModal();
-    oChannelSettingsList.appendChild(audioItem);
+    const subItem = document.createElement('li');
+    subItem.id = 'setting-subtitles';
+    subItem.style.padding = '10px 20px';
+    subItem.style.cursor = 'pointer';
+    subItem.textContent = 'Subtitles: detecting...';
+    subItem.onclick = () => toggleSubtitleList();
+    oChannelSettingsList.appendChild(subItem);
 
     const favItem = document.createElement('li');
     favItem.id = 'setting-fav';
@@ -538,29 +488,31 @@ document.addEventListener('DOMContentLoaded', () => {
       showIdle();
     });
 
-    // buffering events: show loader + keep background visible
+    // show background during buffering events
     player.addEventListener('buffering', (e) => {
       if (e.buffering) {
+        // show background & loader while buffering
         oBackground.style.opacity = '1';
         oLoader.classList.add('active');
       } else {
-        // after buffering ends we'll wait for playing/loadeddata to hide loader
+        // hiding loader only when playing will be handled by media events
       }
     });
 
+    // when adaptation occurs update info
     player.addEventListener('adaptation', () => updateStreamInfo());
 
     // media element events
     oPlayer.addEventListener('loadeddata', onMediaReady);
     oPlayer.addEventListener('playing', onMediaReady);
-    oPlayer.addEventListener('error', () => console.warn('HTMLMediaElement error'));
   }
 
   function onMediaReady() {
     // reveal video, hide loader, fade out background
-    if (!oPlayer.classList.contains('visible')) oPlayer.classList.add('visible');
+    oPlayer.classList.add('visible');
     oLoader.classList.remove('active');
     if (oIdle) oIdle.classList.add('HIDDEN');
+    // subtle delay to avoid flicker
     setTimeout(() => { oBackground.style.opacity = '0'; }, 260);
     isFirstPlay = false;
   }
@@ -644,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try { await oPlayer.play(); } catch(playErr) { console.warn('Autoplay blocked or failed:', playErr); }
 
-      // hide idle earlier unless we explicitly keep it until playing
+      // if not keeping idle until playing, we hide idle overlay earlier
       if (!options.keepIdleUntilPlaying) {
         if (oIdle) oIdle.classList.add('HIDDEN');
         setTimeout(()=>{ oBackground.style.opacity = '0'; }, 360);
@@ -654,176 +606,119 @@ document.addEventListener('DOMContentLoaded', () => {
       showIdle();
     } finally {
       // final hide of loader is handled by onMediaReady (when playing)
+      // but if play failed keep loader off after a timeout
       setTimeout(() => {
-        if (oPlayer.classList.contains('visible')) {
+        if (!oPlayer.classList.contains('visible')) {
+          // keep loader active until playing — intentionally do nothing
+        } else {
           oLoader.classList.remove('active');
         }
-      }, 900);
+      }, 800);
     }
   }
 
   /**************************
-   * resolution & subtitles (settings)
+   * resolution & subtitles
    **************************/
   function populateSettingsForChannel() {
-    // Update right panel text (stream-info and channel settings items)
-    updateStreamInfo();
-    renderChannelSettings();
-  }
+    const resEl = document.getElementById('setting-resolution');
+    const subEl = document.getElementById('setting-subtitles');
 
-  function updateStreamInfo() {
-    const streamInfoEl = getEl('stream-info');
     try {
-      const track = player?.getVariantTracks()?.find(t => t.active);
-      if (track && streamInfoEl) {
-        streamInfoEl.innerHTML = `codecs: ${track.videoCodec || track.audioCodec}<br>res: ${track.width}×${track.height}<br>bps: ${(track.bandwidth/1e6).toFixed(2)}M`;
-        streamInfoEl.classList.remove('HIDDEN');
-      } else if (streamInfoEl) {
-        streamInfoEl.classList.add('HIDDEN');
+      const tracks = player?.getVariantTracks() || [];
+      const resOptions = [...new Map(tracks.filter(t=>t.height).map(t=>[t.height, { height:t.height, width:t.width, bandwidth:t.bandwidth }])).values()]
+                          .sort((a,b)=>b.height - a.height);
+      if (resOptions.length) {
+        const active = tracks.find(t => t.active && t.height) || {};
+        resEl.textContent = `Resolution: ${active.height ? active.height + 'p' : 'Auto'}`;
+        resEl._options = resOptions;
+      } else {
+        resEl.textContent = 'Resolution: Auto';
+        resEl._options = [];
       }
-    } catch(e){}
-  }
-
-  /* ---- floating modal helpers ---- */
-  function openVideoTrackModal() {
-    if (!player) return;
-    videoTrackList.innerHTML = '';
-    // Auto option
-    const autoEl = document.createElement('div');
-    autoEl.className = 'modal-item';
-    autoEl.tabIndex = 0;
-    autoEl.textContent = 'Auto (Adaptive)';
-    autoEl.onclick = () => {
-      player.configure({ abr: { enabled: true }});
-      closeVideoModal();
-    };
-    videoTrackList.appendChild(autoEl);
-
-    // Unique resolutions
-    const variants = player.getVariantTracks() || [];
-    const resols = [...new Map(variants.filter(v => v.height).map(v => [v.height, v.height])).values()].sort((a,b)=>b-a);
-    resols.forEach(h => {
-      const li = document.createElement('div');
-      li.className = 'modal-item';
-      li.tabIndex = 0;
-      li.textContent = `${h}p`;
-      li.onclick = () => {
-        player.configure({ abr: { enabled: false }});
-        // choose a variant that matches height (pick highest bandwidth for that height)
-        const variant = variants.filter(v => v.height === h).sort((a,b)=>b.bandwidth - a.bandwidth)[0];
-        if (variant) player.selectVariantTrack(variant, true);
-        closeVideoModal();
-      };
-      videoTrackList.appendChild(li);
-    });
-
-    showModal(videoTrackModal);
-  }
-
-  function closeVideoModal() { hideModal(videoTrackModal); }
-
-  function openAudioSubModal() {
-    if (!player) return;
-    audioTrackList.innerHTML = '';
-    textTrackList.innerHTML = '';
-
-    // Audio tracks (from variants)
-    const variants = player.getVariantTracks() || [];
-    const audioLangs = [...new Set(variants.map(v => v.audioLanguage).filter(Boolean))];
-    if (audioLangs.length) {
-      audioLangs.forEach(lang => {
-        const li = document.createElement('div');
-        li.className = 'modal-item';
-        li.tabIndex = 0;
-        li.textContent = `Audio: ${lang}`;
-        li.onclick = () => {
-          try { player.selectAudioLanguage(lang); } catch(e){ console.warn(e); }
-          hideModal(audioSubModal);
-        };
-        audioTrackList.appendChild(li);
-      });
-    } else {
-      const none = document.createElement('div');
-      none.className = 'modal-item';
-      none.textContent = 'No alternate audio tracks';
-      audioTrackList.appendChild(none);
+    } catch(e){
+      if (resEl) resEl.textContent = 'Resolution: Auto';
+      if (resEl) resEl._options = [];
     }
 
-    // Text tracks (player.getTextTracks) + HTML tracks
-    const textTracks = player.getTextTracks?.() || [];
-    const htmlTracks = Array.from(oPlayer.textTracks || []);
-    if (textTracks.length || htmlTracks.length) {
-      textTracks.forEach((t, idx) => {
-        const li = document.createElement('div');
-        li.className = 'modal-item';
-        li.tabIndex = 0;
-        li.textContent = `Subtitle: ${t.language || t.id || ('Track ' + (idx+1))}`;
-        li.onclick = () => {
-          try { player.setTextTrackVisibility(true); player.selectTextTrack(t); } catch(e){ console.warn(e); }
-          hideModal(audioSubModal);
-        };
-        textTrackList.appendChild(li);
-      });
-      // also include HTML native text tracks if present
-      htmlTracks.forEach((t, idx) => {
-        const li = document.createElement('div');
-        li.className = 'modal-item';
-        li.tabIndex = 0;
-        li.textContent = `Subtitle: ${t.language || t.label || ('Track ' + (idx+1))}`;
-        li.onclick = () => {
-          // disable all then enable this
-          Array.from(oPlayer.textTracks).forEach(tt => tt.mode = 'disabled');
-          t.mode = 'showing';
-          hideModal(audioSubModal);
-        };
-        textTrackList.appendChild(li);
-      });
-
-      // off option
-      const off = document.createElement('div');
-      off.className = 'modal-item';
-      off.tabIndex = 0;
-      off.textContent = 'Turn Off Subtitles';
-      off.onclick = () => {
-        try { player.setTextTrackVisibility(false); } catch(e){ Array.from(oPlayer.textTracks||[]).forEach(tt => tt.mode='disabled'); }
-        hideModal(audioSubModal);
-      };
-      textTrackList.appendChild(off);
-    } else {
-      const none = document.createElement('div');
-      none.className = 'modal-item';
-      none.textContent = 'No subtitles available';
-      textTrackList.appendChild(none);
+    try {
+      const textTracks = player?.getTextTracks?.() || [];
+      const htmlTracks = Array.from(oPlayer.textTracks || []);
+      const combined = [...textTracks, ...htmlTracks];
+      if (combined.length) {
+        const active = combined.find(t => t.active) || combined[0];
+        subEl.textContent = `Subtitles: ${active?.language || active?.label || 'on'}`;
+        subEl._tracks = combined;
+      } else {
+        subEl.textContent = 'Subtitles: Off';
+        subEl._tracks = [];
+      }
+    } catch(e){
+      if (subEl) subEl.textContent = 'Subtitles: Off';
+      if (subEl) subEl._tracks = [];
     }
 
-    showModal(audioSubModal);
+    updateStreamInfo();
   }
 
-  function showModal(modal) {
-    modal.classList.add('visible');
-    modal.setAttribute('aria-hidden','false');
-    // focus first reachable item
-    const first = modal.querySelector('.modal-item');
-    if (first) first.focus();
-    // close on Esc
-    const onEsc = (ev) => { if (ev.key === 'Escape') { hideModal(modal); document.removeEventListener('keydown', onEsc); } };
-    document.addEventListener('keydown', onEsc);
+  function showResolutionOptions() {
+    const resEl = document.getElementById('setting-resolution');
+    const opts = resEl?._options || [];
+    if (!opts.length) { alert('No explicit resolutions available (Adaptive/Auto).'); return; }
+    const list = opts.map((o, idx) => `${idx+1}. ${o.height}p (${(o.bandwidth/1e6).toFixed(2)} Mbps)`).join('\n');
+    const pick = prompt('Select resolution (enter number) or cancel:\n' + list);
+    if (!pick) return;
+    const idx = parseInt(pick.trim(), 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= opts.length) { alert('Invalid selection'); return; }
+    const target = opts[idx];
+    player.configure({ abr: { enabled: false }});
+    const variant = player.getVariantTracks().find(t => t.height === target.height);
+    if (variant) {
+      player.selectVariantTrack(variant, true);
+      resEl.textContent = `Resolution: ${target.height}p`;
+    } else {
+      alert('Could not find matching track to set.');
+    }
   }
 
-  function hideModal(modal) {
-    modal.classList.remove('visible');
-    modal.setAttribute('aria-hidden','true');
+  function toggleSubtitleList() {
+    const subEl = document.getElementById('setting-subtitles');
+    const tracks = subEl?._tracks || [];
+    if (!tracks.length) { alert('No subtitles available for this stream.'); return; }
+    const listText = ['0. Off'].concat(tracks.map((t,idx) => `${idx+1}. ${t.language || t.label || ('Track ' + (idx+1))}`)).join('\n');
+    const pick = prompt('Choose subtitle track:\n' + listText);
+    if (pick === null) return;
+    const num = parseInt(pick.trim(), 10);
+    if (isNaN(num)) { alert('Invalid selection'); return; }
+    if (num === 0) {
+      Array.from(oPlayer.textTracks || []).forEach(t => t.mode = 'disabled');
+      (player.getTextTracks?.() || []).forEach(t => player.setTextTrackVisibility(false));
+      subEl.textContent = 'Subtitles: Off';
+      return;
+    }
+    const sel = tracks[num-1];
+    if (!sel) { alert('Selection not found'); return; }
+    try {
+      if ('mode' in sel) {
+        Array.from(oPlayer.textTracks || []).forEach(t => t.mode = 'disabled');
+        sel.mode = 'showing';
+      } else {
+        (player.getTextTracks?.() || []).forEach(t => { if (t === sel) player.setTextTrackVisibility(true); });
+      }
+      subEl.textContent = `Subtitles: ${sel.language || sel.label || 'on'}`;
+    } catch(e) { console.warn('Could not set subtitle track', e); }
   }
-
-  // Click outside to close modals
-  [videoTrackModal, audioSubModal].forEach(m => {
-    m.addEventListener('click', (ev) => { if (ev.target === m) hideModal(m); });
-  });
 
   /****************
    * stream info
    ****************/
-  /* updateStreamInfo already defined above */
+  function updateStreamInfo() {
+    const streamInfoEl = document.getElementById('stream-info');
+    const track = player?.getVariantTracks()?.find(t => t.active);
+    if (track && streamInfoEl) {
+      streamInfoEl.innerHTML = `codecs: ${track.videoCodec || track.audioCodec}<br>res: ${track.width}×${track.height}<br>bps: ${(track.bandwidth/1e6).toFixed(2)}M`;
+    }
+  }
 
   /****************
    * navigation UI
@@ -832,10 +727,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-langid]').forEach(el => {
       const k = el.dataset.langid;
       el.innerHTML = i18n.en?.[k] || k;
-    });
-    // force category label
-    document.querySelectorAll('.list_headline.i18n').forEach(el => {
-      if (el.dataset.langid === 'groups') el.textContent = i18n.en.groups;
     });
   }
 
@@ -875,18 +766,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function hideGroups() { bGroupsOpened = false; document.getElementById('list_container').classList.remove('groups-opened'); }
 
   function focusFirstGroupItem() {
-    const first = document.querySelector('#dynamic_groups_list li:not(#favourites_group):not(#all_channels_group)');
-    if (first) { first.focus(); first.classList.add('selected'); }
+    const first = document.querySelector('#dynamic_groups_list li');
+    if (first) { first.focus(); }
   }
 
   function showChannelSettings() { hideAllPopups('channelSettings'); oChannelSettings.classList.add('visible'); renderChannelSettings(); updateStreamInfo(); }
   function hideChannelSettings() { oChannelSettings.classList.remove('visible'); }
 
-  function showGuide() { getEl('guide').style.display = 'block'; renderGuideContent(); }
-  function hideGuide() { getEl('guide').style.display = 'none'; }
+  function showGuide() { document.getElementById('guide').style.display = 'block'; renderGuideContent(); }
+  function hideGuide() { document.getElementById('guide').style.display = 'none'; }
 
   function renderGuideContent() {
-    getEl('guide_content').innerHTML = `<h2 style="color:white">${i18n.en?.guideControlsHeadline}</h2><ul style="color:white">${i18n.en?.guideControls}</ul>`;
+    document.getElementById('guide_content').innerHTML = `<h2>${i18n.en?.guideControlsHeadline}</h2><ul>${i18n.en?.guideControls}</ul>`;
   }
 
   function hideAllPopups(exclude) {
@@ -934,8 +825,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const opt = channelSettingsOptions[iChannelSettingsIndex];
         if (!opt) return;
         if (opt.id === 'channel-setting-favourite') toggleFavourite();
-        if (opt.id === 'channel-setting-audio') openAudioSubModal();
-        if (opt.id === 'channel-setting-video') openVideoTrackModal();
+        if (opt.id === 'channel-setting-subs') toggleSubtitleList();
+        if (opt.id === 'channel-setting-res') showResolutionOptions();
       } else if (e.key === 'ArrowUp') { e.preventDefault(); iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1); renderChannelSettings(); }
       else if (e.key === 'ArrowDown') { e.preventDefault(); iChannelSettingsIndex = Math.min(channelSettingsOptions.length - 1, iChannelSettingsIndex + 1); renderChannelSettings(); }
       return;
@@ -961,7 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
     else { player?.unload?.(); showIdle(); }
   });
 
-  // touch gestures
+  // touch gestures (kept)
   let touchStartX=0, touchStartY=0, touchEndX=0, touchEndY=0;
   document.addEventListener('touchstart', (ev) => { touchStartX=ev.touches[0].clientX; touchStartY=ev.touches[0].clientY; });
   document.addEventListener('touchmove', (ev) => { touchEndX=ev.touches[0].clientX; touchEndY=ev.touches[0].clientY; });
@@ -998,10 +889,6 @@ document.addEventListener('DOMContentLoaded', () => {
    * init + start point
    **********************/
   (function init() {
-    // number channels
-    let i = 1;
-    for (const k in channels) { channels[k].number = i++; channels[k].key = k; }
-
     applyLang();
     document.getElementById('all_channels_group')?.classList.add('selected');
 
@@ -1009,26 +896,23 @@ document.addEventListener('DOMContentLoaded', () => {
     buildNav();
     loadFavoritesFromStorage();
 
-    // init player (non-blocking)
+    // init player async and non-blocking
     initPlayerOnce().catch(()=>{});
 
     // init EPG in background
     loadAllEpg().then(()=>{ buildNav(); }).catch(()=>{});
 
-    // start playlist logic: autoplay aniplus for new visitor else resume
+    // start playlist logic
     playlistReadyHandler();
   })();
 
   // small utilities
   function hideChannelName() { oChannelInfo.classList.remove('visible'); }
-
-  // expose some global helpers
+  // expose functions
   window.showGuide = showGuide;
   window.hideGuide = hideGuide;
   window.showNav = showNav;
   window.hideNav = hideNav;
-  window.openVideoTrackModal = openVideoTrackModal;
-  window.openAudioSubModal = openAudioSubModal;
 });
 </script>
 </body>
