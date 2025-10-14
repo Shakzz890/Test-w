@@ -319,6 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let groupHtml = '';
         sortedGroups.forEach(name => { groupHtml += `<li data-group="${name}">${name.toUpperCase()}</li>`; });
         o.DynamicGroupsList.insertAdjacentHTML('beforeend', groupHtml);
+        // Correctly attach listeners to all items with data-group
         o.GroupList.querySelectorAll('li[data-group]').forEach((li, index) => {
              // We add 3 because of the 3 static main menu items before the categories
             li.onclick = () => selectGroup(index + 3);
@@ -418,13 +419,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.setResolution = track => {
-        if (track) { player.configure({ abr: { enabled: false } }); player.selectVariantTrack(track, true); } 
+        const trackToSelect = player.getVariantTracks().find(t => t.id === track.id);
+        if (trackToSelect) { player.configure({ abr: { enabled: false } }); player.selectVariantTrack(trackToSelect, true); } 
         else { player.configure({ abr: { enabled: true } }); }
         hideSettingsModal();
     };
     window.setSubtitles = (track, isVisible) => {
         player.setTextTrackVisibility(isVisible);
-        if (track) player.selectTextTrack(track);
+        if (track) { const trackToSelect = player.getTextTracks().find(t => t.id === track.id); if (trackToSelect) player.selectTextTrack(trackToSelect); }
         hideSettingsModal();
     };
     window.setAudio = lang => { player.selectAudioLanguage(lang); hideSettingsModal(); };
@@ -455,7 +457,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateStreamInfo() { const track = player?.getVariantTracks().find(t => t.active); if (track) o.StreamInfo.innerHTML = `Res: ${track.width}x${track.height}<br>Bps: ${(track.bandwidth/1e6).toFixed(2)}M`; }
     function loadFavoritesFromStorage() { try { const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]"); Object.keys(channels).forEach(key => channels[key].favorite = favs.includes(key)); } catch(e) {} }
     function saveFavoritesToStorage() { try { const favs = Object.entries(channels).filter(([,ch]) => ch.favorite).map(([key]) => key); localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs)); } catch(e) {} }
-    function handleFirstPlay() { hideIdleAnimation(); o.AvPlayer.muted = false; o.AvPlayer.play().catch(e => console.warn("Autoplay was prevented by the browser.", e)); }
+    function handleFirstPlay() {
+        hideIdleAnimation();
+        o.AvPlayer.muted = false;
+        o.AvPlayer.play().catch(e => console.warn("Autoplay was prevented by the browser.", e));
+        o.PlayButton.classList.add('HIDDEN');
+    }
 
     // --- Event Listeners ---
     o.PlayButton.addEventListener('click', handleFirstPlay);
