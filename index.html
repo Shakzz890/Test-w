@@ -62,6 +62,15 @@
     #channel_list .list-title { overflow: hidden; text-overflow: ellipsis; }
     .fav-star { margin-right: 10px; font-size: 16px; }
 
+    /* --- IMPROVED SETTINGS PANEL --- */
+    #channel_settings_list li {
+        color: #fff; font-size: clamp(18px, 2.5vw, 22px);
+        white-space: normal; height: auto; line-height: 1.4;
+        padding: 12px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    #channel_settings_list li:last-child { border-bottom: none; }
+
     #search_item_wrapper { padding: 8px 20px; }
     #search_field { width: 100% !important; background: rgba(255,255,255,0.9); display: block; font-size: 18px; padding: 8px; border-radius: 4px; border: 2px solid #333; color: #000; }
     #search_field:focus { border-color: var(--primary-color); background-color: var(--text-light); }
@@ -179,18 +188,7 @@
     <div id="guide" class="fullscreen HIDDEN" aria-hidden="true">
       <div class="fullscreen-popup">
         <div class="close-button" onclick="hideGuide()"></div>
-        <h2 class="i18n" data-langid="guideControlsHeadline">Controls</h2>
-        <ul class="i18n" data-langid="guideControls">
-          <li><kbd>M</kbd> - Settings</li>
-          <li><kbd>E</kbd> - EPG</li>
-          <li><kbd>H</kbd> - User Manual</li>
-          <li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li>
-          <li><kbd>←</kbd> - open channel list</li>
-          <li><kbd>←</kbd><kbd>←</kbd> - open group list</li>
-          <li><kbd>→</kbd> - open channel settings</li>
-          <li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li>
-          <li><kbd>ESC</kbd> - Go Back</li>
-        </ul>
+        <div id="guide_content"></div>
       </div>
     </div>
   </div>
@@ -237,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         AvPlayer: getEl("player"), Nav: getEl("nav"), BlurOverlay: getEl("blur_overlay"),
         ChannelSettings: getEl("channel_settings"), ChannelSettingsList: getEl("channel_settings_list"),
         ChannelList: getEl("channel_list"), ChannelInfo: getEl("channel_info"), StreamInfo: getEl("stream-info"),
-        Guide: getEl("guide"), SearchField: getEl("search_field"), IdleAnimation: getEl("idle_animation"),
+        Guide: getEl("guide"), GuideContent: getEl("guide_content"), SearchField: getEl("search_field"), IdleAnimation: getEl("idle_animation"),
         PlayButton: getEl("play_button_overlay"), ChannelLoader: getEl("channel_loader_overlay"),
         GroupList: getEl("group_list"), ListContainer: getEl("list_container"), DynamicGroupsList: getEl('dynamic_groups_list')
     };
@@ -246,7 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /** Initializes the Shaka player, loads data, and sets up the initial UI state. */
     async function initPlayer() {
-        // Prepare channels: assign numbers and unique keys
         Object.keys(channels).forEach((key, i) => {
             channels[key].number = i + 1;
             channels[key].key = key;
@@ -257,7 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
         buildGroupNav();
         updateSelectedGroupInNav();
 
-        // Install Shaka player polyfills and create instance
         await shaka.polyfill.installAll();
         if (!shaka.Player.isBrowserSupported()) {
             console.error("Browser not supported by Shaka Player.");
@@ -267,18 +263,15 @@ document.addEventListener('DOMContentLoaded', () => {
         player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 } });
         player.addEventListener('error', e => console.error('Shaka Error:', e.detail));
         player.addEventListener('adaptation', updateStreamInfo);
-
-        // Pre-load a default channel muted in the background
         loadInitialChannel();
     }
 
-    /** Loads the last watched or a default channel without showing the loader. */
+    /** Loads the last watched or a default channel muted in the background. */
     function loadInitialChannel() {
         const storedLast = localStorage.getItem('iptvLastWatched');
         let initialChannelKey = 'aniplus'; // Default channel
-        if (storedLast && channels[storedLast]) {
-            initialChannelKey = storedLast;
-        }
+        if (storedLast && channels[storedLast]) initialChannelKey = storedLast;
+        
         const initialIndex = Object.keys(channels).indexOf(initialChannelKey);
         loadChannel(initialIndex >= 0 ? initialIndex : 0, { isInitialLoad: true });
     }
@@ -339,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI and Navigation Functions ---
 
-    /** Builds the filtered channel list based on selected group and search term. */
+    /** Builds the filtered channel list. */
     function buildNav() {
         const searchTerm = o.SearchField.value.toLowerCase();
         aFilteredChannelKeys = Object.keys(channels).filter(key => {
@@ -373,9 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     /** Generates the list of channel groups/categories. */
     function buildGroupNav() {
-        const allGroups = new Set();
-        Object.values(channels).forEach(ch => ch.group?.forEach(g => allGroups.add(g)));
-        
+        const allGroups = new Set(Object.values(channels).flatMap(ch => ch.group || []));
         const sortedGroups = [...allGroups].sort();
         
         let groupHtml = '';
@@ -384,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         o.DynamicGroupsList.innerHTML += groupHtml;
 
-        // Add click listeners to all group items, including static ones
         o.GroupList.querySelectorAll('li').forEach((li, index) => {
             li.onclick = () => selectGroup(index);
         });
@@ -402,11 +392,10 @@ document.addEventListener('DOMContentLoaded', () => {
             sSelectedGroup = item.dataset.group;
             buildNav();
             hideGroups();
-            if (aFilteredChannelKeys.length > 0) {
-                 if(isSessionActive) loadChannel(0);
-            } else {
-                player?.unload();
-                showIdleAnimation();
+            // **FIX**: Do NOT autoplay. Just show the filtered list.
+            if (aFilteredChannelKeys.length === 0) {
+                 player?.unload();
+                 showIdleAnimation();
             }
         }
     }
@@ -435,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ch = channels[aFilteredChannelKeys[iCurrentChannel]];
         if (!ch) return;
         getEl('channel_name').textContent = ch.name;
-        getEl('channel_epg').textContent = 'EPG not available'; // EPG logic can be re-added here
+        getEl('channel_epg').textContent = 'EPG not available';
         getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="${ch.name} logo">` : '';
         o.ChannelInfo.classList.add('visible');
         channelNameTimeout = setTimeout(hideChannelName, 5000);
@@ -444,11 +433,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Settings Panel Logic ---
 
-    /** Renders the main settings menu or a specific sub-menu. */
     function renderChannelSettings(view = 'main') {
         o.ChannelSettingsList.innerHTML = '';
         let items = [];
-        
         const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
         if (!currentChannel) return;
 
@@ -456,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'quality':
                 const tracks = [...new Map((player?.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a,b)=>b.height-a.height);
                 items.push({ text: '⬅️ Back', action: () => renderChannelSettings('main') });
-                items.push({ text: 'Auto (Default)', action: () => setResolution(null), selected: !player.getConfiguration().abr.enabled });
+                items.push({ text: 'Auto (Default)', action: () => setResolution(null), selected: player.getConfiguration().abr.enabled });
                 tracks.forEach(t => items.push({ text: `${t.height}p`, action: () => setResolution(t), selected: t.active }));
                 break;
             case 'subtitles':
@@ -499,17 +486,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         hideChannelSettings();
     }
-
-    function setSubtitles(track) {
-        player.setTextTrackVisibility(!!track);
-        if (track) player.selectTextTrack(track);
-        hideChannelSettings();
-    }
-
-    function setAudio(lang) {
-        player.selectAudioLanguage(lang);
-        hideChannelSettings();
-    }
+    function setSubtitles(track) { player.setTextTrackVisibility(!!track); if (track) player.selectTextTrack(track); hideChannelSettings(); }
+    function setAudio(lang) { player.selectAudioLanguage(lang); hideChannelSettings(); }
     
     function toggleFavourite() {
         const key = aFilteredChannelKeys[iCurrentChannel];
@@ -521,15 +499,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const newIndex = aFilteredChannelKeys.indexOf(key);
         if (newIndex !== -1) iCurrentChannel = newIndex;
     }
+    
+    /** **FIX**: Function to render Guide content */
+    function renderGuideContent() {
+        o.GuideContent.innerHTML = `
+            <h2>Controls</h2>
+            <ul>
+                <li><kbd>M</kbd> - Settings</li>
+                <li><kbd>E</kbd> - EPG</li>
+                <li><kbd>H</kbd> - User Manual</li>
+                <li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li>
+                <li><kbd>←</kbd> - open channel list</li>
+                <li><kbd>←</kbd><kbd>←</kbd> - open group list</li>
+                <li><kbd>→</kbd> - open channel settings</li>
+                <li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li>
+                <li><kbd>ESC</kbd> - Go Back</li>
+            </ul>
+        `;
+    }
 
     // --- State Management & UI Toggles ---
     function showIdleAnimation() { o.IdleAnimation.classList.remove('HIDDEN'); isSessionActive = false; }
     function hideIdleAnimation() { o.IdleAnimation.classList.add('HIDDEN'); isSessionActive = true; }
     function clearUi(exclude) {
-        if (exclude !== 'nav') hideNav();
-        if (exclude !== 'channelSettings') hideChannelSettings();
-        if (exclude !== 'guide') hideGuide();
-        if (exclude !== 'channelName') hideChannelName();
+        if (exclude !== 'nav') hideNav(); if (exclude !== 'channelSettings') hideChannelSettings();
+        if (exclude !== 'guide') hideGuide(); if (exclude !== 'channelName') hideChannelName();
     }
     function showNav() { clearUi('nav'); bNavOpened = true; o.Nav.classList.add('visible'); }
     function hideNav() { bNavOpened = bGroupsOpened = false; o.Nav.classList.remove('visible'); }
@@ -537,34 +531,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function hideGroups() { bGroupsOpened = false; o.ListContainer.classList.remove('groups-opened'); }
     function showChannelSettings() { clearUi('channelSettings'); bChannelSettingsOpened = true; iChannelSettingsIndex = 0; renderChannelSettings(); updateStreamInfo(); o.StreamInfo.classList.remove('HIDDEN'); o.ChannelSettings.classList.add('visible'); }
     function hideChannelSettings() { bChannelSettingsOpened = false; o.StreamInfo.classList.add('HIDDEN'); o.ChannelSettings.classList.remove('visible'); }
-    function showGuide() { clearUi('guide'); bGuideOpened = true; o.Guide.classList.remove('HIDDEN'); }
+    function showGuide() { clearUi('guide'); renderGuideContent(); bGuideOpened = true; o.Guide.classList.remove('HIDDEN'); }
     function hideGuide() { bGuideOpened = false; o.Guide.classList.add('HIDDEN'); }
 
     // --- Helpers & Event Handlers ---
-    function updateStreamInfo() {
-        const track = player?.getVariantTracks().find(t => t.active);
-        if (track) o.StreamInfo.innerHTML = `Res: ${track.width}x${track.height}<br>Bps: ${(track.bandwidth/1e6).toFixed(2)}M`;
-    }
+    function updateStreamInfo() { const track = player?.getVariantTracks().find(t => t.active); if (track) o.StreamInfo.innerHTML = `Res: ${track.width}x${track.height}<br>Bps: ${(track.bandwidth/1e6).toFixed(2)}M`; }
     function loadFavoritesFromStorage() { try { const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]"); Object.keys(channels).forEach(key => channels[key].favorite = favs.includes(key)); } catch(e) {} }
     function saveFavoritesToStorage() { try { const favs = Object.entries(channels).filter(([,ch]) => ch.favorite).map(([key]) => key); localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs)); } catch(e) {} }
-
-    function handleFirstPlay() {
-        hideIdleAnimation();
-        o.AvPlayer.muted = false;
-        loadChannel(iCurrentChannel); // Reload to ensure it's visible
-    }
+    function handleFirstPlay() { hideIdleAnimation(); o.AvPlayer.muted = false; loadChannel(iCurrentChannel); }
 
     // --- Event Listeners ---
     o.PlayButton.addEventListener('click', handleFirstPlay);
-    o.SearchField.addEventListener('input', () => {
-        buildNav();
-        if (aFilteredChannelKeys.length > 0) {
-            if(isSessionActive) loadChannel(0);
-        } else {
-            player?.unload();
-            showIdleAnimation();
-        }
-    });
+    o.SearchField.addEventListener('input', () => { buildNav(); if (aFilteredChannelKeys.length > 0) { if(isSessionActive) loadChannel(0); } else { player?.unload(); showIdleAnimation(); } });
 
     document.addEventListener('keydown', (e) => {
         if (document.activeElement === o.SearchField) return;
@@ -579,13 +557,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'Enter': selectGroup(iGroupListIndex); break;
                     case 'ArrowRight': case 'Escape': hideGroups(); break;
                 }
-            } else {
+            } else { // Channel List is open
                 switch (e.key) {
-                    case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
-                    case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
+                    // **FIX**: Navigate without loading
+                    case 'ArrowUp': iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length; updateSelectedChannelInNav(); break;
+                    case 'ArrowDown': iCurrentChannel = (iCurrentChannel + 1) % aFilteredChannelKeys.length; updateSelectedChannelInNav(); break;
+                    // **FIX**: Load channel on Enter
+                    case 'Enter': loadChannel(iCurrentChannel); hideNav(); break;
                     case 'ArrowRight': hideNav(); break;
                     case 'ArrowLeft': showGroups(); break;
-                    case 'Enter': hideNav(); break;
                     case 'Escape': hideNav(); break;
                 }
             }
@@ -601,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (bGuideOpened) {
             if (e.key === 'Escape') hideGuide();
         } else {
-            // Global controls when no panels are open
+            // Global controls (panels are closed)
             switch (e.key) {
                 case 'ArrowLeft': e.preventDefault(); showNav(); break;
                 case 'ArrowRight': e.preventDefault(); showChannelSettings(); break;
@@ -618,20 +598,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; });
     document.addEventListener('touchmove', e => { touchEndX = e.touches[0].clientX; touchEndY = e.touches[0].clientY; });
     document.addEventListener('touchend', () => {
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
+        const deltaX = touchEndX - touchStartX; const deltaY = touchEndY - touchStartY;
         const isHorizontal = Math.abs(deltaX) > Math.abs(deltaY);
         
         if (isHorizontal && Math.abs(deltaX) > 50) { // Horizontal Swipe
-            if (deltaX > 0) { // Right
-                if (bChannelSettingsOpened) hideChannelSettings(); else showNav();
-            } else { // Left
-                if (bNavOpened) hideNav(); else showChannelSettings();
-            }
+            if (deltaX > 0) { if (bChannelSettingsOpened) hideChannelSettings(); else showNav(); } 
+            else { if (bNavOpened) hideNav(); else showChannelSettings(); }
         } else if (!isHorizontal && Math.abs(deltaY) > 50) { // Vertical Swipe
             if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened) {
-                if (deltaY > 0) loadChannel(iCurrentChannel + 1); // Down
-                else loadChannel(iCurrentChannel - 1); // Up
+                if (deltaY > 0) loadChannel(iCurrentChannel + 1); else loadChannel(iCurrentChannel - 1);
             }
         } else if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) { // Tap
             if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened) showChannelName();
