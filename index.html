@@ -330,9 +330,16 @@ document.addEventListener('DOMContentLoaded', () => {
         iGroupListIndex = index;
         updateSelectedGroupInNav();
         sSelectedGroup = item.dataset.group;
-        buildNav();
-        hideGroups();
-        if (aFilteredChannelKeys.length === 0) { player?.unload(); showIdleAnimation(true); }
+        hideGroups(); // Start the slide-out animation first
+
+        // Rebuild the channel list *after* the animation completes
+        setTimeout(() => {
+            buildNav();
+            if (aFilteredChannelKeys.length === 0) {
+                player?.unload();
+                showIdleAnimation(true);
+            }
+        }, 500); // This duration matches the CSS transition time for #list_container
     }
     
     function buildNav() {
@@ -389,12 +396,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showSettingsModal(type) {
-        clearUi();
+        clearUi('settingsModal');
+        o.BlurOverlay.classList.add('visible');
         bSettingsModalOpened = true;
         o.SettingsModalContent.innerHTML = renderModalContent(type);
         o.SettingsModal.classList.remove('HIDDEN');
     }
-    window.hideSettingsModal = () => { bSettingsModalOpened = false; o.SettingsModal.classList.add('HIDDEN'); }
+    window.hideSettingsModal = () => {
+        bSettingsModalOpened = false;
+        o.SettingsModal.classList.add('HIDDEN');
+        o.BlurOverlay.classList.remove('visible');
+    }
 
     function renderModalContent(type) {
         let contentHtml = '';
@@ -456,8 +468,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function hideGroups() { bGroupsOpened = false; o.ListContainer.classList.remove('groups-opened'); }
     function showChannelSettings() { clearUi('channelSettings'); bChannelSettingsOpened = true; iChannelSettingsIndex = 0; renderChannelSettings(); updateStreamInfo(); o.StreamInfo.classList.remove('HIDDEN'); o.ChannelSettings.classList.add('visible'); }
     function hideChannelSettings() { bChannelSettingsOpened = false; o.StreamInfo.classList.add('HIDDEN'); o.ChannelSettings.classList.remove('visible'); }
-    window.showGuide = () => { clearUi('guide'); renderGuideContent(); bGuideOpened = true; o.Guide.classList.remove('HIDDEN'); }
-    window.hideGuide = () => { bGuideOpened = false; o.Guide.classList.add('HIDDEN'); }
+    window.showGuide = () => {
+        clearUi('guide');
+        o.BlurOverlay.classList.add('visible');
+        renderGuideContent();
+        bGuideOpened = true;
+        o.Guide.classList.remove('HIDDEN');
+    }
+    window.hideGuide = () => {
+        bGuideOpened = false;
+        o.Guide.classList.add('HIDDEN');
+        o.BlurOverlay.classList.remove('visible');
+    }
     function showChannelName() { clearTimeout(channelNameTimeout); if (!aFilteredChannelKeys.length) return; const ch = channels[aFilteredChannelKeys[iCurrentChannel]]; if (!ch) return; getEl('channel_name').textContent = ch.name; getEl('channel_epg').textContent = 'EPG not available'; getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="${ch.name} logo">` : ''; o.ChannelInfo.classList.add('visible'); channelNameTimeout = setTimeout(hideChannelName, 5000); }
     function hideChannelName() { o.ChannelInfo.classList.remove('visible'); }
     function updateStreamInfo() { const track = player?.getVariantTracks().find(t => t.active); if (track) o.StreamInfo.innerHTML = `Res: ${track.width}x${track.height}<br>Bps: ${(track.bandwidth/1e6).toFixed(2)}M`; }
