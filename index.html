@@ -330,16 +330,17 @@ document.addEventListener('DOMContentLoaded', () => {
         iGroupListIndex = index;
         updateSelectedGroupInNav();
         sSelectedGroup = item.dataset.group;
-        hideGroups(); // Start the slide-out animation first
+        hideGroups(); // Start the panel sliding animation
 
-        // Rebuild the channel list *after* the animation completes
+        // Wait for the animation to be partway through before rebuilding the list.
+        // This prevents visual stuttering and makes the UI feel smooth and responsive.
         setTimeout(() => {
             buildNav();
             if (aFilteredChannelKeys.length === 0) {
                 player?.unload();
                 showIdleAnimation(true);
             }
-        }, 500); // This duration matches the CSS transition time for #list_container
+        }, 300); // Adjusted delay for a faster feel
     }
     
     function buildNav() {
@@ -391,13 +392,12 @@ document.addEventListener('DOMContentLoaded', () => {
         getEl('quality_setting').onclick = () => showSettingsModal('quality');
         getEl('subs_setting').onclick = () => showSettingsModal('subtitles');
         o.ChannelSettingsList.lastElementChild.onclick = toggleFavourite;
-        // After rendering, apply the initial selection for keyboard nav
         o.ChannelSettingsList.querySelectorAll('li')[iChannelSettingsIndex]?.classList.add('selected');
     }
 
     function showSettingsModal(type) {
-        clearUi('settingsModal');
-        o.BlurOverlay.classList.add('visible');
+        clearUi('settingsModal'); // Exclude modal from being hidden
+        o.BlurOverlay.classList.add('visible'); // Add blur effect
         bSettingsModalOpened = true;
         o.SettingsModalContent.innerHTML = renderModalContent(type);
         o.SettingsModal.classList.remove('HIDDEN');
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.hideSettingsModal = () => {
         bSettingsModalOpened = false;
         o.SettingsModal.classList.add('HIDDEN');
-        o.BlurOverlay.classList.remove('visible');
+        o.BlurOverlay.classList.remove('visible'); // Remove blur effect
     }
 
     function renderModalContent(type) {
@@ -468,9 +468,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function hideGroups() { bGroupsOpened = false; o.ListContainer.classList.remove('groups-opened'); }
     function showChannelSettings() { clearUi('channelSettings'); bChannelSettingsOpened = true; iChannelSettingsIndex = 0; renderChannelSettings(); updateStreamInfo(); o.StreamInfo.classList.remove('HIDDEN'); o.ChannelSettings.classList.add('visible'); }
     function hideChannelSettings() { bChannelSettingsOpened = false; o.StreamInfo.classList.add('HIDDEN'); o.ChannelSettings.classList.remove('visible'); }
+    
     window.showGuide = () => {
-        clearUi('guide');
-        o.BlurOverlay.classList.add('visible');
+        clearUi('guide'); // Exclude modal from being hidden
+        o.BlurOverlay.classList.add('visible'); // Add blur effect
         renderGuideContent();
         bGuideOpened = true;
         o.Guide.classList.remove('HIDDEN');
@@ -478,19 +479,20 @@ document.addEventListener('DOMContentLoaded', () => {
     window.hideGuide = () => {
         bGuideOpened = false;
         o.Guide.classList.add('HIDDEN');
-        o.BlurOverlay.classList.remove('visible');
+        o.BlurOverlay.classList.remove('visible'); // Remove blur effect
     }
+    
     function showChannelName() { clearTimeout(channelNameTimeout); if (!aFilteredChannelKeys.length) return; const ch = channels[aFilteredChannelKeys[iCurrentChannel]]; if (!ch) return; getEl('channel_name').textContent = ch.name; getEl('channel_epg').textContent = 'EPG not available'; getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="${ch.name} logo">` : ''; o.ChannelInfo.classList.add('visible'); channelNameTimeout = setTimeout(hideChannelName, 5000); }
     function hideChannelName() { o.ChannelInfo.classList.remove('visible'); }
     function updateStreamInfo() { const track = player?.getVariantTracks().find(t => t.active); if (track) o.StreamInfo.innerHTML = `Res: ${track.width}x${track.height}<br>Bps: ${(track.bandwidth/1e6).toFixed(2)}M`; }
     function loadFavoritesFromStorage() { try { const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]"); Object.keys(channels).forEach(key => channels[key].favorite = favs.includes(key)); } catch(e) {} }
     function saveFavoritesToStorage() { try { const favs = Object.entries(channels).filter(([,ch]) => ch.favorite).map(([key]) => key); localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs)); } catch(e) {} }
     function handleFirstPlay() {
-        isSessionActive = true; // Mark session as active
+        isSessionActive = true;
         hideIdleAnimation();
         o.AvPlayer.muted = false;
         o.AvPlayer.play().catch(e => console.warn("Autoplay was prevented by the browser.", e));
-        o.PlayButton.classList.add('HIDDEN'); // Permanently hide after first click
+        o.PlayButton.classList.add('HIDDEN');
     }
 
     // --- Event Listeners ---
