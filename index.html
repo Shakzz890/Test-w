@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Shakzz TV Player - Refactored</title>
   <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/shaka-player.ui.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/controls.css">
   <style>
     :root {
       --primary-color: royalblue;
@@ -25,7 +25,8 @@
       font-size: 28px; -moz-user-select: none; -webkit-user-select: none;
       user-select: none; touch-action: none; overflow: hidden; height: 100%;
     }
-    #player, video { z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0; background: transparent; cursor: none; transition: transform 0.3s ease, object-fit 0.3s ease; }
+    #player_container { z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+    video { width: 100%; height: 100%; border: 0; background: transparent; cursor: none; transition: transform 0.3s ease, object-fit 0.3s ease; }
     .fullscreen { width: 100%; height: 100%; position: fixed; top: 0; left: 0; }
     .HIDDEN { display: none !important; }
 
@@ -89,6 +90,7 @@
     .popup-buttons button:hover { background-color: rgba(255,255,255,0.1); }
     input[type="radio"] { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; border: 2px solid var(--text-medium); border-radius: 50%; outline: none; cursor: pointer; transition: border-color 0.2s; margin-left: 15px; }
     input[type="radio"]:checked { border-color: var(--primary-color); background-color: var(--primary-color); box-shadow: inset 0 0 0 3px #000; }
+    .edit-modal-field { width:100%; background: #333; border: 1px solid #555; color: #fff; padding: 10px; margin-bottom: 15px; font-size: 18px; }
     
     #idle_animation {
       z-index: 2; display: flex; justify-content: flex-end; align-items: center;
@@ -127,7 +129,9 @@
   </style>
 </head>
 <body>
-  <video id="player" autoplay muted playsinline></video>
+  <div id="player_container">
+      <video id="player" autoplay muted playsinline></video>
+  </div>
   <div id="blur_overlay" class="fullscreen"></div>
   <div id="ui_elements">
     <div id="channel_loader_overlay" class="fullscreen HIDDEN">
@@ -221,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- State Variables ---
-    let player, iCurrentChannel = 0, iGroupListIndex = 3, iChannelSettingsIndex = 0, iVideoSettingsIndex = 0, iEpgChannelIndex = 0;
+    let player, ui, iCurrentChannel = 0, iGroupListIndex = 3, iChannelSettingsIndex = 0, iVideoSettingsIndex = 0, iEpgChannelIndex = 0;
     let aFilteredChannelKeys = [], sSelectedGroup = '__all';
     let bNavOpened = false, bGroupsOpened = false, bGuideOpened = false, bChannelSettingsOpened = false, bSettingsModalOpened = false, bEpgOpened = false;
     let channelNameTimeout, isSessionActive = false;
@@ -230,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Element Cache ---
     const getEl = id => document.getElementById(id);
     const o = {
-        AvPlayer: getEl("player"), Nav: getEl("nav"), BlurOverlay: getEl("blur_overlay"),
+        AvPlayer: getEl("player"), PlayerContainer: getEl("player_container"), Nav: getEl("nav"), BlurOverlay: getEl("blur_overlay"),
         ChannelSettings: getEl("channel_settings"), SettingsContainer: getEl("settings_container"),
         SettingsMainMenu: getEl("settings_main_menu"), SettingsVideoFormatMenu: getEl("settings_video_format_menu"),
         ChannelList: getEl("channel_list"), ChannelInfo: getEl("channel_info"),
@@ -250,11 +254,18 @@ document.addEventListener('DOMContentLoaded', () => {
         sSelectedGroup = '__all';
         buildNav();
         updateSelectedGroupInNav();
+        
         await shaka.polyfill.installAll();
         if (!shaka.Player.isBrowserSupported()) { console.error("Browser not supported"); return; }
-        player = new shaka.Player(o.AvPlayer);
+        
+        player = new shaka.Player();
+        ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
+        ui.getControls(); // This creates the controls
+        player.attach(o.AvPlayer);
+
         player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 } });
         player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); showIdleAnimation(true); });
+        
         loadInitialChannel();
     }
 
@@ -376,9 +387,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
             <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
             <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
-            <div class="settings-item" onclick="alert('Edit channel coming soon!')">Edit channel</div>
+            <div class="settings-item" onclick="showSettingsModal('edit')">Edit channel</div>
             <div class="settings-item" onclick="showEpg()">EPG</div>
-            <div class="settings-item" onclick="alert('Playback controls coming soon!')">Show playback controls</div>
+            <div class="settings-item" onclick="togglePlaybackControls()">Show playback controls</div>
         `;
         updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
     }
@@ -414,6 +425,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function togglePlaybackControls() {
+        ui.getControls().getControlsContainer().removeAttribute('hidden');
+        ui.getControls().overrideCssShowControls(true);
+        setTimeout(() => { ui.getControls().overrideCssShowControls(false); }, 5000);
+        hideChannelSettings();
+    }
+
     function showSettingsModal(type) {
         clearUi('settingsModal'); o.BlurOverlay.classList.add('visible'); bSettingsModalOpened = true;
         o.SettingsModalContent.innerHTML = renderModalContent(type);
@@ -441,9 +459,23 @@ document.addEventListener('DOMContentLoaded', () => {
             textTracks.forEach(track => { subItemsHtml += `<li onclick='setSubtitles(${JSON.stringify(track)}, true)'>${track.label || track.language}</li>`; });
             let audioItemsHtml = audioTracks.map(track => `<li onclick="setAudio('${track.language}')">${track.language} (Audio)</li>`).join('');
             contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button onclick="hideSettingsModal()">CLOSE</button></div>`;
+        } else if (type === 'edit') {
+            const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
+            contentHtml = `<h2>Edit Channel</h2><div style="padding: 15px 25px;">
+            <label>Name</label><br><input type="text" id="edit_ch_name" class="edit-modal-field" value="${currentChannel.name}"><br>
+            <label>Logo URL</label><br><input type="text" id="edit_ch_logo" class="edit-modal-field" value="${currentChannel.logo || ''}">
+            </div><div class="popup-buttons"><button onclick="hideSettingsModal()">CANCEL</button><button onclick="applyChannelEdit()">SAVE</button></div>`;
         }
         return contentHtml;
     }
+
+    window.applyChannelEdit = () => {
+        const key = aFilteredChannelKeys[iCurrentChannel];
+        channels[key].name = getEl('edit_ch_name').value;
+        channels[key].logo = getEl('edit_ch_logo').value;
+        buildNav(); // Rebuild list to show changes
+        hideSettingsModal();
+    };
 
     window.applyQualitySetting = () => {
         const selected = document.querySelector('input[name="quality"]:checked').value;
