@@ -3,9 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Shakzz TV Player - Refactored</title>
+  <title>Shakzz TV Player - Dual Player Edition</title>
+  
+  <script src="https://ssl.p.jwpcdn.com/player/v/8.36.6/jwplayer.js"></script>
+  <script>jwplayer.key = "ITWMv7t88JGzI0xPwW8I0+LveiXX9SWbfdmt0ArUSyc=";</script>
+  
   <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/shaka-player.ui.js"></script>
-  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/controls.css">
+  
   <style>
     :root {
       --primary-color: royalblue;
@@ -14,10 +18,7 @@
       --panel-bg-right: linear-gradient(to left, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.4));
       --text-light: #fff;
       --text-medium: #ccc;
-      --text-dark: #000;
       --border-color: #444;
-      --settings-item-bg: rgba(255, 255, 255, 0.1);
-      --settings-item-hover-bg: rgba(255, 255, 255, 0.2);
     }
     * { font-family: Lucida Sans, Arial, Helvetica, sans-serif; outline: none; box-sizing: border-box; }
     html, body {
@@ -25,8 +26,8 @@
       font-size: 28px; -moz-user-select: none; -webkit-user-select: none;
       user-select: none; touch-action: none; overflow: hidden; height: 100%;
     }
-    #player_container { z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
-    video { width: 100%; height: 100%; border: 0; background: transparent; cursor: none; transition: transform 0.3s ease, object-fit 0.3s ease; }
+    #jwplayer_container, #shaka_player_container { z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+    #shaka_player { width: 100%; height: 100%; }
     .fullscreen { width: 100%; height: 100%; position: fixed; top: 0; left: 0; }
     .HIDDEN { display: none !important; }
 
@@ -40,18 +41,27 @@
     .loader-bar::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 50%; background: var(--primary-color); border-radius: 2px; animation: loading-bar-animation 1.5s linear infinite; }
     @keyframes loading-bar-animation { 0% { left: -50%; } 100% { left: 100%; } }
 
-    .close-button { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M13.41,12l6.3-6.29a1,1,0,1,0-1.42-1.42L12,10.59,5.71,4.29A1,1,0,0,0,4.29,5.71L10.59,12l-6.3,6.29a1,1,0,0,0,0,1.42,1,1,0,0,0,1.42,0L12,13.41l6.29,6.3a1,1,0,0,0,1.42,0,1,1,0,0,0,0-1.42Z'/%3E%3C/svg%3E"); background-size: cover; cursor: pointer; position: absolute; z-index: 11; top: 10px; right: 10px; height: 40px; width: 40px; }
+    #nav, #channel_settings {
+      z-index: 31; position: fixed; top: 0; width: clamp(320px, 25vw, 400px); max-width: 90%;
+      overflow: hidden; height: 100%; transition: transform 0.5s; font-size: clamp(18px, 2.5vw, 22px);
+    }
+    #nav { left: 0; transform: translateX(-100%); background-image: var(--panel-bg-left); }
+    #channel_settings { right: 0; transform: translateX(100%); background-image: var(--panel-bg-right); }
+    #nav.visible, #channel_settings.visible { transform: translateX(0); }
 
-    #nav { z-index: 31; position: fixed; top: 0; width: clamp(320px, 25vw, 400px); max-width: 90%; overflow: hidden; height: 100%; transition: transform 0.5s; font-size: clamp(18px, 2.5vw, 22px); left: 0; transform: translateX(-100%); background-image: var(--panel-bg-left); }
-    #nav.visible { transform: translateX(0); }
     #list_container { display: flex; width: 200%; height: 100%; color: var(--text-light); transition: transform 0.5s; transform: translateX(-50%); }
     #list_container.groups-opened { transform: translateX(0); }
-    #group_list, #channel_list { height: 100%; width: 50%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+    #group_list, #channel_list, #channel_settings_list { height: 100%; width: 50%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
     h2.list_headline { margin: 20px 30px; font-size: clamp(24px, 3vw, 28px); color: var(--text-medium); }
     ul { list-style: none; margin: 0; padding: 0; }
-    li { padding: 4px 20px; margin: 2px 0; white-space: nowrap; cursor: pointer; height: 50px; line-height: 50px; display: flex; align-items: center; }
-    li:hover { color: var(--text-light); }
+    
+    .panel-item {
+      padding: 4px 20px; margin: 2px 0; white-space: nowrap; cursor: pointer;
+      height: 50px; line-height: 50px; display: flex; align-items: center;
+    }
+    .panel-item:hover { color: var(--text-light); background-color: rgba(255,255,255,0.1); }
     .selected { background: var(--primary-gradient) !important; font-weight: bold; }
+    
     .list-ch { min-width: 50px; font-weight: bold; }
     #channel_list .nav_logo { width: 50px; margin: auto 0 auto auto; text-align: center; display: flex; justify-content: center; align-items: center; height: 35px; }
     #channel_list .nav_logo img { max-height: 100%; max-width: 100%; object-fit: contain; }
@@ -79,19 +89,7 @@
     #brand-header { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-color); }
     #brand-header svg { width: 35px; height: 35px; margin-right: 15px; }
     #brand-header span { font-size: clamp(22px, 3vw, 28px); font-weight: bold; color: var(--text-light); }
-    
-    .fullscreen-popup { z-index: 40; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; background-image: var(--panel-bg-right); color: var(--text-light); border-radius: 8px; box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5); text-shadow: 1px 1px 2px #000; }
-    .fullscreen-popup h2 { margin: 0; font-size: clamp(22px, 4vw, 28px); padding: 20px 25px; }
-    .popup-content-list { padding: 0 0 10px 0; }
-    .popup-content-list li { padding: 15px 25px; height: auto; white-space: normal; line-height: 1.4; font-size: clamp(18px, 2.5vw, 22px); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .popup-content-list li:last-child { border-bottom: none; }
-    .popup-buttons { display: flex; justify-content: flex-end; padding: 15px 25px; background: rgba(0,0,0,0.2); }
-    .popup-buttons button { background: none; border: none; color: var(--primary-color); font-weight: bold; font-size: 18px; padding: 8px 15px; cursor: pointer; border-radius: 4px; transition: background-color 0.2s; }
-    .popup-buttons button:hover { background-color: rgba(255,255,255,0.1); }
-    input[type="radio"] { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; border: 2px solid var(--text-medium); border-radius: 50%; outline: none; cursor: pointer; transition: border-color 0.2s; margin-left: 15px; }
-    input[type="radio"]:checked { border-color: var(--primary-color); background-color: var(--primary-color); box-shadow: inset 0 0 0 3px #000; }
-    .edit-modal-field { width:100%; background: #333; border: 1px solid #555; color: #fff; padding: 10px; margin-bottom: 15px; font-size: 18px; }
-    
+
     #idle_animation {
       z-index: 2; display: flex; justify-content: flex-end; align-items: center;
       background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop');
@@ -105,33 +103,12 @@
     #play_button_overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; background: rgba(0, 0, 0, 0.5); border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background 0.3s ease; z-index: 3; }
     #play_button_overlay:hover { background: rgba(65, 105, 225, 0.8); }
     #play_button_overlay svg { width: 60px; height: 60px; fill: white; margin-left: 10px; }
-
-    /* New Settings Panel Styles */
-    #channel_settings { right: 0; transform: translateX(100%); background-image: var(--panel-bg-right); z-index: 31; position: fixed; top: 0; width: clamp(320px, 25vw, 400px); max-width: 90%; overflow: hidden; height: 100%; transition: transform 0.5s; font-size: clamp(18px, 2.5vw, 22px); }
-    #channel_settings.visible { transform: translateX(0); }
-    #settings_container { position: relative; width: 200%; height: 100%; display: flex; transition: transform 0.4s ease-in-out; }
-    #settings_container.submenu-visible { transform: translateX(-50%); }
-    #settings_main_menu, #settings_video_format_menu { width: 50%; height: 100%; padding: 20px 0; }
-    .settings-item { padding: 15px 25px; cursor: pointer; transition: background-color 0.2s; }
-    .settings-item.selected { background-color: var(--settings-item-hover-bg); }
-    .settings-item-header { font-size: clamp(24px, 3vw, 28px); color: var(--text-medium); margin: 20px 25px; }
-    #settings_video_format_menu .settings-item { display: flex; justify-content: space-between; align-items: center; }
-    .settings-item select { background: var(--settings-item-bg); color: var(--text-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; font-size: 16px; }
-
-    /* New EPG Styles */
-    #epg_overlay { z-index: 35; background: rgba(0,0,0,0.85); display: flex; font-size: clamp(16px, 2vw, 20px); }
-    #epg_channels { width: clamp(280px, 22vw, 350px); height: 100%; overflow-y: auto; }
-    #epg_timeline { flex-grow: 1; height: 100%; overflow-y: auto; border-left: 1px solid var(--border-color); }
-    .epg-ch-item { padding: 12px 20px; white-space: normal; line-height: 1.3; height: auto; }
-    #epg_timeline .epg-pr-item { padding: 20px; border-bottom: 1px solid var(--border-color); }
-    .epg-pr-time { color: var(--text-medium); font-size: 0.9em; margin-bottom: 5px; }
-    .epg-pr-title { font-weight: bold; }
   </style>
 </head>
 <body>
-  <div id="player_container">
-      <video id="player" autoplay muted playsinline></video>
-  </div>
+  <div id="jwplayer_container"><div id="jwplayer"></div></div>
+  <div id="shaka_player_container" class="HIDDEN"><video id="shaka_player" autoplay muted playsinline></video></div>
+  
   <div id="blur_overlay" class="fullscreen"></div>
   <div id="ui_elements">
     <div id="channel_loader_overlay" class="fullscreen HIDDEN">
@@ -147,18 +124,13 @@
         <span>Shakzz TV</span>
       </div>
       <div id="search_item_wrapper"><input id="search_field" type="search" placeholder="Search"></div>
-      <div id="list_container_scrollarea" style="height: calc(100vh - 159px);">
+      <div id="list_container_scrollarea" style="height: calc(100vh - 120px);">
         <div id="list_container">
           <div id="group_list" class="custom-scrollbar">
-            <ul id="main_nav">
-                <li id="guide_group">GUIDE</li>
-                <li id="epg_button">EPG</li>
-            </ul>
-            <div class="HR" style="margin:16px 6px; height:1px; background: var(--primary-gradient);"></div>
             <h2 class="list_headline">CATEGORIES</h2>
             <ul id="dynamic_groups_list">
-              <li data-group="__fav">FAVORITES</li>
-              <li data-group="__all">ALL CHANNELS</li>
+              <li class="panel-item" data-group="__fav">FAVORITES</li>
+              <li class="panel-item" data-group="__all">ALL CHANNELS</li>
             </ul>
           </div>
           <div id="channel_list" class="custom-scrollbar"></div>
@@ -166,10 +138,8 @@
       </div>
     </div>
     <div id="channel_settings">
-      <div id="settings_container">
-        <div id="settings_main_menu" class="custom-scrollbar"></div>
-        <div id="settings_video_format_menu" class="custom-scrollbar"></div>
-      </div>
+        <h2 class="list_headline">Settings</h2>
+        <ul id="channel_settings_list"></ul>
     </div>
     <div id="channel_info">
       <div id="ch_logo"></div>
@@ -177,21 +147,6 @@
         <div id="channel_name"></div>
         <div id="channel_epg"></div>
       </div>
-    </div>
-    <div id="guide" class="fullscreen HIDDEN" aria-hidden="true">
-      <div class="fullscreen-popup" style="max-width:800px; padding: 30px;">
-        <div class="close-button" onclick="hideGuide()"></div>
-        <div id="guide_content"></div>
-      </div>
-    </div>
-    <div id="epg_overlay" class="fullscreen HIDDEN" aria-hidden="true">
-        <div id="epg_channels" class="custom-scrollbar"></div>
-        <div id="epg_timeline" class="custom-scrollbar"></div>
-    </div>
-    <div id="settings_modal" class="fullscreen HIDDEN" aria-hidden="true">
-        <div class="fullscreen-popup">
-          <div id="settings_modal_content"></div>
-        </div>
     </div>
   </div>
 <script>
@@ -218,53 +173,55 @@ document.addEventListener('DOMContentLoaded', () => {
         pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
         angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
         zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
-        mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://amg00627-amg00627c40-rakuten-uk-5725.playouts.now.amagi.tv/ts-eu-w1-n2/playlist/amg00627-banijayfast-mrbeanpopupcc-rakutenuk/cb573d1d7d6c648b92d43b66cef24582847b3dcb0e6c886470af4a9765d96300dbf9b9c8fd3ab13c1ec0468a710b6d5a4d1cd209af3c419b8b1dfd034f25536b9f9bb565da9f0211c9a06b5756af6a4208a55b05a7700079d6a05a2b8d2fba74005cb95a3c1862c3ed47ad662f9ad253d72a39e8fc8b307b24455a9c5a43e6a64cb7abe95810893aa5b00140c12e14fa83439fd401b388d50f8315d775a514c893a182da1187e4205293728aecdb5f581fa9a83bf8f955bfd6937929957f2d556c3a8cc1b2cd3ef702da21269cded8b6648560a63ebb89125a980194408b338b65ea2aaef557e2dad320aaea5ad6a60b315dccc8a59ee93a739067f5abe5dc391af392452c179b3f994a5f491a999f65d2ff58b6cf8d6d06d79d67feb10ff0bca18aeeffa04b922cc6c6ce7a5c28414e0b188f51ae9b228e678d38e0e21a2f49551fedbb5bc094d65734221ed6db1eff5a5b98cb9b8fda393ec84b124ea7358a0c4b3f9a742457cd19d4b6702c852f0180751afe5b3e8f0bbc9b24e7a8d6e0496ae68c8912b13fa1e54afff900a061391931b2f42d4d4c032883b9285e660bae2f83f2c5650609e885afaf9029580d5a460a586b835790052ba668aed8b933cf2257196f9860690e20e9/184/1280x720_3329040/index.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdSj6OHTQv9_53OX9ZwSjCqOTkYj5dDUZUW0irJhXranWx7zI1YhEIwg&s=10", group: ["cartoons & animations", "entertainment"] },
-        iQIYI: { name: "iQIYI", type: "clearkey", manifestUri: "https://linearjitp-playback.astro.com.my/dash-wv/linear/1006/default_ott.mpd", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSs3X1_D_GkWQbMiZzbmaoFets_gAeM6zKGhvtuAD7y46OH9zcqWCnLoG3K&s=10", group: ["entertainment"], userAgent: "Mozilla/5.0 (Linux; Android 14; 27821-67832-42-315-4231-233-21-43-12-1312-321-23-21-232-) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36", keyId: "7ef7e913ce85a1131b27036069169a10", key: "77d98ed71db7524c27875a09a975f9e6" },
+        // This channel is marked to use the Shaka Player fallback
+        iQIYI: { player: 'shaka', name: "iQIYI", type: "clearkey", manifestUri: "https://linearjitp-playback.astro.com.my/dash-wv/linear/1006/default_ott.mpd", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSs3X1_D_GkWQbMiZzbmaoFets_gAeM6zKGhvtuAD7y46OH9zcqWCnLoG3K&s=10", group: ["entertainment"], userAgent: "Mozilla/5.0 (Linux; Android 14; 27821-67832-42-315-4231-233-21-43-12-1312-321-23-21-232-) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36", keyId: "7ef7e913ce85a1131b27036069169a10", key: "77d98ed71db7524c27875a09a975f9e6" },
         tv5: { name: "TV 5 HD", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/tv5_hd/default1/index.mpd", keyId: "2615129ef2c846a9bbd43a641c7303ef", key: "07c7f996b1734ea288641a68e1cfdc4d", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/TV5_logo.svg/1200px-TV5_logo.svg.png", group: ["news", "entertainment"] },
         kapamilya: { name: "Kapamilya Channel HD", type: "clearkey", manifestUri: "https://d1uf7s78uqso1e.cloudfront.net/out/v1/efa01372657648be830e7c23ff68bea2/index.mpd", keyId: "bd17afb5dc9648a39be79ee3634dd4b8", key: "3ecf305d54a7729299b93a3d69c02ea5", logo: "https://cms.cignal.tv/Upload/Images/Kapamilya Channel Logo alpha.png", group: ["news", "entertainment"] },
     };
     
     // --- State Variables ---
-    let player, ui, iCurrentChannel = 0, iGroupListIndex = 3, iChannelSettingsIndex = 0, iVideoSettingsIndex = 0, iEpgChannelIndex = 0;
+    let jwplayerInstance, shakaPlayer, iCurrentChannel = 0, iGroupListIndex = 1, iChannelSettingsIndex = 0;
     let aFilteredChannelKeys = [], sSelectedGroup = '__all';
-    let bNavOpened = false, bGroupsOpened = false, bGuideOpened = false, bChannelSettingsOpened = false, bSettingsModalOpened = false, bEpgOpened = false;
+    let bNavOpened = false, bGroupsOpened = false, bChannelSettingsOpened = false;
     let channelNameTimeout, isSessionActive = false;
     let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 
     // --- DOM Element Cache ---
     const getEl = id => document.getElementById(id);
     const o = {
-        AvPlayer: getEl("player"), PlayerContainer: getEl("player_container"), Nav: getEl("nav"), BlurOverlay: getEl("blur_overlay"),
-        ChannelSettings: getEl("channel_settings"), SettingsContainer: getEl("settings_container"),
-        SettingsMainMenu: getEl("settings_main_menu"), SettingsVideoFormatMenu: getEl("settings_video_format_menu"),
+        JWPlayerContainer: getEl("jwplayer_container"),
+        ShakaPlayerContainer: getEl("shaka_player_container"), ShakaPlayer: getEl("shaka_player"),
+        Nav: getEl("nav"), BlurOverlay: getEl("blur_overlay"),
+        ChannelSettings: getEl("channel_settings"), ChannelSettingsList: getEl("channel_settings_list"),
         ChannelList: getEl("channel_list"), ChannelInfo: getEl("channel_info"),
-        Guide: getEl("guide"), GuideContent: getEl("guide_content"), SearchField: getEl("search_field"), IdleAnimation: getEl("idle_animation"),
+        SearchField: getEl("search_field"), IdleAnimation: getEl("idle_animation"),
         PlayButton: getEl("play_button_overlay"), ChannelLoader: getEl("channel_loader_overlay"),
-        GroupList: getEl("group_list"), ListContainer: getEl("list_container"), DynamicGroupsList: getEl('dynamic_groups_list'),
-        SettingsModal: getEl("settings_modal"), SettingsModalContent: getEl("settings_modal_content"),
-        EpgOverlay: getEl("epg_overlay"), EpgChannels: getEl("epg_channels"), EpgTimeline: getEl("epg_timeline")
+        GroupList: getEl("group_list"), ListContainer: getEl("list_container"), DynamicGroupsList: getEl('dynamic_groups_list')
     };
 
     // --- Core Player Functions ---
-    async function initPlayer() {
+    async function initPlayers() {
         Object.keys(channels).forEach((key, i) => { channels[key].number = i + 1; channels[key].key = key; });
         loadFavoritesFromStorage();
-        setupMainMenuControls();
         buildDynamicGroupNav();
         sSelectedGroup = '__all';
         buildNav();
         updateSelectedGroupInNav();
         
-        await shaka.polyfill.installAll();
-        if (!shaka.Player.isBrowserSupported()) { console.error("Browser not supported"); return; }
+        // Init JW Player
+        jwplayerInstance = jwplayer("jwplayer").setup({
+            width: "100%", height: "100%", autostart: false, mute: true,
+            aspectratio: "16:9", stretching: "exactfit", controls: false
+        });
+        jwplayerInstance.on('error', () => showIdleAnimation(true));
         
-        player = new shaka.Player();
-        ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
-        ui.getControls(); // This creates the controls
-        player.attach(o.AvPlayer);
-
-        player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 } });
-        player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); showIdleAnimation(true); });
+        // Init Shaka Player
+        await shaka.polyfill.installAll();
+        if (shaka.Player.isBrowserSupported()) {
+            shakaPlayer = new shaka.Player(o.ShakaPlayer);
+            shakaPlayer.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 } });
+            shakaPlayer.addEventListener('error', e => { console.error('Shaka Error:', e.detail); showIdleAnimation(true); });
+        }
         
         loadInitialChannel();
     }
@@ -277,12 +234,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadChannel(initialIndex >= 0 ? initialIndex : 0, { isInitialLoad: true });
     }
 
-    async function loadChannel(index, options = {}) {
-        if (!aFilteredChannelKeys.length) { player?.unload(); showIdleAnimation(true); return; }
+    function loadChannel(index, options = {}) {
+        if (!aFilteredChannelKeys.length) { jwplayerInstance.stop(); shakaPlayer?.unload(); showIdleAnimation(true); return; }
         iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
         const channelKey = aFilteredChannelKeys[iCurrentChannel];
         const channel = channels[channelKey];
-        if (!player || !channel) return;
+
         localStorage.setItem('iptvLastWatched', channelKey);
         if (!options.isInitialLoad) {
             o.ChannelLoader.classList.remove('HIDDEN');
@@ -290,55 +247,88 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         showChannelName();
         updateSelectedChannelInNav();
+
+        // ** The Smart Player Switch **
+        if (channel.player === 'shaka') {
+            loadWithShakaPlayer(channel);
+        } else {
+            loadWithJWPlayer(channel);
+        }
+
+        setTimeout(() => {
+            o.ChannelLoader.classList.add('HIDDEN');
+            o.BlurOverlay.classList.remove('visible');
+        }, 1500);
+    }
+
+    function loadWithJWPlayer(channel) {
+        shakaPlayer?.unload(); // Stop shaka if it was playing
+        o.ShakaPlayerContainer.classList.add('HIDDEN');
+        o.JWPlayerContainer.classList.remove('HIDDEN');
+        
+        const playlistItem = { file: channel.manifestUri, title: channel.name };
+        if (channel.type === 'clearkey' && channel.keyId && channel.key) {
+            playlistItem.drm = { clearkey: { keyId: channel.keyId, key: channel.key } };
+        }
+        jwplayerInstance.load([playlistItem]);
+
+        if (isSessionActive) {
+            jwplayerInstance.play();
+            jwplayerInstance.setMute(false);
+            hideIdleAnimation();
+        }
+    }
+
+    async function loadWithShakaPlayer(channel) {
+        jwplayerInstance.stop(); // Stop JW if it was playing
+        o.JWPlayerContainer.classList.add('HIDDEN');
+        o.ShakaPlayerContainer.classList.remove('HIDDEN');
+
+        if (!shakaPlayer) return;
+
         try {
-            player.configure('drm.clearKeys', {});
+            shakaPlayer.configure('drm.clearKeys', {});
             if (channel.type === 'clearkey' && channel.keyId && channel.key) {
-                player.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } });
+                shakaPlayer.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } });
             }
-            player.getNetworkingEngine()?.clearAllRequestFilters();
+            shakaPlayer.getNetworkingEngine()?.clearAllRequestFilters();
             if (channel.userAgent) {
-                player.getNetworkingEngine()?.registerRequestFilter((type, request) => { request.headers['User-Agent'] = channel.userAgent; });
+                shakaPlayer.getNetworkingEngine()?.registerRequestFilter((type, request) => { request.headers['User-Agent'] = channel.userAgent; });
             }
-            await player.load(channel.manifestUri);
-            if (isSessionActive) { hideIdleAnimation(); o.AvPlayer.muted = false; }
+            await shakaPlayer.load(channel.manifestUri);
+            if (isSessionActive) {
+                o.ShakaPlayer.muted = false;
+                o.ShakaPlayer.play();
+                hideIdleAnimation();
+            }
         } catch (error) {
-            console.error(`Error loading: ${channel?.name}`, error);
-            if (!options.isInitialLoad) showIdleAnimation(true);
-        } finally {
-            if (!options.isInitialLoad) {
-                o.ChannelLoader.classList.add('HIDDEN');
-                o.BlurOverlay.classList.remove('visible');
-            }
+            console.error(`Shaka error loading: ${channel?.name}`, error);
+            showIdleAnimation(true);
         }
     }
 
     // --- UI and Navigation ---
-    function setupMainMenuControls() {
-        getEl('guide_group').onclick = showGuide;
-        getEl('epg_button').onclick = showEpg;
-    }
-
     function buildDynamicGroupNav() {
         const allGroups = new Set(Object.values(channels).flatMap(ch => ch.group || []));
         const sortedGroups = [...allGroups].sort();
         let groupHtml = '';
-        sortedGroups.forEach(name => { groupHtml += `<li data-group="${name}">${name.toUpperCase()}</li>`; });
+        sortedGroups.forEach(name => { groupHtml += `<li class="panel-item" data-group="${name}">${name.toUpperCase()}</li>`; });
         o.DynamicGroupsList.insertAdjacentHTML('beforeend', groupHtml);
         o.GroupList.querySelectorAll('li[data-group]').forEach((li, index) => {
-            li.onclick = () => selectGroup(index + 2); // 2 for static items
+            li.onclick = () => selectGroup(index);
         });
     }
 
     function selectGroup(index) {
-        const item = o.GroupList.querySelectorAll('li')[index];
-        if (!item || !item.hasAttribute('data-group')) return;
+        const item = o.GroupList.querySelectorAll('li[data-group]')[index];
+        if (!item || !item.dataset.group) return;
         iGroupListIndex = index;
         updateSelectedGroupInNav();
         sSelectedGroup = item.dataset.group;
         hideGroups();
         setTimeout(() => {
             buildNav();
-            if (aFilteredChannelKeys.length === 0) { player?.unload(); showIdleAnimation(true); }
+            if (aFilteredChannelKeys.length === 0) { jwplayerInstance.stop(); shakaPlayer?.unload(); showIdleAnimation(true); }
         }, 300);
     }
     
@@ -351,12 +341,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return inGroup && inSearch;
         }).sort((a, b) => channels[a].number - channels[b].number);
         o.ChannelList.innerHTML = '';
-        if (aFilteredChannelKeys.length === 0) { o.ChannelList.innerHTML = `<li style="justify-content:center; color:#888;">No channels found.</li>`; return; }
+        if (aFilteredChannelKeys.length === 0) { o.ChannelList.innerHTML = `<li class="panel-item" style="justify-content:center; color:#888;">No channels found.</li>`; return; }
         const frag = document.createDocumentFragment();
         aFilteredChannelKeys.forEach((key, index) => {
             const ch = channels[key];
             const item = document.createElement('li');
-            item.className = 'channel-item';
+            item.className = 'panel-item';
             item.onclick = () => { loadChannel(index); setTimeout(hideNav, 100); };
             const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : '';
             const logo = ch.logo ? `<div class="nav_logo"><img src="${ch.logo}" alt=""></div>` : '';
@@ -369,199 +359,69 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function updateSelectedChannelInNav() {
         o.ChannelList.querySelector('.selected')?.classList.remove('selected');
-        const newItem = o.ChannelList.querySelectorAll('li.channel-item')[iCurrentChannel];
+        const newItem = o.ChannelList.querySelectorAll('li.panel-item')[iCurrentChannel];
         if (newItem) { newItem.classList.add('selected'); if (bNavOpened) newItem.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }
     
     function updateSelectedGroupInNav() {
         o.GroupList.querySelector('.selected')?.classList.remove('selected');
-        const newItem = o.GroupList.querySelectorAll('li')[iGroupListIndex];
+        const newItem = o.GroupList.querySelectorAll('li[data-group]')[iGroupListIndex];
         if (newItem) { newItem.classList.add('selected'); if(bGroupsOpened) newItem.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }
 
-    // --- Settings Panels & Modals ---
     function renderChannelSettings() {
         const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
         if (!currentChannel) return;
-        o.SettingsMainMenu.innerHTML = `
-            <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
-            <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
-            <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
-            <div class="settings-item" onclick="showSettingsModal('edit')">Edit channel</div>
-            <div class="settings-item" onclick="showEpg()">EPG</div>
-            <div class="settings-item" onclick="togglePlaybackControls()">Show playback controls</div>
-        `;
-        updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+        o.ChannelSettingsList.innerHTML = `<li class="panel-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</li>`;
     }
 
-    function showVideoFormatMenu() { o.SettingsContainer.classList.add('submenu-visible'); iVideoSettingsIndex = 0; renderVideoFormatMenu(); }
-    function hideVideoFormatMenu() { o.SettingsContainer.classList.remove('submenu-visible'); iChannelSettingsIndex = 1; updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex); }
-    
-    function renderVideoFormatMenu() {
-        o.SettingsVideoFormatMenu.innerHTML = `
-            <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
-            <div class="settings-item-header">Video Format</div>
-            <div class="settings-item">
-                <span>Video format</span>
-                <select onchange="setAspectRatio(this.value)">
-                    <option value="original">Original</option>
-                    <option value="16:9">16:9</option>
-                    <option value="stretch">Stretch</option>
-                    <option value="zoom">Zoom</option>
-                </select>
-            </div>
-            <div class="settings-item" onclick="showSettingsModal('quality')">Video track</div>
-        `;
-        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-    }
-
-    function setAspectRatio(format) {
-        o.AvPlayer.style.transform = 'scale(1)';
-        switch(format) {
-            case 'stretch': o.AvPlayer.style.objectFit = 'fill'; break;
-            case '16:9': o.AvPlayer.style.objectFit = 'contain'; break;
-            case 'zoom': o.AvPlayer.style.objectFit = 'cover'; o.AvPlayer.style.transform = 'scale(1.15)'; break;
-            default: o.AvPlayer.style.objectFit = 'contain';
-        }
-    }
-
-    function togglePlaybackControls() {
-        ui.getControls().getControlsContainer().removeAttribute('hidden');
-        ui.getControls().overrideCssShowControls(true);
-        setTimeout(() => { ui.getControls().overrideCssShowControls(false); }, 5000);
-        hideChannelSettings();
-    }
-
-    function showSettingsModal(type) {
-        clearUi('settingsModal'); o.BlurOverlay.classList.add('visible'); bSettingsModalOpened = true;
-        o.SettingsModalContent.innerHTML = renderModalContent(type);
-        o.SettingsModal.classList.remove('HIDDEN');
-    }
-    window.hideSettingsModal = () => {
-        bSettingsModalOpened = false; o.SettingsModal.classList.add('HIDDEN'); o.BlurOverlay.classList.remove('visible');
-    }
-
-    function renderModalContent(type) {
-        let contentHtml = '';
-        if (type === 'quality') {
-            const tracks = [...new Map((player?.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a, b) => b.height - a.height);
-            let itemsHtml = `<li onclick="this.querySelector('input').checked=true">Auto <input type="radio" name="quality" value="auto" ${player.getConfiguration().abr.enabled ? 'checked' : ''}></li>`;
-            tracks.forEach(track => {
-                const bps = track.bandwidth > 1000000 ? `${(track.bandwidth/1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth/1e3)} Kbps`;
-                itemsHtml += `<li onclick="this.querySelector('input').checked=true">${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${track.active && !player.getConfiguration().abr.enabled ? 'checked' : ''}></li>`;
-            });
-            contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul>
-            <div class="popup-buttons"><button onclick="hideSettingsModal()">CANCEL</button><button onclick="applyQualitySetting()">OK</button></div>`;
-        } else if (type === 'subtitles') {
-            const textTracks = player?.getTextTracks() || [];
-            const audioTracks = player?.getAudioLanguagesAndRoles() || [];
-            let subItemsHtml = `<li onclick="setSubtitles(null, false)">Off</li>`;
-            textTracks.forEach(track => { subItemsHtml += `<li onclick='setSubtitles(${JSON.stringify(track)}, true)'>${track.label || track.language}</li>`; });
-            let audioItemsHtml = audioTracks.map(track => `<li onclick="setAudio('${track.language}')">${track.language} (Audio)</li>`).join('');
-            contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button onclick="hideSettingsModal()">CLOSE</button></div>`;
-        } else if (type === 'edit') {
-            const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
-            contentHtml = `<h2>Edit Channel</h2><div style="padding: 15px 25px;">
-            <label>Name</label><br><input type="text" id="edit_ch_name" class="edit-modal-field" value="${currentChannel.name}"><br>
-            <label>Logo URL</label><br><input type="text" id="edit_ch_logo" class="edit-modal-field" value="${currentChannel.logo || ''}">
-            </div><div class="popup-buttons"><button onclick="hideSettingsModal()">CANCEL</button><button onclick="applyChannelEdit()">SAVE</button></div>`;
-        }
-        return contentHtml;
-    }
-
-    window.applyChannelEdit = () => {
-        const key = aFilteredChannelKeys[iCurrentChannel];
-        channels[key].name = getEl('edit_ch_name').value;
-        channels[key].logo = getEl('edit_ch_logo').value;
-        buildNav(); // Rebuild list to show changes
-        hideSettingsModal();
-    };
-
-    window.applyQualitySetting = () => {
-        const selected = document.querySelector('input[name="quality"]:checked').value;
-        if(selected === 'auto') { player.configure({ abr: { enabled: true } }); } 
-        else {
-            player.configure({ abr: { enabled: false } });
-            const trackToSelect = player.getVariantTracks().find(t => t.id == selected);
-            if (trackToSelect) player.selectVariantTrack(trackToSelect, true);
-        }
-        hideSettingsModal();
-    }
-    window.setSubtitles = (track, isVisible) => { player.setTextTrackVisibility(isVisible); if (track) { const trackToSelect = player.getTextTracks().find(t => t.id === track.id); if (trackToSelect) player.selectTextTrack(trackToSelect); } hideSettingsModal(); };
-    window.setAudio = lang => { player.selectAudioLanguage(lang); hideSettingsModal(); };
-    
     function toggleFavourite() {
         const key = aFilteredChannelKeys[iCurrentChannel]; if (!key) return;
         channels[key].favorite = !channels[key].favorite;
-        saveFavoritesToStorage(); renderChannelSettings();
+        saveFavoritesToStorage(); 
+        renderChannelSettings();
+        buildNav();
     }
     
-    // --- UI State & Helpers ---
     function showIdleAnimation(showPlayButton = false) { o.IdleAnimation.classList.remove('HIDDEN'); if (showPlayButton && !isSessionActive) { o.PlayButton.classList.remove('HIDDEN'); } else { o.PlayButton.classList.add('HIDDEN'); } }
     function hideIdleAnimation() { o.IdleAnimation.classList.add('HIDDEN'); isSessionActive = true; }
-    function clearUi(exclude) { if (exclude !== 'nav') hideNav(); if (exclude !== 'channelSettings') hideChannelSettings(); if (exclude !== 'guide') hideGuide(); if (exclude !== 'channelName') hideChannelName(); if (exclude !== 'settingsModal') hideSettingsModal(); if (exclude !== 'epg') hideEpg(); }
+    function clearUi(exclude) { if (exclude !== 'nav') hideNav(); if (exclude !== 'channelSettings') hideChannelSettings(); if (exclude !== 'channelName') hideChannelName(); }
     function showNav() { clearUi('nav'); bNavOpened = true; o.Nav.classList.add('visible'); }
     function hideNav() { bNavOpened = bGroupsOpened = false; o.Nav.classList.remove('visible'); }
     function showGroups() { if(bNavOpened) { bGroupsOpened = true; o.ListContainer.classList.add('groups-opened'); updateSelectedGroupInNav(); } }
     function hideGroups() { bGroupsOpened = false; o.ListContainer.classList.remove('groups-opened'); }
-    function showChannelSettings() { clearUi('channelSettings'); hideVideoFormatMenu(); iChannelSettingsIndex = 0; renderChannelSettings(); bChannelSettingsOpened = true; o.ChannelSettings.classList.add('visible'); }
+    function showChannelSettings() { clearUi('channelSettings'); renderChannelSettings(); bChannelSettingsOpened = true; o.ChannelSettings.classList.add('visible'); }
     function hideChannelSettings() { bChannelSettingsOpened = false; o.ChannelSettings.classList.remove('visible'); }
-    window.showGuide = () => { clearUi('guide'); o.BlurOverlay.classList.add('visible'); renderGuideContent(); bGuideOpened = true; o.Guide.classList.remove('HIDDEN'); }
-    window.hideGuide = () => { bGuideOpened = false; o.Guide.classList.add('HIDDEN'); o.BlurOverlay.classList.remove('visible'); }
-    function renderGuideContent() { o.GuideContent.innerHTML = `<h2>Controls</h2><ul style="list-style: none; padding: 0; font-size: clamp(16px, 2.5vw, 22px); line-height: 1.8;"><li><kbd>M</kbd> - Settings</li><li><kbd>E</kbd> - EPG</li><li><kbd>H</kbd> - User Manual</li><li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li><li><kbd>←</kbd> - open channel list</li><li><kbd>←</kbd><kbd>←</kbd> - open group list</li><li><kbd>→</kbd> - open channel settings</li><li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li><li><kbd>ESC</kbd> - Go Back</li></ul>`; }
-
-    // --- EPG Functions ---
-    function showEpg() { clearUi('epg'); iEpgChannelIndex = iCurrentChannel; renderEpg(); bEpgOpened = true; o.EpgOverlay.classList.remove('HIDDEN'); }
-    function hideEpg() { bEpgOpened = false; o.EpgOverlay.classList.add('HIDDEN'); }
-    function renderEpg() {
-        let channelsHtml = '';
-        aFilteredChannelKeys.forEach((key, index) => {
-            const ch = channels[key];
-            const selectedClass = index === iEpgChannelIndex ? 'selected' : '';
-            channelsHtml += `<div class="epg-ch-item ${selectedClass}">${ch.number}. ${ch.name}</div>`;
-        });
-        o.EpgChannels.innerHTML = channelsHtml;
-        o.EpgTimeline.innerHTML = generateDummyEpg();
-        o.EpgChannels.querySelector('.selected')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    function generateDummyEpg() {
-        return `<div class="epg-pr-item"><div class="epg-pr-time">Now Playing</div><div class="epg-pr-title">Current Program Title</div></div><div class="epg-pr-item"><div class="epg-pr-time">Up Next</div><div class="epg-pr-title">The Next Exciting Show</div></div><div class="epg-pr-item"><div class="epg-pr-time">Later</div><div class="epg-pr-title">Evening Special</div></div>`;
-    }
 
     function showChannelName() { clearTimeout(channelNameTimeout); if (!aFilteredChannelKeys.length) return; const ch = channels[aFilteredChannelKeys[iCurrentChannel]]; if (!ch) return; getEl('channel_name').textContent = ch.name; getEl('channel_epg').textContent = 'EPG not available'; getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="${ch.name} logo">` : ''; o.ChannelInfo.classList.add('visible'); channelNameTimeout = setTimeout(hideChannelName, 5000); }
     function hideChannelName() { o.ChannelInfo.classList.remove('visible'); }
     function loadFavoritesFromStorage() { try { const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]"); Object.keys(channels).forEach(key => channels[key].favorite = favs.includes(key)); } catch(e) {} }
     function saveFavoritesToStorage() { try { const favs = Object.entries(channels).filter(([,ch]) => ch.favorite).map(([key]) => key); localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs)); } catch(e) {} }
-    function handleFirstPlay() { isSessionActive = true; hideIdleAnimation(); o.AvPlayer.muted = false; o.AvPlayer.play().catch(e => console.warn("Autoplay was prevented.", e)); o.PlayButton.classList.add('HIDDEN'); }
-    function updateSettingsSelection(container, index) {
-        container.querySelector('.selected')?.classList.remove('selected');
-        const items = container.querySelectorAll('.settings-item');
-        if (items[index]) {
-            items[index].classList.add('selected');
-            items[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    function handleFirstPlay() { 
+        isSessionActive = true; 
+        hideIdleAnimation(); 
+        const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
+        if (currentChannel.player === 'shaka') {
+            o.ShakaPlayer.play();
+            o.ShakaPlayer.muted = false;
+        } else {
+            jwplayerInstance.play();
+            jwplayerInstance.setMute(false);
         }
+        o.PlayButton.classList.add('HIDDEN'); 
     }
 
     // --- Event Listeners ---
     o.PlayButton.addEventListener('click', handleFirstPlay);
-    o.SearchField.addEventListener('input', () => { buildNav(); if (aFilteredChannelKeys.length > 0) { if(isSessionActive) loadChannel(0); } else { player?.unload(); showIdleAnimation(true); } });
+    o.SearchField.addEventListener('input', () => { buildNav(); if (aFilteredChannelKeys.length > 0) { if(isSessionActive) loadChannel(0); } else { jwplayerInstance.stop(); shakaPlayer?.unload(); showIdleAnimation(true); } });
     
     document.addEventListener('keydown', (e) => {
-        if (document.activeElement === o.SearchField || bSettingsModalOpened) return;
+        if (document.activeElement === o.SearchField) return;
         
-        if (bEpgOpened) {
-            e.preventDefault();
-            const items = o.EpgChannels.querySelectorAll('.epg-ch-item');
-            if (e.key === 'Escape') hideEpg();
-            else if (e.key === 'ArrowUp') iEpgChannelIndex = Math.max(0, iEpgChannelIndex - 1);
-            else if (e.key === 'ArrowDown') iEpgChannelIndex = Math.min(items.length - 1, iEpgChannelIndex + 1);
-            renderEpg();
-        } else if (bGuideOpened) {
-             if (e.key === 'Escape') hideGuide();
-        } else if (bNavOpened) {
+        if (bNavOpened) {
             e.preventDefault();
             if (bGroupsOpened) {
-                const groupItems = o.GroupList.querySelectorAll('li');
+                const groupItems = o.GroupList.querySelectorAll('li[data-group]');
                 if (e.key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
                 else if (e.key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
                 else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click();
@@ -577,22 +437,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (bChannelSettingsOpened) {
             e.preventDefault();
-            const isSubmenu = o.SettingsContainer.classList.contains('submenu-visible');
-            if (isSubmenu) {
-                const items = o.SettingsVideoFormatMenu.querySelectorAll('.settings-item');
-                if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
-                else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(items.length - 1, iVideoSettingsIndex + 1);
-                else if (e.key === 'Enter') items[iVideoSettingsIndex]?.click();
-                else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideVideoFormatMenu();
-                updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-            } else {
-                const items = o.SettingsMainMenu.querySelectorAll('.settings-item');
-                if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
-                else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(items.length - 1, iChannelSettingsIndex + 1);
-                else if (e.key === 'Enter' || e.key === 'ArrowRight') items[iChannelSettingsIndex]?.click();
-                else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideChannelSettings();
-                updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
-            }
+            const items = o.ChannelSettingsList.querySelectorAll('.panel-item');
+            if (e.key === 'Enter') items[iChannelSettingsIndex]?.click();
+            else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideChannelSettings();
         } else {
             switch (e.key) {
                 case 'ArrowLeft': e.preventDefault(); showNav(); break;
@@ -600,8 +447,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'Enter': e.preventDefault(); showChannelName(); break;
                 case 'ArrowUp': e.preventDefault(); loadChannel(iCurrentChannel - 1); break;
                 case 'ArrowDown': e.preventDefault(); loadChannel(iCurrentChannel + 1); break;
-                case 'h': e.preventDefault(); showGuide(); break;
-                case 'e': e.preventDefault(); showEpg(); break;
                 case 'Escape': e.preventDefault(); clearUi(); break;
             }
         }
@@ -616,12 +461,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (deltaX > 0) { if (bChannelSettingsOpened) hideChannelSettings(); else showNav(); } 
             else { if (bNavOpened) hideNav(); else showChannelSettings(); }
         } else if (!isHorizontal && Math.abs(deltaY) > 50) {
-            if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened) { if (deltaY > 0) loadChannel(iCurrentChannel + 1); else loadChannel(iCurrentChannel - 1); }
+            if (!bNavOpened && !bChannelSettingsOpened) { if (deltaY > 0) loadChannel(iCurrentChannel + 1); else loadChannel(iCurrentChannel - 1); }
         } else if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
-            if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened) showChannelName();
+            if (!bNavOpened && !bChannelSettingsOpened) showChannelName();
         }
     });
-    initPlayer();
+    initPlayers();
 });
 </script>
 </body>
