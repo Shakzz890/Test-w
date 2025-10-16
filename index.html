@@ -16,6 +16,8 @@
       --text-medium: #ccc;
       --text-dark: #000;
       --border-color: #444;
+      --settings-item-bg: rgba(255, 255, 255, 0.1);
+      --settings-item-hover-bg: rgba(255, 255, 255, 0.2);
     }
     * { font-family: Lucida Sans, Arial, Helvetica, sans-serif; outline: none; box-sizing: border-box; }
     html, body {
@@ -23,7 +25,7 @@
       font-size: 28px; -moz-user-select: none; -webkit-user-select: none;
       user-select: none; touch-action: none; overflow: hidden; height: 100%;
     }
-    #player, video { z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0; background: transparent; cursor: none; }
+    #player, video { z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0; background: transparent; cursor: none; transition: transform 0.3s ease, object-fit 0.3s ease; }
     .fullscreen { width: 100%; height: 100%; position: fixed; top: 0; left: 0; }
     .HIDDEN { display: none !important; }
 
@@ -39,17 +41,11 @@
 
     .close-button { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M13.41,12l6.3-6.29a1,1,0,1,0-1.42-1.42L12,10.59,5.71,4.29A1,1,0,0,0,4.29,5.71L10.59,12l-6.3,6.29a1,1,0,0,0,0,1.42,1,1,0,0,0,1.42,0L12,13.41l6.29,6.3a1,1,0,0,0,1.42,0,1,1,0,0,0,0-1.42Z'/%3E%3C/svg%3E"); background-size: cover; cursor: pointer; position: absolute; z-index: 11; top: 10px; right: 10px; height: 40px; width: 40px; }
 
-    #nav, #channel_settings {
-      z-index: 31; position: fixed; top: 0; width: clamp(320px, 25vw, 400px); max-width: 90%;
-      overflow: hidden; height: 100%; transition: transform 0.5s; font-size: clamp(18px, 2.5vw, 22px);
-    }
-    #nav { left: 0; transform: translateX(-100%); background-image: var(--panel-bg-left); }
-    #channel_settings { right: 0; transform: translateX(100%); background-image: var(--panel-bg-right); }
-    #nav.visible, #channel_settings.visible { transform: translateX(0); }
-
+    #nav { z-index: 31; position: fixed; top: 0; width: clamp(320px, 25vw, 400px); max-width: 90%; overflow: hidden; height: 100%; transition: transform 0.5s; font-size: clamp(18px, 2.5vw, 22px); left: 0; transform: translateX(-100%); background-image: var(--panel-bg-left); }
+    #nav.visible { transform: translateX(0); }
     #list_container { display: flex; width: 200%; height: 100%; color: var(--text-light); transition: transform 0.5s; transform: translateX(-50%); }
     #list_container.groups-opened { transform: translateX(0); }
-    #group_list, #channel_list, #channel_settings_list { height: 100%; width: 50%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+    #group_list, #channel_list { height: 100%; width: 50%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
     h2.list_headline { margin: 20px 30px; font-size: clamp(24px, 3vw, 28px); color: var(--text-medium); }
     ul { list-style: none; margin: 0; padding: 0; }
     li { padding: 4px 20px; margin: 2px 0; white-space: nowrap; cursor: pointer; height: 50px; line-height: 50px; display: flex; align-items: center; }
@@ -60,15 +56,6 @@
     #channel_list .nav_logo img { max-height: 100%; max-width: 100%; object-fit: contain; }
     #channel_list .list-title { overflow: hidden; text-overflow: ellipsis; }
     .fav-star { margin-right: 10px; font-size: 16px; }
-
-    #channel_settings_list li, .popup-content-list li {
-        color: #fff; font-size: clamp(18px, 2.5vw, 22px);
-        white-space: normal; height: auto; line-height: 1.4;
-        padding: 12px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    }
-    #channel_settings_list li:last-child, .popup-content-list li:last-child { border-bottom: none; }
-    .popup-content-list li.selected { color: var(--primary-color); }
 
     #search_item_wrapper { padding: 8px 20px; }
     #search_field { width: 100% !important; background: rgba(255,255,255,0.9); display: block; font-size: 18px; padding: 8px; border-radius: 4px; border: 2px solid #333; color: #000; }
@@ -85,18 +72,24 @@
     #channel_name { font-size: clamp(22px, 3.5vw, 32px); font-weight: bold; line-height: 1.2; margin-bottom: 8px; }
     #channel_epg { font-size: clamp(16px, 2.5vw, 22px); color: var(--text-medium); }
 
-    #stream-info { text-align: right; padding: 20px 30px 0; color: var(--text-light); font-size: 14px; line-height: 1.5; text-shadow: 1px 1px 2px #000; }
     .custom-scrollbar::-webkit-scrollbar { width: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--primary-color); border-radius: 20px; border: 2px solid darkblue; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #333; }
     #brand-header { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-color); }
     #brand-header svg { width: 35px; height: 35px; margin-right: 15px; }
     #brand-header span { font-size: clamp(22px, 3vw, 28px); font-weight: bold; color: var(--text-light); }
-    .fullscreen-popup { z-index: 40; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 800px; background-image: var(--panel-bg-right); color: var(--text-light); padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5); text-shadow: 1px 1px 2px #000; }
-    .fullscreen-popup h2 { margin-top: 0; font-size: clamp(24px, 4vw, 32px); border-bottom: 2px solid var(--primary-color); padding-bottom: 15px; margin-bottom: 20px; }
-    .fullscreen-popup ul { list-style: none; padding: 0; font-size: clamp(16px, 2.5vw, 22px); line-height: 1.8; }
-    .fullscreen-popup kbd { display: inline-block; padding: 3px 8px; font-size: clamp(14px, 2vw, 18px); font-family: monospace; line-height: 1; vertical-align: middle; background-color: #333; border: 1px solid #555; border-radius: 4px; box-shadow: inset 0 -1px 0 #555; }
-
+    
+    .fullscreen-popup { z-index: 40; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; background-image: var(--panel-bg-right); color: var(--text-light); border-radius: 8px; box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5); text-shadow: 1px 1px 2px #000; }
+    .fullscreen-popup h2 { margin: 0; font-size: clamp(22px, 4vw, 28px); padding: 20px 25px; }
+    .popup-content-list { padding: 0 0 10px 0; }
+    .popup-content-list li { padding: 15px 25px; height: auto; white-space: normal; line-height: 1.4; font-size: clamp(18px, 2.5vw, 22px); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .popup-content-list li:last-child { border-bottom: none; }
+    .popup-buttons { display: flex; justify-content: flex-end; padding: 15px 25px; background: rgba(0,0,0,0.2); }
+    .popup-buttons button { background: none; border: none; color: var(--primary-color); font-weight: bold; font-size: 18px; padding: 8px 15px; cursor: pointer; border-radius: 4px; transition: background-color 0.2s; }
+    .popup-buttons button:hover { background-color: rgba(255,255,255,0.1); }
+    input[type="radio"] { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; border: 2px solid var(--text-medium); border-radius: 50%; outline: none; cursor: pointer; transition: border-color 0.2s; margin-left: 15px; }
+    input[type="radio"]:checked { border-color: var(--primary-color); background-color: var(--primary-color); box-shadow: inset 0 0 0 3px #000; }
+    
     #idle_animation {
       z-index: 2; display: flex; justify-content: flex-end; align-items: center;
       background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop');
@@ -107,20 +100,30 @@
     .idle-branding p { font-size: 2vw; margin: 0; color: #00ff7f; font-weight: bold; }
     @keyframes pulseText { 0%, 100% { transform: scale(0.98); opacity: 0.9; } 50% { transform: scale(1); opacity: 1; } }
 
-    #play_button_overlay {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 120px; height: 120px; background: rgba(0, 0, 0, 0.5);
-      border-radius: 50%; display: flex; justify-content: center; align-items: center;
-      cursor: pointer; transition: background 0.3s ease; z-index: 3;
-    }
+    #play_button_overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; background: rgba(0, 0, 0, 0.5); border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background 0.3s ease; z-index: 3; }
     #play_button_overlay:hover { background: rgba(65, 105, 225, 0.8); }
     #play_button_overlay svg { width: 60px; height: 60px; fill: white; margin-left: 10px; }
 
-    @keyframes slideInItem { from { opacity: 0; transform: translateX(-15px); } to { opacity: 1; transform: translateX(0); } }
-    #nav.visible li { opacity: 0; animation: slideInItem 0.4s ease-out forwards; }
-    #nav.visible li:nth-child(1) { animation-delay: 0.05s; } #nav.visible li:nth-child(2) { animation-delay: 0.1s; }
-    #nav.visible li:nth-child(3) { animation-delay: 0.15s; } #nav.visible li:nth-child(4) { animation-delay: 0.2s; }
-    #nav.visible li:nth-child(5) { animation-delay: 0.25s; }
+    /* New Settings Panel Styles */
+    #channel_settings { right: 0; transform: translateX(100%); background-image: var(--panel-bg-right); z-index: 31; position: fixed; top: 0; width: clamp(320px, 25vw, 400px); max-width: 90%; overflow: hidden; height: 100%; transition: transform 0.5s; font-size: clamp(18px, 2.5vw, 22px); }
+    #channel_settings.visible { transform: translateX(0); }
+    #settings_container { position: relative; width: 200%; height: 100%; display: flex; transition: transform 0.4s ease-in-out; }
+    #settings_container.submenu-visible { transform: translateX(-50%); }
+    #settings_main_menu, #settings_video_format_menu { width: 50%; height: 100%; padding: 20px 0; }
+    .settings-item { padding: 15px 25px; cursor: pointer; transition: background-color 0.2s; }
+    .settings-item:hover, .settings-item.selected { background-color: var(--settings-item-hover-bg); }
+    .settings-item-header { font-size: clamp(24px, 3vw, 28px); color: var(--text-medium); margin: 20px 25px; }
+    #settings_video_format_menu .settings-item { display: flex; justify-content: space-between; align-items: center; }
+    .settings-item select { background: var(--settings-item-bg); color: var(--text-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; font-size: 16px; }
+
+    /* New EPG Styles */
+    #epg_overlay { z-index: 35; background: rgba(0,0,0,0.85); display: flex; font-size: clamp(16px, 2vw, 20px); }
+    #epg_channels { width: clamp(280px, 22vw, 350px); height: 100%; overflow-y: auto; }
+    #epg_timeline { flex-grow: 1; height: 100%; overflow-y: auto; border-left: 1px solid var(--border-color); }
+    #epg_channels .epg-ch-item { padding: 12px 20px; white-space: normal; line-height: 1.3; height: auto; }
+    #epg_timeline .epg-pr-item { padding: 20px; border-bottom: 1px solid var(--border-color); }
+    .epg-pr-time { color: var(--text-medium); font-size: 0.9em; margin-bottom: 5px; }
+    .epg-pr-title { font-weight: bold; }
   </style>
 </head>
 <body>
@@ -128,33 +131,22 @@
   <div id="blur_overlay" class="fullscreen"></div>
   <div id="ui_elements">
     <div id="channel_loader_overlay" class="fullscreen HIDDEN">
-      <div class="loader-content">
-        <span class="loading-text">Loading Channel...</span>
-        <div class="loader-bar"></div>
-      </div>
+      <div class="loader-content"><span class="loading-text">Loading Channel...</span><div class="loader-bar"></div></div>
     </div>
     <div id="idle_animation" class="fullscreen">
-      <div class="idle-branding">
-        <h1>SHAKZZ TV</h1>
-        <p>FOR FREE</p>
-      </div>
-      <div id="play_button_overlay">
-        <svg viewbox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"></path></svg>
-      </div>
+      <div class="idle-branding"><h1>SHAKZZ TV</h1><p>FOR FREE</p></div>
+      <div id="play_button_overlay"><svg viewbox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"></path></svg></div>
     </div>
     <div id="nav">
       <div id="brand-header">
         <svg viewbox="0 0 24 24" fill="white"><path d="M21,3H3C1.89,3,1,3.89,1,5V17C1,18.11,1.89,19,3,19H8V21H16V19H21C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17M16,11L11,15V7L16,11Z"></path></svg>
         <span>Shakzz TV</span>
       </div>
-      <div id="search_item_wrapper">
-        <input id="search_field" type="search" placeholder="Search">
-      </div>
+      <div id="search_item_wrapper"><input id="search_field" type="search" placeholder="Search"></div>
       <div id="list_container_scrollarea" style="height: calc(100vh - 159px);">
         <div id="list_container">
           <div id="group_list" class="custom-scrollbar">
             <ul id="main_nav">
-                <li id="settings_button">SETTINGS</li>
                 <li id="guide_group">GUIDE</li>
                 <li id="epg_button">EPG</li>
             </ul>
@@ -170,10 +162,9 @@
       </div>
     </div>
     <div id="channel_settings">
-      <div id="list_container_right_scrollarea">
-        <div id="stream-info" class="HIDDEN"></div>
-        <h2 class="list_headline">Channel Settings</h2>
-        <ul id="channel_settings_list"></ul>
+      <div id="settings_container">
+        <div id="settings_main_menu" class="custom-scrollbar"></div>
+        <div id="settings_video_format_menu" class="custom-scrollbar"></div>
       </div>
     </div>
     <div id="channel_info">
@@ -184,14 +175,17 @@
       </div>
     </div>
     <div id="guide" class="fullscreen HIDDEN" aria-hidden="true">
-      <div class="fullscreen-popup">
+      <div class="fullscreen-popup" style="max-width:800px; padding: 30px;">
         <div class="close-button" onclick="hideGuide()"></div>
         <div id="guide_content"></div>
       </div>
     </div>
+    <div id="epg_overlay" class="fullscreen HIDDEN" aria-hidden="true">
+        <div id="epg_channels" class="custom-scrollbar"></div>
+        <div id="epg_timeline" class="custom-scrollbar"></div>
+    </div>
     <div id="settings_modal" class="fullscreen HIDDEN" aria-hidden="true">
         <div class="fullscreen-popup">
-          <div class="close-button" onclick="hideSettingsModal()"></div>
           <div id="settings_modal_content"></div>
         </div>
     </div>
@@ -229,20 +223,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State Variables ---
     let player, iCurrentChannel = 0, iGroupListIndex = 3, iChannelSettingsIndex = 0;
     let aFilteredChannelKeys = [], sSelectedGroup = '__all';
-    let bNavOpened = false, bGroupsOpened = false, bGuideOpened = false, bChannelSettingsOpened = false, bSettingsModalOpened = false;
+    let bNavOpened = false, bGroupsOpened = false, bGuideOpened = false, bChannelSettingsOpened = false, bSettingsModalOpened = false, bEpgOpened = false;
     let channelNameTimeout, isSessionActive = false;
     let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 
     // --- DOM Element Cache ---
-    const getEl = (id) => document.getElementById(id);
+    const getEl = id => document.getElementById(id);
     const o = {
         AvPlayer: getEl("player"), Nav: getEl("nav"), BlurOverlay: getEl("blur_overlay"),
-        ChannelSettings: getEl("channel_settings"), ChannelSettingsList: getEl("channel_settings_list"),
-        ChannelList: getEl("channel_list"), ChannelInfo: getEl("channel_info"), StreamInfo: getEl("stream-info"),
+        ChannelSettings: getEl("channel_settings"), SettingsContainer: getEl("settings_container"),
+        SettingsMainMenu: getEl("settings_main_menu"), SettingsVideoFormatMenu: getEl("settings_video_format_menu"),
+        ChannelList: getEl("channel_list"), ChannelInfo: getEl("channel_info"),
         Guide: getEl("guide"), GuideContent: getEl("guide_content"), SearchField: getEl("search_field"), IdleAnimation: getEl("idle_animation"),
         PlayButton: getEl("play_button_overlay"), ChannelLoader: getEl("channel_loader_overlay"),
         GroupList: getEl("group_list"), ListContainer: getEl("list_container"), DynamicGroupsList: getEl('dynamic_groups_list'),
-        SettingsModal: getEl("settings_modal"), SettingsModalContent: getEl("settings_modal_content")
+        SettingsModal: getEl("settings_modal"), SettingsModalContent: getEl("settings_modal_content"),
+        EpgOverlay: getEl("epg_overlay"), EpgChannels: getEl("epg_channels"), EpgTimeline: getEl("epg_timeline")
     };
 
     // --- Core Player Functions ---
@@ -251,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFavoritesFromStorage();
         setupMainMenuControls();
         buildDynamicGroupNav();
-        sSelectedGroup = '__all'; // Default to all channels
+        sSelectedGroup = '__all';
         buildNav();
         updateSelectedGroupInNav();
         await shaka.polyfill.installAll();
@@ -259,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
         player = new shaka.Player(o.AvPlayer);
         player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 } });
         player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); showIdleAnimation(true); });
-        player.addEventListener('adaptation', updateStreamInfo);
         loadInitialChannel();
     }
 
@@ -308,9 +303,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI and Navigation ---
     function setupMainMenuControls() {
-        getEl('settings_button').onclick = () => { showChannelSettings(); hideNav(); };
         getEl('guide_group').onclick = showGuide;
-        getEl('epg_button').onclick = () => alert('EPG feature is coming soon!');
+        getEl('epg_button').onclick = showEpg;
     }
 
     function buildDynamicGroupNav() {
@@ -320,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedGroups.forEach(name => { groupHtml += `<li data-group="${name}">${name.toUpperCase()}</li>`; });
         o.DynamicGroupsList.insertAdjacentHTML('beforeend', groupHtml);
         o.GroupList.querySelectorAll('li[data-group]').forEach((li, index) => {
-            li.onclick = () => selectGroup(index + 3); // We add 3 for the static main menu items
+            li.onclick = () => selectGroup(index + 2); // 2 for static items
         });
     }
 
@@ -330,17 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
         iGroupListIndex = index;
         updateSelectedGroupInNav();
         sSelectedGroup = item.dataset.group;
-        hideGroups(); // Start the panel sliding animation
-
-        // Wait for the animation to be partway through before rebuilding the list.
-        // This prevents visual stuttering and makes the UI feel smooth and responsive.
+        hideGroups();
         setTimeout(() => {
             buildNav();
-            if (aFilteredChannelKeys.length === 0) {
-                player?.unload();
-                showIdleAnimation(true);
-            }
-        }, 300); // Adjusted delay for a faster feel
+            if (aFilteredChannelKeys.length === 0) { player?.unload(); showIdleAnimation(true); }
+        }, 300);
     }
     
     function buildNav() {
@@ -384,20 +372,49 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderChannelSettings() {
         const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
         if (!currentChannel) return;
-        o.ChannelSettingsList.innerHTML = `
-            <li id="quality_setting">Video Quality</li>
-            <li id="subs_setting">Subtitles / Audio</li>
-            <li>${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</li>
+        o.SettingsMainMenu.innerHTML = `
+            <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
+            <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
+            <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
+            <div class="settings-item" onclick="alert('Edit channel coming soon!')">Edit channel</div>
+            <div class="settings-item" onclick="showEpg()">EPG</div>
+            <div class="settings-item" onclick="alert('Playback controls coming soon!')">Show playback controls</div>
         `;
-        getEl('quality_setting').onclick = () => showSettingsModal('quality');
-        getEl('subs_setting').onclick = () => showSettingsModal('subtitles');
-        o.ChannelSettingsList.lastElementChild.onclick = toggleFavourite;
-        o.ChannelSettingsList.querySelectorAll('li')[iChannelSettingsIndex]?.classList.add('selected');
+    }
+
+    function showVideoFormatMenu() { o.SettingsContainer.classList.add('submenu-visible'); renderVideoFormatMenu(); }
+    function hideVideoFormatMenu() { o.SettingsContainer.classList.remove('submenu-visible'); }
+    
+    function renderVideoFormatMenu() {
+        o.SettingsVideoFormatMenu.innerHTML = `
+            <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
+            <div class="settings-item-header">Video Format</div>
+            <div class="settings-item">
+                <span>Video format</span>
+                <select onchange="setAspectRatio(this.value)">
+                    <option value="original">Original</option>
+                    <option value="16:9">16:9</option>
+                    <option value="stretch">Stretch</option>
+                    <option value="zoom">Zoom</option>
+                </select>
+            </div>
+            <div class="settings-item" onclick="showSettingsModal('quality')">Video track</div>
+        `;
+    }
+
+    function setAspectRatio(format) {
+        o.AvPlayer.style.transform = 'scale(1)'; // Reset scale
+        switch(format) {
+            case 'stretch': o.AvPlayer.style.objectFit = 'fill'; break;
+            case '16:9': o.AvPlayer.style.objectFit = 'contain'; break;
+            case 'zoom': o.AvPlayer.style.objectFit = 'cover'; o.AvPlayer.style.transform = 'scale(1.15)'; break;
+            default: o.AvPlayer.style.objectFit = 'contain';
+        }
     }
 
     function showSettingsModal(type) {
-        clearUi('settingsModal'); // Exclude modal from being hidden
-        o.BlurOverlay.classList.add('visible'); // Add blur effect
+        clearUi('settingsModal');
+        o.BlurOverlay.classList.add('visible');
         bSettingsModalOpened = true;
         o.SettingsModalContent.innerHTML = renderModalContent(type);
         o.SettingsModal.classList.remove('HIDDEN');
@@ -405,101 +422,109 @@ document.addEventListener('DOMContentLoaded', () => {
     window.hideSettingsModal = () => {
         bSettingsModalOpened = false;
         o.SettingsModal.classList.add('HIDDEN');
-        o.BlurOverlay.classList.remove('visible'); // Remove blur effect
+        o.BlurOverlay.classList.remove('visible');
     }
 
     function renderModalContent(type) {
         let contentHtml = '';
         if (type === 'quality') {
             const tracks = [...new Map((player?.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a, b) => b.height - a.height);
-            let itemsHtml = `<li onclick="setResolution(null)" class="${player.getConfiguration().abr.enabled ? 'selected' : ''}">Auto (Default)</li>`;
+            let itemsHtml = `<li onclick="this.querySelector('input').checked=true">Auto <input type="radio" name="quality" value="auto" ${player.getConfiguration().abr.enabled ? 'checked' : ''}></li>`;
             tracks.forEach(track => {
-                itemsHtml += `<li onclick='setResolution(${JSON.stringify(track)})' class="${track.active ? 'selected' : ''}">${track.height}p</li>`;
+                const bps = track.bandwidth > 1000000 ? `${(track.bandwidth/1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth/1e3)} Kbps`;
+                itemsHtml += `<li onclick="this.querySelector('input').checked=true">${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${track.active && !player.getConfiguration().abr.enabled ? 'checked' : ''}></li>`;
             });
-            contentHtml = `<h2>Video Quality</h2><ul class="popup-content-list">${itemsHtml}</ul>`;
+            contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul>
+            <div class="popup-buttons"><button onclick="hideSettingsModal()">CANCEL</button><button onclick="applyQualitySetting()">OK</button></div>`;
         } else if (type === 'subtitles') {
+            // This part can be styled similarly if needed, but for now it's functional
             const textTracks = player?.getTextTracks() || [];
             const audioTracks = player?.getAudioLanguagesAndRoles() || [];
-            let subItemsHtml = `<li onclick="setSubtitles(null, false)" class="${!textTracks.some(t=>t.active) ? 'selected' : ''}">Off</li>`;
-            textTracks.forEach(track => {
-                subItemsHtml += `<li onclick='setSubtitles(${JSON.stringify(track)}, true)' class="${track.active ? 'selected' : ''}">${track.label || track.language}</li>`;
-            });
-            let audioItemsHtml = audioTracks.map(track => `<li onclick="setAudio('${track.language}')" class="${player.isAudioTrackSelected(track.language) ? 'selected' : ''}">${track.language} (Audio)</li>`).join('');
-            contentHtml = `<h2>Subtitles</h2><ul class="popup-content-list">${subItemsHtml}</ul><h2>Audio</h2><ul class="popup-content-list">${audioItemsHtml}</ul>`;
+            let subItemsHtml = `<li onclick="setSubtitles(null, false)">Off</li>`;
+            textTracks.forEach(track => { subItemsHtml += `<li onclick='setSubtitles(${JSON.stringify(track)}, true)'>${track.label || track.language}</li>`; });
+            let audioItemsHtml = audioTracks.map(track => `<li onclick="setAudio('${track.language}')">${track.language} (Audio)</li>`).join('');
+            contentHtml = `<h2>Subtitles</h2><ul class="popup-content-list">${subItemsHtml}</ul><h2>Audio</h2><ul class="popup-content-list">${audioItemsHtml}</ul><div class="popup-buttons"><button onclick="hideSettingsModal()">CLOSE</button></div>`;
         }
         return contentHtml;
     }
 
-    window.setResolution = track => {
-        if (track) { player.configure({ abr: { enabled: false } }); const trackToSelect = player.getVariantTracks().find(t => t.id === track.id); if (trackToSelect) player.selectVariantTrack(trackToSelect, true); } 
-        else { player.configure({ abr: { enabled: true } }); }
+    window.applyQualitySetting = () => {
+        const selected = document.querySelector('input[name="quality"]:checked').value;
+        if(selected === 'auto') {
+            player.configure({ abr: { enabled: true } });
+        } else {
+            player.configure({ abr: { enabled: false } });
+            const trackToSelect = player.getVariantTracks().find(t => t.id == selected);
+            if (trackToSelect) player.selectVariantTrack(trackToSelect, true);
+        }
         hideSettingsModal();
-    };
-    window.setSubtitles = (track, isVisible) => {
-        player.setTextTrackVisibility(isVisible);
-        if (track) { const trackToSelect = player.getTextTracks().find(t => t.id === track.id); if (trackToSelect) player.selectTextTrack(trackToSelect); }
-        hideSettingsModal();
-    };
+    }
+    window.setSubtitles = (track, isVisible) => { player.setTextTrackVisibility(isVisible); if (track) { const trackToSelect = player.getTextTracks().find(t => t.id === track.id); if (trackToSelect) player.selectTextTrack(trackToSelect); } hideSettingsModal(); };
     window.setAudio = lang => { player.selectAudioLanguage(lang); hideSettingsModal(); };
     
     function toggleFavourite() {
         const key = aFilteredChannelKeys[iCurrentChannel]; if (!key) return;
         channels[key].favorite = !channels[key].favorite;
-        saveFavoritesToStorage(); renderChannelSettings(); buildNav();
-        const newIndex = aFilteredChannelKeys.indexOf(key); if (newIndex !== -1) iCurrentChannel = newIndex;
+        saveFavoritesToStorage(); renderChannelSettings();
     }
     
-    function renderGuideContent() { o.GuideContent.innerHTML = `<h2>Controls</h2><ul><li><kbd>M</kbd> - Settings</li><li><kbd>E</kbd> - EPG</li><li><kbd>H</kbd> - User Manual</li><li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li><li><kbd>←</kbd> - open channel list</li><li><kbd>←</kbd><kbd>←</kbd> - open group list</li><li><kbd>→</kbd> - open channel settings</li><li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li><li><kbd>ESC</kbd> - Go Back</li></ul>`; }
-
     // --- UI State & Helpers ---
-    function showIdleAnimation(showPlayButton = false) { 
-        o.IdleAnimation.classList.remove('HIDDEN'); 
-        if (showPlayButton && !isSessionActive) {
-            o.PlayButton.classList.remove('HIDDEN');
-        } else {
-            o.PlayButton.classList.add('HIDDEN');
-        }
-    }
+    function showIdleAnimation(showPlayButton = false) { o.IdleAnimation.classList.remove('HIDDEN'); if (showPlayButton && !isSessionActive) { o.PlayButton.classList.remove('HIDDEN'); } else { o.PlayButton.classList.add('HIDDEN'); } }
     function hideIdleAnimation() { o.IdleAnimation.classList.add('HIDDEN'); isSessionActive = true; }
-    function clearUi(exclude) { if (exclude !== 'nav') hideNav(); if (exclude !== 'channelSettings') hideChannelSettings(); if (exclude !== 'guide') hideGuide(); if (exclude !== 'channelName') hideChannelName(); if (exclude !== 'settingsModal') hideSettingsModal(); }
+    function clearUi(exclude) { if (exclude !== 'nav') hideNav(); if (exclude !== 'channelSettings') hideChannelSettings(); if (exclude !== 'guide') hideGuide(); if (exclude !== 'channelName') hideChannelName(); if (exclude !== 'settingsModal') hideSettingsModal(); if (exclude !== 'epg') hideEpg(); }
     function showNav() { clearUi('nav'); bNavOpened = true; o.Nav.classList.add('visible'); }
     function hideNav() { bNavOpened = bGroupsOpened = false; o.Nav.classList.remove('visible'); }
     function showGroups() { if(bNavOpened) { bGroupsOpened = true; o.ListContainer.classList.add('groups-opened'); updateSelectedGroupInNav(); } }
     function hideGroups() { bGroupsOpened = false; o.ListContainer.classList.remove('groups-opened'); }
-    function showChannelSettings() { clearUi('channelSettings'); bChannelSettingsOpened = true; iChannelSettingsIndex = 0; renderChannelSettings(); updateStreamInfo(); o.StreamInfo.classList.remove('HIDDEN'); o.ChannelSettings.classList.add('visible'); }
-    function hideChannelSettings() { bChannelSettingsOpened = false; o.StreamInfo.classList.add('HIDDEN'); o.ChannelSettings.classList.remove('visible'); }
-    
-    window.showGuide = () => {
-        clearUi('guide'); // Exclude modal from being hidden
-        o.BlurOverlay.classList.add('visible'); // Add blur effect
-        renderGuideContent();
-        bGuideOpened = true;
-        o.Guide.classList.remove('HIDDEN');
+    function showChannelSettings() { clearUi('channelSettings'); hideVideoFormatMenu(); renderChannelSettings(); bChannelSettingsOpened = true; o.ChannelSettings.classList.add('visible'); }
+    function hideChannelSettings() { bChannelSettingsOpened = false; o.ChannelSettings.classList.remove('visible'); }
+    window.showGuide = () => { clearUi('guide'); o.BlurOverlay.classList.add('visible'); renderGuideContent(); bGuideOpened = true; o.Guide.classList.remove('HIDDEN'); }
+    window.hideGuide = () => { bGuideOpened = false; o.Guide.classList.add('HIDDEN'); o.BlurOverlay.classList.remove('visible'); }
+    function renderGuideContent() { o.GuideContent.innerHTML = `<h2>Controls</h2><ul style="list-style: none; padding: 0; font-size: clamp(16px, 2.5vw, 22px); line-height: 1.8;"><li><kbd>M</kbd> - Settings</li><li><kbd>E</kbd> - EPG</li><li><kbd>H</kbd> - User Manual</li><li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li><li><kbd>←</kbd> - open channel list</li><li><kbd>←</kbd><kbd>←</kbd> - open group list</li><li><kbd>→</kbd> - open channel settings</li><li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li><li><kbd>ESC</kbd> - Go Back</li></ul>`; }
+
+    // --- EPG Functions ---
+    function showEpg() { clearUi('epg'); renderEpg(); bEpgOpened = true; o.EpgOverlay.classList.remove('HIDDEN'); }
+    function hideEpg() { bEpgOpened = false; o.EpgOverlay.classList.add('HIDDEN'); }
+    function renderEpg() {
+        // Since we don't have real EPG data, we generate placeholders
+        let channelsHtml = '';
+        aFilteredChannelKeys.forEach(key => {
+            const ch = channels[key];
+            channelsHtml += `<div class="epg-ch-item">${ch.number}. ${ch.name}</div>`;
+        });
+        o.EpgChannels.innerHTML = channelsHtml;
+        o.EpgTimeline.innerHTML = generateDummyEpg();
     }
-    window.hideGuide = () => {
-        bGuideOpened = false;
-        o.Guide.classList.add('HIDDEN');
-        o.BlurOverlay.classList.remove('visible'); // Remove blur effect
+    function generateDummyEpg() {
+        // This is a placeholder. In a real app, you'd fetch this data.
+        return `
+            <div class="epg-pr-item">
+                <div class="epg-pr-time">Now Playing</div>
+                <div class="epg-pr-title">Current Program Title</div>
+            </div>
+            <div class="epg-pr-item">
+                <div class="epg-pr-time">Up Next</div>
+                <div class="epg-pr-title">The Next Exciting Show</div>
+            </div>
+            <div class="epg-pr-item">
+                <div class="epg-pr-time">Later</div>
+                <div class="epg-pr-title">Evening Special</div>
+            </div>`;
     }
-    
+
     function showChannelName() { clearTimeout(channelNameTimeout); if (!aFilteredChannelKeys.length) return; const ch = channels[aFilteredChannelKeys[iCurrentChannel]]; if (!ch) return; getEl('channel_name').textContent = ch.name; getEl('channel_epg').textContent = 'EPG not available'; getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="${ch.name} logo">` : ''; o.ChannelInfo.classList.add('visible'); channelNameTimeout = setTimeout(hideChannelName, 5000); }
     function hideChannelName() { o.ChannelInfo.classList.remove('visible'); }
-    function updateStreamInfo() { const track = player?.getVariantTracks().find(t => t.active); if (track) o.StreamInfo.innerHTML = `Res: ${track.width}x${track.height}<br>Bps: ${(track.bandwidth/1e6).toFixed(2)}M`; }
     function loadFavoritesFromStorage() { try { const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]"); Object.keys(channels).forEach(key => channels[key].favorite = favs.includes(key)); } catch(e) {} }
     function saveFavoritesToStorage() { try { const favs = Object.entries(channels).filter(([,ch]) => ch.favorite).map(([key]) => key); localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs)); } catch(e) {} }
-    function handleFirstPlay() {
-        isSessionActive = true;
-        hideIdleAnimation();
-        o.AvPlayer.muted = false;
-        o.AvPlayer.play().catch(e => console.warn("Autoplay was prevented by the browser.", e));
-        o.PlayButton.classList.add('HIDDEN');
-    }
+    function handleFirstPlay() { isSessionActive = true; hideIdleAnimation(); o.AvPlayer.muted = false; o.AvPlayer.play().catch(e => console.warn("Autoplay was prevented.", e)); o.PlayButton.classList.add('HIDDEN'); }
 
     // --- Event Listeners ---
     o.PlayButton.addEventListener('click', handleFirstPlay);
     o.SearchField.addEventListener('input', () => { buildNav(); if (aFilteredChannelKeys.length > 0) { if(isSessionActive) loadChannel(0); } else { player?.unload(); showIdleAnimation(true); } });
     document.addEventListener('keydown', (e) => {
         if (document.activeElement === o.SearchField || bSettingsModalOpened) return;
+        if (bEpgOpened || bGuideOpened) { if (e.key === 'Escape') { hideEpg(); hideGuide(); } return; }
+        
         if (bNavOpened) {
             e.preventDefault();
             if (bGroupsOpened) {
@@ -520,23 +545,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (bChannelSettingsOpened) {
             e.preventDefault();
-            const items = o.ChannelSettingsList.querySelectorAll('li');
-            if (!items.length) return;
-            items[iChannelSettingsIndex]?.classList.remove('selected');
+            // Basic navigation can be added here if needed
+            if (e.key === 'Escape' || e.key === 'ArrowLeft') { hideChannelSettings(); }
+        } else {
             switch (e.key) {
-                case 'ArrowUp': iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1); break;
-                case 'ArrowDown': iChannelSettingsIndex = Math.min(items.length - 1, iChannelSettingsIndex + 1); break;
-                case 'Enter': items[iChannelSettingsIndex]?.click(); break;
-                case 'ArrowLeft': case 'Escape': hideChannelSettings(); break;
-            }
-            items[iChannelSettingsIndex]?.classList.add('selected');
-            items[iChannelSettingsIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (bGuideOpened) { if (e.key === 'Escape') hideGuide(); } 
-        else {
-            switch (e.key) {
-                case 'ArrowLeft': e.preventDefault(); showNav(); break; case 'ArrowRight': e.preventDefault(); showChannelSettings(); break;
-                case 'Enter': e.preventDefault(); showChannelName(); break; case 'ArrowUp': e.preventDefault(); loadChannel(iCurrentChannel - 1); break;
-                case 'ArrowDown': e.preventDefault(); loadChannel(iCurrentChannel + 1); break; case 'h': e.preventDefault(); showGuide(); break;
+                case 'ArrowLeft': e.preventDefault(); showNav(); break;
+                case 'ArrowRight': e.preventDefault(); showChannelSettings(); break;
+                case 'Enter': e.preventDefault(); showChannelName(); break;
+                case 'ArrowUp': e.preventDefault(); loadChannel(iCurrentChannel - 1); break;
+                case 'ArrowDown': e.preventDefault(); loadChannel(iCurrentChannel + 1); break;
+                case 'h': e.preventDefault(); showGuide(); break;
+                case 'e': e.preventDefault(); showEpg(); break;
                 case 'Escape': e.preventDefault(); clearUi(); break;
             }
         }
