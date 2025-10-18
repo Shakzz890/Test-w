@@ -82,7 +82,6 @@
     
     .fullscreen-popup { z-index: 40; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; background-image: var(--panel-bg-right); color: var(--text-light); border-radius: 8px; box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5); text-shadow: 1px 1px 2px #000; }
     
-    /* FIX: Make sure fullscreen modals are on top of the blur overlay */
     #guide, #settings_modal {
       z-index: 40;
     }
@@ -125,15 +124,34 @@
     .settings-item select { background: var(--settings-item-bg); color: var(--text-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; font-size: 16px; }
 
     /* New EPG Styles */
-    /* FIX: Make all text white in the EPG overlay */
     #epg_overlay { z-index: 35; background: rgba(0,0,0,0.85); display: flex; font-size: clamp(16px, 2vw, 20px); color: var(--text-light); }
     #epg_channels { width: clamp(280px, 22vw, 350px); height: 100%; overflow-y: auto; }
     #epg_timeline { flex-grow: 1; height: 100%; overflow-y: auto; border-left: 1px solid var(--border-color); }
     .epg-ch-item { padding: 12px 20px; white-space: normal; line-height: 1.3; height: auto; }
     #epg_timeline .epg-pr-item { padding: 20px; border-bottom: 1px solid var(--border-color); }
-    /* FIX: Make EPG time text white */
     .epg-pr-time { color: var(--text-light); font-size: 0.9em; margin-bottom: 5px; }
     .epg-pr-title { font-weight: bold; }
+
+    /* NEW: Codec Info Box Style */
+    #codec_info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 32; /* Above panels */
+      background: rgba(0,0,0,0.7);
+      color: var(--text-light);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 18px;
+      text-shadow: 1px 1px 2px #000;
+      opacity: 0; /* Hidden by default */
+      transition: opacity 0.3s ease;
+      pointer-events: none; /* Don't block clicks */
+    }
+    /* NEW: Show codec info when settings panel is visible */
+    #channel_settings.visible ~ #codec_info {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -201,6 +219,7 @@
           <div id="settings_modal_content"></div>
         </div>
     </div>
+    <div id="codec_info"></div>
   </div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -218,67 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         jeepneytv: { name: "Jeepney TV", type: "clearkey", manifestUri: "https://abslive.akamaized.net/dash/live/2028025/jeepneytv/manifest.mpd", keyId: "90ea4079e02f418db7b170e8763e65f0", key: "1bfe2d166e31d03eee86ee568bd6c272", logo: "https://upload.wikimedia.org/wikipedia/en/1/15/Jeepney_TV_Logo_2015.svg", group: ["entertainment"] },
         aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
         sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
-        pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
-        animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
-        discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://i.imgur.com/XsvAk5H.png", group: ["documentary"] },
-        nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
-        nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
-        pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
-        angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
-        zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
-        mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://amg00627-amg00627c40-rakuten-uk-5725.playouts.now.amagi.tv/ts-eu-w1-n2/playlist/amg00627-banijayfast-mrbeanpopupcc-rakutenuk/cb573d1d7d6c648b92d43b66cef24582847b3dcb0e6c886470af4a9765d96300dbf9b9c8fd3ab13c1ec0468a710b6d5a4d1cd209af3c419b8b1dfd034f25536b9f9bb565da9f0211c9a06b5756af6a4208a55b05a7700079d6a05a2b8d2fba74005cb95a3c1862c3ed47ad662f9ad253d72a39e8fc8b307b24455a9c5a43e6a64cb7abe95810893aa5b00140c12e14fa83439fd401b388d50f8315d775a514c893a182da1187e4205293728aecdb5f581fa9a83bf8f955bfd6937929957f2d556c3a8cc1b2cd3ef702da21269cded8b6648560a63ebb89125a980194408b338b65ea2aaef557e2dad320aaea5ad6a60b315dccc8a59ee93a739067f5abe5dc391af392452c179b3f994a5f491a999f65d2ff58b6cf8d6d06d79d67feb10ff0bca18aeeffa04b922cc6c6ce7a5c28414e0b188f51ae9b228e678d38e0e21a2f49551fedbb5bc094d65734221ed6db1eff5a5b98cb9b8fda393ec84b124ea7358a0c4b3f9a742457cd19d4b6702c852f0180751afe5b3e8f0bbc9b24e7a8d6e0496ae68c8912b13fa1e54afff900a061391931b2f42d4d4c032883b9285e660bae2f83f2c5650609e885afaf9029580d5a460a586b835790052ba668aed8b933cf2257196f9860690e20e9/index.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdSj6OHTQv9_53OX9ZwSjCqOTkYj5dDUZUW0irJhXranWx7zI1YhEIwg&s=10", group: ["cartoons & animations", "entertainment"] },
-        iQIYI: { name: "iQIYI", type: "clearkey", manifestUri: "https://linearjitp-playback.astro.com.my/dash-wv/linear/1006/default_ott.mpd", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSs3X1_D_GkWQbMiZzbmaoFets_gAeM6zKGhvtuAD7y46OH9zcqWCnLoG3K&s=10", group: ["entertainment"], userAgent: "Mozilla/5.0 (Linux; Android 14; 27821-67832-42-315-4231-233-21-43-12-1312-321-23-21-232-) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36", keyId: "7ef7e913ce85a1131b27036069169a10", key: "77d98ed71db7524c27875a09a975f9e6" },
-        tv5: { name: "TV 5 HD", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/tv5_hd/default1/index.mpd", keyId: "2615129ef2c846a9bbd43a641c7303ef", key: "07c7f996b1734ea288641a68e1cfdc4d", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/TV5_logo.svg/1200px-TV5_logo.svg.png", group: ["news", "entertainment"] },
-        kapamilya: { name: "Kapamilya Channel HD", type: "clearkey", manifestUri: "https://d1uf7s78uqso1e.cloudfront.net/out/v1/efa01372657648be830e7c23ff68bea2/index.mpd", keyId: "bd17afb5dc9648a39be79ee3634dd4b8", key: "3ecf305d54a7729299b93a3d69c02ea5", logo: "https://cms.cignal.tv/Upload/Images/Kapamilya Channel Logo alpha.png", group: ["news", "entertainment"] },
-    };
-    
-    // --- State Variables ---
-    let player, ui, iCurrentChannel = 0, iGroupListIndex = 3, iChannelSettingsIndex = 0, iVideoSettingsIndex = 0, iEpgChannelIndex = 0;
-    let aFilteredChannelKeys = [], sSelectedGroup = '__all';
-    let bNavOpened = false, bGroupsOpened = false, bGuideOpened = false, bChannelSettingsOpened = false, bSettingsModalOpened = false, bEpgOpened = false;
-    let channelNameTimeout, isSessionActive = false;
-    let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
-
-    // --- DOM Element Cache ---
-    const getEl = id => document.getElementById(id);
-    const o = {
-        AvPlayer: getEl("player"), PlayerContainer: getEl("player_container"), Nav: getEl("nav"), BlurOverlay: getEl("blur_overlay"),
-        ChannelSettings: getEl("channel_settings"), SettingsContainer: getEl("settings_container"),
-        SettingsMainMenu: getEl("settings_main_menu"), SettingsVideoFormatMenu: getEl("settings_video_format_menu"),
-        ChannelList: getEl("channel_list"), ChannelInfo: getEl("channel_info"),
-        Guide: getEl("guide"), GuideContent: getEl("guide_content"), SearchField: getEl("search_field"), IdleAnimation: getEl("idle_animation"),
-        PlayButton: getEl("play_button_overlay"), ChannelLoader: getEl("channel_loader_overlay"),
-        GroupList: getEl("group_list"), ListContainer: getEl("list_container"), DynamicGroupsList: getEl('dynamic_groups_list'),
-        SettingsModal: getEl("settings_modal"), SettingsModalContent: getEl("settings_modal_content"),
-        EpgOverlay: getEl("epg_overlay"), EpgChannels: getEl("epg_channels"), EpgTimeline: getEl("epg_timeline")
-    };
-
-    // --- Core Player Functions ---
-    async function initPlayer() {
-        Object.keys(channels).forEach((key, i) => { channels[key].number = i + 1; channels[key].key = key; });
-        loadFavoritesFromStorage();
-        setupMainMenuControls();
-        buildDynamicGroupNav();
-        sSelectedGroup = '__all';
-        buildNav();
-        updateSelectedGroupInNav();
-        
-        await shaka.polyfill.installAll();
-        if (!shaka.Player.isBrowserSupported()) { console.error("Browser not supported"); return; }
-        
-        player = new shaka.Player();
-        ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
-        ui.getControls(); // This creates the controls
-        player.attach(o.AvPlayer);
-
-        player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 } });
-        player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); showIdleAnimation(true); });
-        
-        loadInitialChannel();
-    }
-
-    function loadInitialChannel() {
-        const storedLast = localStorage.getItem('iptvLastWatched');
+        pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "httpsStorage.getItem('iptvLastWatched');
         let initialChannelKey = 'aniplus';
         if (storedLast && channels[storedLast]) initialChannelKey = storedLast;
         const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
@@ -345,7 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sSelectedGroup = item.dataset.group;
         hideGroups();
         
-        // FIX: Removed setTimeout for faster category switching
         buildNav();
         if (aFilteredChannelKeys.length === 0) { player?.unload(); showIdleAnimation(true); }
     }
@@ -388,10 +346,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Settings Panels & Modals ---
-    // FIX: Removed extra buttons from settings panel
+    
+    // FIX: Updated function to populate the new codec info box
     function renderChannelSettings() {
         const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
         if (!currentChannel) return;
+
+        // --- Get Codec Info ---
+        const activeTracks = player.getActiveTracks();
+        let vCodec = 'N/A';
+        let aCodec = 'N/A';
+
+        if (activeTracks) {
+            // Get video codec and simplify it (e.g., "avc1.4d401f" becomes "AVC1")
+            if (activeTracks.video) {
+                vCodec = activeTracks.video.codec.split('.')[0].toUpperCase();
+            }
+            // Get audio codec and simplify it (e.g., "mp4a.40.2" becomes "MP4A")
+            if (activeTracks.audio) {
+                aCodec = activeTracks.audio.codec.split('.')[0].toUpperCase();
+            }
+        }
+        // Update the new codec info element
+        o.CodecInfo.textContent = `Video: ${vCodec} | Audio: ${aCodec}`;
+        // --- End Codec Info ---
+
+        // Render the main menu (buttons are now clickable)
         o.SettingsMainMenu.innerHTML = `
             <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
             <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
@@ -475,8 +455,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return contentHtml;
     }
 
-    // Removed applyChannelEdit as it's no longer used
-
     window.applyQualitySetting = () => {
         const selected = document.querySelector('input[name="quality"]:checked').value;
         if(selected === 'auto') { player.configure({ abr: { enabled: true } }); } 
@@ -505,7 +483,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function showGroups() { if(bNavOpened) { bGroupsOpened = true; o.ListContainer.classList.add('groups-opened'); updateSelectedGroupInNav(); } }
     function hideGroups() { bGroupsOpened = false; o.ListContainer.classList.remove('groups-opened'); }
     function showChannelSettings() { clearUi('channelSettings'); hideVideoFormatMenu(); iChannelSettingsIndex = 0; renderChannelSettings(); bChannelSettingsOpened = true; o.ChannelSettings.classList.add('visible'); }
-    function hideChannelSettings() { bChannelSettingsOpened = false; o.ChannelSettings.classList.remove('visible'); }
+    
+    // FIX: Updated to clear codec info when panel closes
+    function hideChannelSettings() {
+        bChannelSettingsOpened = false;
+        o.ChannelSettings.classList.remove('visible');
+        o.CodecInfo.textContent = ''; // Clear the codec info
+    }
+
     window.showGuide = () => { clearUi('guide'); o.BlurOverlay.classList.add('visible'); renderGuideContent(); bGuideOpened = true; o.Guide.classList.remove('HIDDEN'); }
     window.hideGuide = () => { bGuideOpened = false; o.Guide.classList.add('HIDDEN'); o.BlurOverlay.classList.remove('visible'); }
     function renderGuideContent() { o.GuideContent.innerHTML = `<h2>Controls</h2><ul style="list-style: none; padding: 0; font-size: clamp(16px, 2.5vw, 22px); line-height: 1.8;"><li><kbd>M</kbd> - Settings</li><li><kbd>E</kbd> - EPG</li><li><kbd>H</kbd> - User Manual</li><li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li><li><kbd>←</kbd> - open channel list</li><li><kbd>←</kbd><kbd>←</kbd> - open group list</li><li><kbd>→</kbd> - open channel settings</li><li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show info</li><li><kbd>ESC</kbd> - Go Back</li></ul>`; }
@@ -623,43 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     initPlayer();
 });
-  // --- (Inside the <script> tag) ---
-
-    // FIX: This function is updated to show codec information
-    function renderChannelSettings() {
-        const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
-        if (!currentChannel) return;
-
-        // --- NEW CODE START ---
-        // Get the active tracks from the player
-        const activeTracks = player.getActiveTracks();
-        let vCodec = 'N/A';
-        let aCodec = 'N/A';
-
-        if (activeTracks) {
-            // Get video codec and simplify it (e.g., "avc1.4d401f" becomes "AVC1")
-            if (activeTracks.video) {
-                vCodec = activeTracks.video.codec.split('.')[0].toUpperCase();
-            }
-            // Get audio codec and simplify it (e.g., "mp4a.40.2" becomes "MP4A")
-            if (activeTracks.audio) {
-                aCodec = activeTracks.audio.codec.split('.')[0].toUpperCase();
-            }
-        }
-        // Create the display string
-        const codecInfo = `Video: ${vCodec} | Audio: ${aCodec}`;
-        // --- NEW CODE END ---
-
-        // Updated HTML includes the new codecInfo line
-        o.SettingsMainMenu.innerHTML = `
-            <div class="settings-item-header" style="font-size: 18px; color: var(--text-medium); margin-bottom: 15px;">${codecInfo}</div>
-            <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
-            <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
-            <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
-        `;
-        updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
-    }
 </script>
 </body>
 </html>
-
