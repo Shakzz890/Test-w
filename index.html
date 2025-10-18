@@ -623,6 +623,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     initPlayer();
 });
+  // --- (Inside the <script> tag) ---
+
+    // FIX: This function is updated to show codec information
+    function renderChannelSettings() {
+        const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
+        if (!currentChannel) return;
+
+        // --- NEW CODE START ---
+        // Get the active tracks from the player
+        const activeTracks = player.getActiveTracks();
+        let vCodec = 'N/A';
+        let aCodec = 'N/A';
+
+        if (activeTracks) {
+            // Get video codec and simplify it (e.g., "avc1.4d401f" becomes "AVC1")
+            if (activeTracks.video) {
+                vCodec = activeTracks.video.codec.split('.')[0].toUpperCase();
+            }
+            // Get audio codec and simplify it (e.g., "mp4a.40.2" becomes "MP4A")
+            if (activeTracks.audio) {
+                aCodec = activeTracks.audio.codec.split('.')[0].toUpperCase();
+            }
+        }
+        // Create the display string
+        const codecInfo = `Video: ${vCodec} | Audio: ${aCodec}`;
+        // --- NEW CODE END ---
+
+        // Updated HTML includes the new codecInfo line
+        o.SettingsMainMenu.innerHTML = `
+            <div class="settings-item-header" style="font-size: 18px; color: var(--text-medium); margin-bottom: 15px;">${codecInfo}</div>
+            <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
+            <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
+            <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
+        `;
+        updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+    }
 </script>
 </body>
 </html>
+
