@@ -80,8 +80,9 @@
     #brand-header svg { width: 35px; height: 35px; margin-right: 15px; }
     #brand-header span { font-size: clamp(22px, 3vw, 28px); font-weight: bold; color: var(--text-light); }
     
-    .fullscreen-popup { z-index: 40; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; background-image: var(--panel-bg-right); color: var(--text-light); border-radius: 8px; box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5); text-shadow: 1px 1px 2px #000; }
+    .fullscreen-popup { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; background-image: var(--panel-bg-right); color: var(--text-light); border-radius: 8px; box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5); text-shadow: 1px 1px 2px #000; }
     
+    /* FIX: Make sure fullscreen modals are on top of the blur overlay */
     #guide, #settings_modal {
       z-index: 40;
     }
@@ -124,11 +125,13 @@
     .settings-item select { background: var(--settings-item-bg); color: var(--text-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; font-size: 16px; }
 
     /* New EPG Styles */
+    /* FIX: Make all text white in the EPG overlay */
     #epg_overlay { z-index: 35; background: rgba(0,0,0,0.85); display: flex; font-size: clamp(16px, 2vw, 20px); color: var(--text-light); }
     #epg_channels { width: clamp(280px, 22vw, 350px); height: 100%; overflow-y: auto; }
     #epg_timeline { flex-grow: 1; height: 100%; overflow-y: auto; border-left: 1px solid var(--border-color); }
     .epg-ch-item { padding: 12px 20px; white-space: normal; line-height: 1.3; height: auto; }
     #epg_timeline .epg-pr-item { padding: 20px; border-bottom: 1px solid var(--border-color); }
+    /* FIX: Make EPG time text white */
     .epg-pr-time { color: var(--text-light); font-size: 0.9em; margin-bottom: 5px; }
     .epg-pr-title { font-weight: bold; }
 
@@ -226,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /*******************************
      * Channels + Config
      *******************************/
+    // FIX: Restored the full, correct channels object
     const channels = {
         KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
         StrawberryShortcake: { name: "Strawberry Shortcake", type: "hls", manifestUri: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", logo: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"] },
@@ -237,7 +241,69 @@ document.addEventListener('DOMContentLoaded', () => {
         jeepneytv: { name: "Jeepney TV", type: "clearkey", manifestUri: "https://abslive.akamaized.net/dash/live/2028025/jeepneytv/manifest.mpd", keyId: "90ea4079e02f418db7b170e8763e65f0", key: "1bfe2d166e31d03eee86ee568bd6c272", logo: "https://upload.wikimedia.org/wikipedia/en/1/15/Jeepney_TV_Logo_2015.svg", group: ["entertainment"] },
         aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
         sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
-        pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "httpsStorage.getItem('iptvLastWatched');
+        pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
+        animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
+        discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "httpsNext",
+        nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
+        nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
+        pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
+        angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
+        zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
+        mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "httpsNext",
+        iQIYI: { name: "iQIYI", type: "clearkey", manifestUri: "https://linearjitp-playback.astro.com.my/dash-wv/linear/1006/default_ott.mpd", logo: "httpsNext",
+        tv5: { name: "TV 5 HD", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/tv5_hd/default1/index.mpd", keyId: "2615129ef2c846a9bbd43a641c7303ef", key: "07c7f996b1734ea288641a68e1cfdc4d", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/TV5_logo.svg/1200px-TV5_logo.svg.png", group: ["news", "entertainment"] },
+        kapamilya: { name: "Kapamilya Channel HD", type: "clearkey", manifestUri: "https://d1uf7s78uqso1e.cloudfront.net/out/v1/efa01372657648be830e7c23ff68bea2/index.mpd", keyId: "bd17afb5dc9648a39be79ee3634dd4b8", key: "3ecf305d54a7729299b93a3d69c02ea5", logo: "httpsNext",
+    };
+    
+    // --- State Variables ---
+    let player, ui, iCurrentChannel = 0, iGroupListIndex = 3, iChannelSettingsIndex = 0, iVideoSettingsIndex = 0, iEpgChannelIndex = 0;
+    let aFilteredChannelKeys = [], sSelectedGroup = '__all';
+    let bNavOpened = false, bGroupsOpened = false, bGuideOpened = false, bChannelSettingsOpened = false, bSettingsModalOpened = false, bEpgOpened = false;
+    let channelNameTimeout, isSessionActive = false;
+    let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
+
+    // --- DOM Element Cache ---
+    const getEl = id => document.getElementById(id);
+    const o = {
+        AvPlayer: getEl("player"), PlayerContainer: getEl("player_container"), Nav: getEl("nav"), BlurOverlay: getEl("blur_overlay"),
+        ChannelSettings: getEl("channel_settings"), SettingsContainer: getEl("settings_container"),
+        SettingsMainMenu: getEl("settings_main_menu"), SettingsVideoFormatMenu: getEl("settings_video_format_menu"),
+        ChannelList: getEl("channel_list"), ChannelInfo: getEl("channel_info"),
+        Guide: getEl("guide"), GuideContent: getEl("guide_content"), SearchField: getEl("search_field"), IdleAnimation: getEl("idle_animation"),
+        PlayButton: getEl("play_button_overlay"), ChannelLoader: getEl("channel_loader_overlay"),
+        GroupList: getEl("group_list"), ListContainer: getEl("list_container"), DynamicGroupsList: getEl('dynamic_groups_list'),
+        SettingsModal: getEl("settings_modal"), SettingsModalContent: getEl("settings_modal_content"),
+        EpgOverlay: getEl("epg_overlay"), EpgChannels: getEl("epg_channels"), EpgTimeline: getEl("epg_timeline"),
+        // NEW: Codec Info Cache
+        CodecInfo: getEl("codec_info")
+    };
+
+    // --- Core Player Functions ---
+    async function initPlayer() {
+        Object.keys(channels).forEach((key, i) => { channels[key].number = i + 1; channels[key].key = key; });
+        loadFavoritesFromStorage();
+        setupMainMenuControls();
+        buildDynamicGroupNav();
+        sSelectedGroup = '__all';
+        buildNav();
+        updateSelectedGroupInNav();
+        
+        await shaka.polyfill.installAll();
+        if (!shaka.Player.isBrowserSupported()) { console.error("Browser not supported"); return; }
+        
+        player = new shaka.Player();
+        ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
+        ui.getControls(); // This creates the controls
+        player.attach(o.AvPlayer);
+
+        player.configure({ abr: { defaultBandwidthEstimate: 500000 }, streaming: { rebufferingGoal: 2, bufferingGoal: 8 } });
+        player.addEventListener('error', e => { console.error('Shaka Error:', e.detail); showIdleAnimation(true); });
+        
+        loadInitialChannel();
+    }
+
+    function loadInitialChannel() {
+        const storedLast = localStorage.getItem('iptvLastWatched');
         let initialChannelKey = 'aniplus';
         if (storedLast && channels[storedLast]) initialChannelKey = storedLast;
         const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
@@ -296,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // FIX: Removed setTimeout for faster category switching
     function selectGroup(index) {
         const item = o.GroupList.querySelectorAll('li')[index];
         if (!item || !item.hasAttribute('data-group')) return;
@@ -347,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Settings Panels & Modals ---
     
-    // FIX: Updated function to populate the new codec info box
+    // FIX: Updated function to populate the new codec info box and remove extra buttons
     function renderChannelSettings() {
         const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
         if (!currentChannel) return;
@@ -358,11 +425,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let aCodec = 'N/A';
 
         if (activeTracks) {
-            // Get video codec and simplify it (e.g., "avc1.4d401f" becomes "AVC1")
             if (activeTracks.video) {
                 vCodec = activeTracks.video.codec.split('.')[0].toUpperCase();
             }
-            // Get audio codec and simplify it (e.g., "mp4a.40.2" becomes "MP4A")
             if (activeTracks.audio) {
                 aCodec = activeTracks.audio.codec.split('.')[0].toUpperCase();
             }
@@ -371,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
         o.CodecInfo.textContent = `Video: ${vCodec} | Audio: ${aCodec}`;
         // --- End Codec Info ---
 
-        // Render the main menu (buttons are now clickable)
+        // Render the main menu
         o.SettingsMainMenu.innerHTML = `
             <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
             <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
@@ -455,6 +520,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return contentHtml;
     }
 
+    window.applyChannelEdit = () => {
+      const key = aFilteredChannelKeys[iCurrentChannel];
+      channels[key].name = getEl('edit_ch_name').value;
+      channels[key].logo = getEl('edit_ch_logo').value;
+      buildNav(); // Rebuild list to show changes
+      hideSettingsModal();
+    };
+
     window.applyQualitySetting = () => {
         const selected = document.querySelector('input[name="quality"]:checked').value;
         if(selected === 'auto') { player.configure({ abr: { enabled: true } }); } 
@@ -510,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         o.EpgChannels.querySelector('.selected')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     function generateDummyEpg() {
-        return `<div class="epg-pr-item"><div class="epg-pr-time">Now Playing</div><div class="epg-pr-title">Current Program Title</div></div><div class="epg-pr-item"><div class="epg-pr-time">Up Next</div><div class="epg-pr-title">The Next Exciting Show</div></div><div class="epg-pr-item"><div class="epg-pr-time">Later</div><div class="epg-pr-title">Evening Special</div></div>`;
+        return `<div class="epg-pr-item"><div class="epg-pr-time">Now Playing</div><div class="epg-pr-title">Current Program Title</div></div><div class="epg-pr-item"><div class="epg-pr-time">Up Next</div><div class="epg-pr-title">The Next Exciting Show</div></div><div class="epg-pr-item"><div class.epg-pr-time">Later</div><div class="epg-pr-title">Evening Special</div></div>`;
     }
 
     function showChannelName() { clearTimeout(channelNameTimeout); if (!aFilteredChannelKeys.length) return; const ch = channels[aFilteredChannelKeys[iCurrentChannel]]; if (!ch) return; getEl('channel_name').textContent = ch.name; getEl('channel_epg').textContent = 'EPG not available'; getEl('ch_logo').innerHTML = ch.logo ? `<img src="${ch.logo}" alt="${ch.name} logo">` : ''; o.ChannelInfo.classList.add('visible'); channelNameTimeout = setTimeout(hideChannelName, 5000); }
