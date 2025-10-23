@@ -60,7 +60,6 @@
     }
     #nav.visible { transform: translateX(0); }
     #list_container { display: flex; width: 200%; height: 100%; color: var(--text-light); transition: transform 0.5s; transform: translateX(-50%); }
-    /* Check JS: parent element of DynamicGroupsList needs class toggle */
     #list_container.groups-opened { transform: translateX(0); } /* Apply class here for CSS transition */
     #GroupList, #ChannelList { height: 100%; width: 50%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
     h2.list_headline { margin: 20px 30px; font-size: clamp(24px, 3vw, 28px); color: var(--text-medium); }
@@ -216,8 +215,7 @@
             <div class="HR" style="margin:16px 6px; height:1px; background: var(--primary-gradient);"></div>
             <h2 class="list_headline">CATEGORIES</h2>
             <ul id="DynamicGroupsList">
-              <li data-group="__fav">FAVORITES</li>
-              <li data-group="__all">ALL CHANNELS</li>
+               <!-- Static + Dynamic items will be added here by buildDynamicGroupNav -->
             </ul>
           </div>
           <div id="ChannelList" class="custom-scrollbar"></div>
@@ -263,7 +261,7 @@ const o = {
   Nav: document.getElementById('nav'),
   GroupList: document.getElementById('GroupList'),
   DynamicGroupsList: document.getElementById('DynamicGroupsList'),
-  ListContainer: document.getElementById('list_container'), // Added missing ListContainer
+  ListContainer: document.getElementById('list_container'), // FIX: Added ListContainer
   ChannelList: document.getElementById('ChannelList'),
   ChannelLoader: document.getElementById('ChannelLoader'),
   IdleAnimation: document.getElementById('IdleAnimation'),
@@ -318,7 +316,8 @@ let channels = {
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
 let iCurrentChannel = 0;
-let iGroupListIndex = 0; // Ensure this index matches the default selected group '__all' if needed
+// FIX: Initialize iGroupListIndex based on finding '__all' later in initPlayer
+let iGroupListIndex = 1; // Default fallback index for 'ALL CHANNELS'
 let channelNameTimeout = null;
 let isSessionActive = false;
 let bNavOpened = false;
@@ -329,7 +328,7 @@ let bGuideOpened = false;
 let bEpgOpened = false;
 let iChannelSettingsIndex = 0;
 let iVideoSettingsIndex = 0;
-let iEpgChannelIndex = 0; // Added missing variable for EPG
+let iEpgChannelIndex = 0; 
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 
 /* -------------------------
@@ -349,23 +348,26 @@ async function initPlayer() {
 
   loadFavoritesFromStorage();
   setupMainMenuControls();
-  buildDynamicGroupNav();
-  sSelectedGroup = '__all'; // Default group
-  // Find the index for '__all' to initialize iGroupListIndex correctly
-  // Add defensive check for GroupList existing
+  buildDynamicGroupNav(); // Build the group list first
+  sSelectedGroup = '__all'; // Set default group
+  
+  // Find the index for '__all' AFTER building the nav
   if (o.GroupList) {
-      const groupItems = o.GroupList.querySelectorAll('li');
-      const initialGroupItem = Array.from(groupItems).find(li => li.dataset.group === '__all');
+      const allGroupLiItems = o.GroupList.querySelectorAll('li'); // Get all li items in the GroupList container
+      const initialGroupItem = Array.from(allGroupLiItems).find(li => li.dataset.group === '__all'); // Find the one with data-group='__all'
+      
       if (initialGroupItem) {
-          iGroupListIndex = Array.from(groupItems).indexOf(initialGroupItem);
+          // Calculate index relative to ALL list items in GroupList
+          iGroupListIndex = Array.from(allGroupLiItems).indexOf(initialGroupItem); 
       } else {
-          // Find 'ALL CHANNELS' by text content as fallback, assumes it's index 1 after 'FAVORITES'
-          const allChannelsItem = Array.from(groupItems).find(li => li.textContent.trim() === 'ALL CHANNELS');
-          iGroupListIndex = allChannelsItem ? Array.from(groupItems).indexOf(allChannelsItem) : 1; 
+           // Fallback if '__all' isn't found 
+          iGroupListIndex = Array.from(allGroupLiItems).findIndex(li => li.textContent.trim() === 'ALL CHANNELS');
+          if (iGroupListIndex === -1) iGroupListIndex = 1; // Absolute fallback (index 1 is usually 'ALL CHANNELS' after 'FAVORITES')
+          console.warn("'__all' group item not found, using fallback index:", iGroupListIndex);
       }
   } else {
-      iGroupListIndex = 1; // Default if GroupList isn't ready yet
-      console.warn("GroupList not found during init, defaulting index.");
+      iGroupListIndex = 1; 
+      console.warn("GroupList not found during init index calculation.");
   }
   
   buildNav(); // Build initial channel list for the default group
@@ -397,7 +399,6 @@ async function initPlayer() {
 
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
-  // Default channel - ensure it exists, otherwise pick first available
   let initialChannelKey = 'aniplus'; 
   if (!channels[initialChannelKey]) {
       initialChannelKey = Object.keys(channels)[0]; 
@@ -408,43 +409,42 @@ function loadInitialChannel() {
       }
   }
   
-  // Make sure aFilteredChannelKeys is populated based on the default group ('__all')
+  // Ensure aFilteredChannelKeys is populated if empty
   if (aFilteredChannelKeys.length === 0) {
-      sSelectedGroup = '__all'; // Ensure correct group is selected
+      sSelectedGroup = '__all'; // Ensure correct group context
       buildNav(); 
-      // If still no channels after building nav, exit
+      // If still empty after building nav, critical error
       if (aFilteredChannelKeys.length === 0) {
-           console.error("No channels available in the '__all' group.");
+           console.error("No channels available even in the '__all' group.");
            showIdleAnimation(true);
            return;
       }
   }
 
-  // Use storedLast only if it exists in channels AND in the current filter (aFilteredChannelKeys)
+  // Determine the best initial channel key
   if (storedLast && channels[storedLast] && aFilteredChannelKeys.includes(storedLast)) {
+       // Use last watched if valid and available in current filter
        initialChannelKey = storedLast;
   } 
-  // If storedLast is invalid or not in filter, check if the default 'aniplus' is in the filter
   else if (!aFilteredChannelKeys.includes(initialChannelKey)) {
-      // If default also not in filter, use the absolute first channel from the current filter
+      // If default ('aniplus') isn't in filter, use the absolute first channel from filter
       initialChannelKey = aFilteredChannelKeys[0]; 
   }
   
-  // If we still don't have a valid key (e.g., filter is empty after all checks)
-  if (!initialChannelKey) {
-       console.error("Could not determine initial channel.");
+  // Final check if we have a valid key
+  if (!initialChannelKey || !aFilteredChannelKeys.includes(initialChannelKey)) {
+       console.error("Could not determine a valid initial channel from filtered list.");
        showIdleAnimation(true);
        return;
   }
 
   const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
-  // Load channel if index is valid (should always be >= 0 here)
+  // Index should be valid here, but double-check
   loadChannel(initialIndex >= 0 ? initialIndex : 0, { isInitialLoad: true });
 }
 
 
 async function loadChannel(index, options = {}) {
-  // Ensure filtered keys exist before proceeding
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0) {
     console.warn("loadChannel called with no filtered channels available.");
     try { await player?.unload(); } catch {} 
@@ -452,19 +452,16 @@ async function loadChannel(index, options = {}) {
     return;
   }
 
-  // Sanitize index
   iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
   
   const channelKey = aFilteredChannelKeys[iCurrentChannel];
-  // Check if channelKey is valid and channel data exists
   if (!channelKey || !channels[channelKey]) {
        console.error(`Invalid channel key or data for index ${iCurrentChannel}: ${channelKey}`);
-       showIdleAnimation(true); // Show idle screen on error
+       showIdleAnimation(true); 
        return;
   }
   const channel = channels[channelKey];
   
-  // Check if player is initialized
   if (!player) {
       console.error("Player not initialized before loading channel.");
       return;
@@ -472,23 +469,21 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', channelKey);
 
-  // Show loader only if it's not the very first load initiated by initPlayer
-  if (!options.isInitialLoad) {
-    if(o.ChannelLoader) o.ChannelLoader.classList.remove('HIDDEN');
-    if(o.BlurOverlay) o.BlurOverlay.classList.add('visible');
-  }
+  // Loading indicator removed per request
+  // if (!options.isInitialLoad) {
+  //   if(o.ChannelLoader) o.ChannelLoader.classList.remove('HIDDEN');
+  //   if(o.BlurOverlay) o.BlurOverlay.classList.add('visible');
+  // }
 
-  showChannelName(); // Update channel info display
-  updateSelectedChannelInNav(); // Update nav selection
+  showChannelName(); 
+  updateSelectedChannelInNav(); 
 
   try {
-    // Reset DRM config for each load
     player.configure('drm.clearKeys', {}); 
     if (channel.type === 'clearkey' && channel.keyId && channel.key) {
       player.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } });
     }
 
-    // Reset network filters
     player.getNetworkingEngine()?.clearAllRequestFilters();
     if (channel.userAgent) {
       player.getNetworkingEngine()?.registerRequestFilter((type, request) => {
@@ -496,33 +491,29 @@ async function loadChannel(index, options = {}) {
       });
     }
 
-    // Load the manifest
     await player.load(channel.manifestUri);
     
-    // Unmute and play only if the session is marked active 
-    // (meaning user clicked play or it's an auto-load after first play)
+    // Manage player state based on session activity
     if (isSessionActive) { 
-      hideIdleAnimation(); // Ensure idle screen is hidden
+      hideIdleAnimation(); 
       if (o.AvPlayer) {
           o.AvPlayer.muted = false;
-          // Attempt play, but catch errors silently if browser blocks it
           o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e)); 
       }
-    } else if (options.isInitialLoad) {
-         // Special case for initial load BEFORE first play: just hide animation, don't unmute/play yet
-         hideIdleAnimation(); 
+    } else if (options.isInitialLoad) { 
+         // If initial load AND session NOT active, keep idle screen + play button visible
+         showIdleAnimation(true); 
     }
     
   } catch (error) {
     console.error(`Error loading channel "${channel?.name}":`, error);
-    // Show idle screen on load error, allow user to try again or switch
-    showIdleAnimation(true); 
+    showIdleAnimation(true); // Show idle screen on error
   } finally {
-    // Hide loader overlay once loading finishes (success or fail)
-    if (!options.isInitialLoad) {
-      if(o.ChannelLoader) o.ChannelLoader.classList.add('HIDDEN');
-      if(o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
-    }
+    // Loading indicator removed per request
+    // if (!options.isInitialLoad) {
+    //   if(o.ChannelLoader) o.ChannelLoader.classList.add('HIDDEN');
+    //   if(o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
+    // }
   }
 }
 
@@ -530,121 +521,143 @@ async function loadChannel(index, options = {}) {
     UI and Navigation
     ------------------------- */
 function setupMainMenuControls() {
-  // Wire buttons using IDs
   const guideBtn = getEl('guide_button');
   const epgBtn = getEl('epg_button');
+  // Add listeners if elements exist
   if (guideBtn) guideBtn.onclick = showGuide;
+  else console.warn("guide_button not found.");
   if (epgBtn) epgBtn.onclick = showEpg;
+  else console.warn("epg_button not found.");
 
-  // Ensure PlayButton exists before adding listener
   if (o.PlayButton) {
+      o.PlayButton.removeEventListener('mousedown', handleFirstPlay); // Remove potential duplicates
       o.PlayButton.addEventListener('mousedown', handleFirstPlay); 
   } else {
       console.error("PlayButton element not found.");
   }
 }
 
+// FIX: Build full list including static items, reattach listeners robustly
 function buildDynamicGroupNav() {
-  if (!o.DynamicGroupsList || !o.GroupList) return; // Check elements
+  if (!o.DynamicGroupsList || !o.GroupList) {
+      console.error("Required group list elements not found.");
+      return; 
+  }
 
-  // Get all unique groups from channel data
-  const allGroups = new Set(Object.values(channels).flatMap(ch => ch?.group || [])); // Add null check for ch
-  const sortedGroups = [...allGroups].sort();
+  // Get unique dynamic groups, handle potential errors
+  let sortedGroups = [];
+  try {
+      const allGroups = new Set(Object.values(channels).flatMap(ch => ch?.group || []));
+      sortedGroups = [...allGroups].sort();
+  } catch (error) { console.error("Error processing channel groups:", error); }
   
-  // Reset dynamic list but keep static items (FAV, ALL)
-  o.DynamicGroupsList.innerHTML = ''; // Clear only dynamic part
+  // Clear only the dynamic list container
+  o.DynamicGroupsList.innerHTML = ''; 
 
-  let groupHtml = '';
+  // --- Create and Append ALL group items (static + dynamic) ---
+  const allListItems = [];
+
+  // Static: Favorites
+  const favLi = document.createElement('li');
+  favLi.dataset.group = '__fav';
+  favLi.textContent = 'FAVORITES';
+  allListItems.push(favLi);
+
+  // Static: All Channels
+  const allLi = document.createElement('li');
+  allLi.dataset.group = '__all';
+  allLi.textContent = 'ALL CHANNELS';
+  allListItems.push(allLi);
+
+  // Dynamic Groups
   sortedGroups.forEach(name => {
-    // Basic escaping for group name
     const safeName = (name || 'Unnamed Group').replace(/</g, '&lt;');
-    groupHtml += `<li data-group="${safeName}">${safeName.toUpperCase()}</li>`;
+    const dynamicLi = document.createElement('li');
+    dynamicLi.dataset.group = safeName;
+    dynamicLi.textContent = safeName.toUpperCase();
+    allListItems.push(dynamicLi);
   });
-  // Append the dynamically generated group list items
-  o.DynamicGroupsList.insertAdjacentHTML('beforeend', groupHtml); 
 
-  // --- Re-attach click handlers to ALL group list items ---
-  // Select all list items within the main group list container
-  const allGroupItems = o.GroupList.querySelectorAll('li'); 
-  allGroupItems.forEach((li, index) => {
-     // Only process items that should be clickable (groups or main nav)
-     if (li.hasAttribute('data-group') || li.id === 'guide_button' || li.id === 'epg_button') {
-         // Replace the item with its clone to remove old listeners reliably
-         const newLi = li.cloneNode(true);
-         li.parentNode.replaceChild(newLi, li);
-         
-         // Add the appropriate click listener based on type
-         if (newLi.hasAttribute('data-group')) {
-             // Add listener to select the group, passing its current index
-             newLi.onclick = () => selectGroup(index); 
-         } else if (newLi.id === 'guide_button') {
-             newLi.onclick = showGuide;
-         } else if (newLi.id === 'epg_button') {
-             newLi.onclick = showEpg;
-         }
+  // Append all items to the DOM
+  allListItems.forEach(li => o.DynamicGroupsList.appendChild(li));
+
+  // --- Re-attach click handlers using the correct context ---
+  // Select ALL list items within the main #GroupList container (including static nav, headers etc.)
+  const fullGroupListItems = o.GroupList.querySelectorAll('li'); 
+  
+  fullGroupListItems.forEach((li, index) => {
+     // Clear any previous listener first to prevent duplicates
+     li.onclick = null; 
+     
+     // Add listener only if it's a clickable group item
+     if (li.hasAttribute('data-group')) {
+        li.onclick = () => selectGroup(index); // Use the index within the full list
+     } 
+     // Re-add listeners for static nav items (GUIDE/EPG) if necessary (though handled by setupMainMenuControls)
+     else if (li.id === 'guide_button') {
+         li.onclick = showGuide;
+     } else if (li.id === 'epg_button') {
+         li.onclick = showEpg;
      }
   });
 }
 
 
+
+// FIX: Removed auto loadChannel on category select
 function selectGroup(index) {
-  if (!o.GroupList) return; // Check element exists
+  if (!o.GroupList) return; 
   
   const groupItems = o.GroupList.querySelectorAll('li');
-  // Validate index and ensure item exists
   if (index < 0 || index >= groupItems.length) {
        console.warn("Invalid index passed to selectGroup:", index);
        return;
   }
-  
   const item = groupItems[index];
-  // Ensure the selected item is a data group (not Guide/EPG)
+  // Ensure it's a clickable group item with a data-group attribute
   if (!item || !item.hasAttribute('data-group')) {
-       console.warn("Selected item is not a group:", item);
-       return; 
+       return; // Ignore clicks on non-group items like headers
   }
 
   sSelectedGroup = item.dataset.group;
   iGroupListIndex = index;
-  updateSelectedGroupInNav(); // Update visual selection
+  updateSelectedGroupInNav(); 
 
-  hideGroups(); // Close the group view overlay/panel
-  buildNav(); // Rebuild the channel list based on the new sSelectedGroup
+  hideGroups(); // Hide the group overlay panel
+  buildNav(); // Rebuild the channel list based on the new group
 
-  // --- Handle channel loading after group change ---
+  // --- Update UI, Reset Index, Focus, but DO NOT load channel ---
   if (aFilteredChannelKeys.length > 0) {
-    iCurrentChannel = 0; // Reset index to the first channel of the new group
-    updateSelectedChannelInNav(); // Highlight the first channel in the list
-    
-    // Load the first channel *only if* the player session is already active
+    iCurrentChannel = 0; // Reset channel index to the first in the new list
+    updateSelectedChannelInNav(); // Highlight the first channel visually
+    // Ensure idle screen is hidden if the session is already active
     if (isSessionActive) { 
-        loadChannel(0); 
-        hideIdleAnimation(); // Ensure idle screen is hidden
-    } else {
-        // If session not active, just update the list, don't auto-load/play
-        // Idle animation might still be showing, which is correct
+        hideIdleAnimation(); 
     }
   } else {
-    // Group is empty, unload player and show idle animation
-    try { player?.unload(); } catch {}
-    showIdleAnimation(true); // Show idle with play button if session not started
+    // If the selected group is empty
+    try { player?.unload(); } catch {} // Unload current video if any
+    showIdleAnimation(!isSessionActive); // Show idle (with play button only if session hasn't started)
   }
 
-  // --- Manage Nav Panel State ---
-  // Keep the main navigation panel open for further interaction (e.g., keyboard nav)
+  // --- Manage Nav Panel and Focus ---
+  // Ensure the main navigation panel remains visible
   if (!bNavOpened) {
       showNav();
   }
-  // Try to focus the channel list for keyboard navigation, add tabindex if needed
-  if (o.ChannelList) {
-      o.ChannelList.setAttribute('tabindex', '-1'); // Allow programmatic focus
-      o.ChannelList.focus(); 
+  // Set focus to the channel list for keyboard navigation
+  if (o.ChannelList) { 
+      o.ChannelList.setAttribute('tabindex', '-1'); // Make it focusable
+      o.ChannelList.focus(); // Attempt to set focus
   }
 }
 
 
 function buildNav() {
-  if (!o.ChannelList || !o.SearchField) return; // Check required elements
+  if (!o.ChannelList || !o.SearchField) {
+      console.error("ChannelList or SearchField element not found.");
+      return; 
+  }
 
   const searchTerm = o.SearchField.value.toLowerCase();
   
@@ -652,49 +665,50 @@ function buildNav() {
       aFilteredChannelKeys = Object.keys(channels)
         .filter(key => {
           const ch = channels[key];
-          // Robust checks for channel data validity
           if (!ch || typeof ch.name !== 'string') return false; 
-          
           const inGroup = sSelectedGroup === '__all' || 
-                          (sSelectedGroup === '__fav' && ch.favorite === true) || // Explicit check
+                          (sSelectedGroup === '__fav' && ch.favorite === true) || 
                           (Array.isArray(ch.group) && ch.group.includes(sSelectedGroup));
           const inSearch = !searchTerm || ch.name.toLowerCase().includes(searchTerm);
           return inGroup && inSearch;
         })
-        .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity)); // Handle missing numbers
+        .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity)); 
   } catch (error) {
       console.error("Error filtering/sorting channels:", error);
-      aFilteredChannelKeys = []; // Reset on error
+      aFilteredChannelKeys = []; 
   }
 
-  o.ChannelList.innerHTML = ''; // Clear previous list
-  o.ChannelList.scrollTop = 0; // Scroll to top
+  o.ChannelList.innerHTML = ''; // Clear previous content
+  o.ChannelList.scrollTop = 0; // Ensure scrolled to top
 
   if (aFilteredChannelKeys.length === 0) {
-    o.ChannelList.innerHTML = `<li style="justify-content:center; color:#888; padding:12px; height: auto; line-height: normal;">No channels found.</li>`; // Make text wrap
+    const msg = sSelectedGroup === '__fav' 
+        ? 'No favorite channels found. Add channels using the settings menu (→).' 
+        : 'No channels found in this category.';
+    // Ensure list item styles allow wrapping
+    o.ChannelList.innerHTML = `<li style="justify-content:center; color:#888; padding:12px; height: auto; line-height: normal; white-space: normal; text-align: center;">${msg}</li>`; 
     return;
   }
 
   const frag = document.createDocumentFragment();
   aFilteredChannelKeys.forEach((key, index) => {
     const ch = channels[key];
-    if (!ch) return; // Skip if somehow channel data is missing
+    if (!ch) return; // Skip if channel data is somehow missing
     
     const item = document.createElement('li');
     item.className = 'channel-item';
     item.onclick = () => {
       loadChannel(index);
-      // Use minimal delay for visual feedback before closing
-      setTimeout(hideNav, 50); 
+      setTimeout(hideNav, 50); // Small delay before closing nav
     };
     
     const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : '';
-    // Add error handling and better styling for logo placeholder
+    // Handle logo errors gracefully
     const logoHtml = ch.logo 
-        ? `<div class="nav_logo"><img src="${ch.logo}" alt="" onerror="this.parentElement.style.display='none';"></div>` 
-        : '<div class="nav_logo" style="width: 50px;"></div>'; // Placeholder div to maintain layout
+        ? `<div class="nav_logo"><img src="${ch.logo}" alt="" onerror="this.style.display='none'; this.onerror=null;"></div>` // Prevent infinite error loops
+        : '<div class="nav_logo" style="width: 50px;"></div>'; // Consistent placeholder
         
-    // Escape channel name for safety
+    // Basic text sanitization
     const safeName = (ch.name || 'Unknown Channel').replace(/</g, '&lt;');
     
     item.innerHTML = `${fav}<span class="list-ch">${ch.number || '?'}</span><span class="list-title">${safeName}</span>${logoHtml}`;
@@ -702,81 +716,69 @@ function buildNav() {
   });
   
   o.ChannelList.appendChild(frag);
-  updateSelectedChannelInNav(); // Highlight the current/first channel
+  updateSelectedChannelInNav(); // Highlight the correct channel
 }
 
 
 function updateSelectedChannelInNav() {
   if (!o.ChannelList) return; 
-  
   try {
-      // Remove 'selected' from previously selected item
       const currentSelected = o.ChannelList.querySelector('.selected');
       if (currentSelected) currentSelected.classList.remove('selected');
       
-      // Find the new item to select based on iCurrentChannel index
       const channelItems = o.ChannelList.querySelectorAll('li.channel-item');
+      
+      // Validate index before using it
       if (iCurrentChannel >= 0 && iCurrentChannel < channelItems.length) {
           const newItem = channelItems[iCurrentChannel];
           if (newItem) {
             newItem.classList.add('selected');
-            // Scroll into view only if the nav panel is open AND group list is closed
+            // Scroll only if Nav is open AND Group list is closed
             if (bNavOpened && !bGroupsOpened && typeof newItem.scrollIntoView === 'function') { 
                 newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }
-      } else if (aFilteredChannelKeys.length > 0) {
-           // If index is somehow invalid but list not empty, select first item as fallback
+      } else if (aFilteredChannelKeys.length > 0 && channelItems.length > 0) { 
+           // Fallback: Index out of bounds, select first item if list not empty
            iCurrentChannel = 0; 
            const firstItem = channelItems[0];
            if (firstItem) firstItem.classList.add('selected');
-           console.warn("Invalid iCurrentChannel, selecting first channel as fallback.");
-      }
+           console.warn("iCurrentChannel was out of bounds, selecting first channel.");
+      } 
+      // If list is empty (channelItems.length === 0), do nothing
       
-  } catch (error) {
-      console.error("Error updating selected channel in nav:", error);
-  }
+  } catch (error) { console.error("Error updating selected channel in nav:", error); }
 }
 
 
 function updateSelectedGroupInNav() {
    if (!o.GroupList) return;
-   
    try {
        const currentSelected = o.GroupList.querySelector('.selected');
        if (currentSelected) currentSelected.classList.remove('selected');
        
        const allLis = o.GroupList.querySelectorAll('li');
+       // Validate index before use
        if (iGroupListIndex >= 0 && iGroupListIndex < allLis.length) { 
            const newItem = allLis[iGroupListIndex];
            if (newItem) {
              newItem.classList.add('selected');
-             // Scroll only if the Group view overlay is active
+             // Scroll into view only if the group overlay is currently open
              if (bGroupsOpened && typeof newItem.scrollIntoView === 'function') {
                  newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
              }
            }
        } else {
-           console.warn("Invalid iGroupListIndex:", iGroupListIndex);
-           // Optional: Select default ('__all') as fallback?
+           // Index is invalid, log warning. Could attempt fallback to '__all' index if needed.
+           console.warn("Cannot update selected group, invalid iGroupListIndex:", iGroupListIndex);
        }
-   } catch (error) {
-       console.error("Error updating selected group in nav:", error);
-   }
+   } catch (error) { console.error("Error updating selected group in nav:", error); }
 }
 
 /* -------------------------
     Settings & Modals
     ------------------------- */
-// ... (Keep the Settings & Modals functions from the previous good version) ...
-// renderChannelSettings, showVideoFormatMenu, hideVideoFormatMenu, 
-// renderVideoFormatMenu, setAspectRatio, togglePlaybackControls,
-// showSettingsModal, window.hideSettingsModal, renderModalContent,
-// window.applyChannelEdit, window.applyQualitySetting, 
-// window.setSubtitles, window.setAudio, toggleFavourite
-/* -------------------------
-    Settings & Modals (Copied from previous version)
-    ------------------------- */
+// ... (Keep the Settings & Modals functions: renderChannelSettings, showVideoFormatMenu, hideVideoFormatMenu, renderVideoFormatMenu, setAspectRatio, togglePlaybackControls, showSettingsModal, window.hideSettingsModal, renderModalContent, window.applyChannelEdit, window.applyQualitySetting, window.setSubtitles, window.setAudio, toggleFavourite) ...
 function renderChannelSettings() {
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iCurrentChannel >= aFilteredChannelKeys.length) return; 
   const currentChannelKey = aFilteredChannelKeys[iCurrentChannel];
@@ -911,7 +913,9 @@ function renderModalContent(type) {
         const audioTracks = player.getAudioLanguagesAndRoles() || [];
         let subItemsHtml = `<li onclick="setSubtitles(null, false)">Off</li>`;
         textTracks.forEach(track => {
-          const safeTrack = JSON.stringify(track).replace(/</g, '\\u003c'); 
+          // Sanitize track object before stringifying for inline JS
+          const safeTrackData = { id: track.id, label: track.label, language: track.language };
+          const safeTrack = JSON.stringify(safeTrackData).replace(/</g, '\\u003c'); 
           subItemsHtml += `<li onclick='setSubtitles(${safeTrack}, true)'>${track.label || track.language}</li>`;
         });
         let audioItemsHtml = audioTracks.map(track => `<li onclick="setAudio('${track.language}')">${track.language} (Audio)</li>`).join('');
@@ -948,7 +952,7 @@ window.applyChannelEdit = () => {
 
   channels[key].name = nameInput.value; 
   channels[key].logo = logoInput.value; 
-  buildNav(); 
+  buildNav(); // Rebuild nav to reflect changes
   hideSettingsModal();
 };
 
@@ -964,9 +968,9 @@ window.applyQualitySetting = () => {
         player.configure({ abr: { enabled: false } });
         const trackToSelect = (player.getVariantTracks() || []).find(t => t.id == selected); 
         if (trackToSelect) { player.selectVariantTrack(trackToSelect, true); } 
-        else { console.warn("Selected quality track not found:", selected); player.configure({ abr: { enabled: true } }); }
+        else { console.warn("Selected quality track not found:", selected); player.configure({ abr: { enabled: true } }); } // Fallback to auto
       }
-  } catch(error) { console.error("Error applying quality setting:", error); try { player.configure({ abr: { enabled: true } }); } catch {} }
+  } catch(error) { console.error("Error applying quality setting:", error); try { player.configure({ abr: { enabled: true } }); } catch {} } // Fallback to auto on error
   hideSettingsModal();
 };
 
@@ -974,6 +978,7 @@ window.setSubtitles = (track, isVisible) => {
   if (!player) return hideSettingsModal(); 
   try {
       player.setTextTrackVisibility(isVisible);
+      // Ensure track exists and has an id before trying to select
       if (isVisible && track && typeof track.id !== 'undefined') { 
         const trackToSelect = (player.getTextTracks() || []).find(t => t.id === track.id);
         if (trackToSelect) { player.selectTextTrack(trackToSelect); } 
@@ -985,6 +990,7 @@ window.setSubtitles = (track, isVisible) => {
 
 window.setAudio = lang => { 
     if (!player) return hideSettingsModal(); 
+    // Basic validation for language string
     if (typeof lang === 'string' && lang) { 
         try { player.selectAudioLanguage(lang); } 
         catch(error) { console.error("Error setting audio language:", error); }
@@ -999,8 +1005,19 @@ function toggleFavourite() {
 
   channels[key].favorite = !channels[key].favorite;
   saveFavoritesToStorage();
-  if (bChannelSettingsOpened) { renderChannelSettings(); }
-  if (bNavOpened) { buildNav(); } // Update star in list if open
+  
+  // Update settings panel immediately if open
+  if (bChannelSettingsOpened) { 
+      renderChannelSettings(); 
+  }
+  
+  // Rebuild nav list if open OR if the current group IS favorites
+  // This ensures the star updates and the list re-filters correctly for favorites
+  if (bNavOpened || sSelectedGroup === '__fav') { 
+      buildNav(); 
+      // After rebuilding, re-apply the selection highlight to the correct item
+      updateSelectedChannelInNav(); 
+  } 
 }
 
 
@@ -1011,23 +1028,27 @@ function toggleFavourite() {
 function showIdleAnimation(showPlayButton = false) {
   if (o.IdleAnimation) o.IdleAnimation.classList.remove('HIDDEN');
   if (o.PlayButton) {
+      // Only show play button if session NOT active and requested
       if (showPlayButton && !isSessionActive) o.PlayButton.classList.remove('HIDDEN');
       else o.PlayButton.classList.add('HIDDEN');
   }
 }
 function hideIdleAnimation() { 
     if (o.IdleAnimation) o.IdleAnimation.classList.add('HIDDEN'); 
-    // Don't set isSessionActive here, set it in handleFirstPlay
+    // Do NOT set isSessionActive here. Let handleFirstPlay manage it.
 }
 
+
 function clearUi(exclude) {
+  // Close panels unless excluded
   if (exclude !== 'nav' && exclude !== 'epg' && exclude !== 'guide') hideNav();
   if (exclude !== 'channelSettings') hideChannelSettings();
-  if (exclude !== 'guide') hideGuide();
+  if (exclude !== 'guide') hideGuide(); // Uses window.hideGuide
   if (exclude !== 'channelName') hideChannelName();
-  if (exclude !== 'settingsModal') window.hideSettingsModal(); // Use global hide
+  if (exclude !== 'settingsModal') window.hideSettingsModal(); // Uses window.hideSettingsModal
   if (exclude !== 'epg') hideEpg();
 }
+
 
 function showNav() {
   if (!o.Nav) return; 
@@ -1039,9 +1060,9 @@ function showNav() {
 function hideNav() {
   if (!o.Nav) return; 
   bNavOpened = false;
-  bGroupsOpened = false; // Close groups when closing nav
+  bGroupsOpened = false; // Always close groups when closing main nav
   o.Nav.classList.remove('visible');
-  // Also hide the group list view if it was open
+  // Ensure group view visually resets if it was open
   if (o.ListContainer?.classList.contains('groups-opened')) {
       hideGroups(); 
   }
@@ -1051,7 +1072,7 @@ function showGroups() {
   // Ensure Nav is open and ListContainer exists
   if (bNavOpened && o.ListContainer) { 
     bGroupsOpened = true;
-    o.ListContainer.classList.add('groups-opened'); // Use ListContainer for transition
+    o.ListContainer.classList.add('groups-opened'); // FIX: Target ListContainer
     updateSelectedGroupInNav(); 
   }
 }
@@ -1059,9 +1080,10 @@ function showGroups() {
 function hideGroups() {
   bGroupsOpened = false;
   if (o.ListContainer) {
-      o.ListContainer.classList.remove('groups-opened'); // Use ListContainer
+      o.ListContainer.classList.remove('groups-opened'); // FIX: Target ListContainer
   }
 }
+
 
 function showChannelSettings() {
   if (!o.ChannelSettings) return; 
