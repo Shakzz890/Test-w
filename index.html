@@ -102,7 +102,7 @@
     }
 
     .fullscreen-popup h2 { margin: 0; font-size: clamp(22px, 4vw, 28px); padding: 20px 25px; color: var(--text-light); }
-    .popup-content-list { padding: 0 0 10px 0; }
+    .popup-content-list { padding: 0 0 10px 0; max-height: 60vh; overflow-y: auto; }
     .popup-content-list li { padding: 15px 25px; height: auto; white-space: normal; line-height: 1.4; font-size: clamp(18px, 2.5vw, 22px); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
     .popup-content-list li:last-child { border-bottom: none; }
     .popup-buttons { display: flex; justify-content: flex-end; padding: 15px 25px; background: rgba(0,0,0,0.2); }
@@ -115,7 +115,9 @@
     #IdleAnimation {
       z-index: 28; 
       display: flex; justify-content: flex-end; align-items: center;
-      background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop');
+      /* background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop'); */
+      /* FIX 2: Use a simpler background to test, or ensure the image loads */
+      background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8));
       background-size: cover; background-position: center;
       pointer-events: none;
     }
@@ -136,9 +138,24 @@
 
     #ChannelSettings { right: 0; transform: translateX(100%); background-image: var(--panel-bg-right); z-index: 31; position: fixed; top: 0; width: clamp(320px, 25vw, 400px); max-width: 90%; overflow: hidden; height: 100%; transition: transform 0.5s; font-size: clamp(18px, 2.5vw, 22px); color: var(--text-light); }
     #ChannelSettings.visible { transform: translateX(0); }
-    #settings_container { position: relative; width: 200%; height: 100%; display: flex; transition: transform 0.4s ease-in-out; }
+    
+    /* FIX: New Header for Video Info */
+    #SettingsVideoInfo {
+        padding: 15px 25px;
+        background: rgba(0,0,0,0.3);
+        border-bottom: 1px solid var(--border-color);
+        font-size: clamp(16px, 2vw, 18px);
+        font-weight: bold;
+        color: var(--text-medium);
+        text-shadow: 1px 1px 2px #000;
+        height: 58px; /* Match brand header height */
+        display: flex;
+        align-items: center;
+    }
+
+    #settings_container { position: relative; width: 200%; height: calc(100% - 58px); /* Adjust height for new header */ display: flex; transition: transform 0.4s ease-in-out; }
     #settings_container.submenu-visible { transform: translateX(-50%); } 
-    #SettingsMainMenu, #SettingsVideoFormatMenu { width: 50%; height: 100%; padding: 20px 0; }
+    #SettingsMainMenu, #SettingsVideoFormatMenu { width: 50%; height: 100%; padding: 20px 0; overflow-y: auto; }
     .settings-item { padding: 15px 25px; cursor: pointer; transition: background-color 0.2s; }
     .settings-item.selected { background-color: var(--settings-item-hover-bg); }
     .settings-item-header { font-size: clamp(24px, 3vw, 28px); color: var(--text-medium); margin: 20px 25px; }
@@ -164,25 +181,6 @@
     #nav.visible ~ #EpgOverlay {
         left: var(--nav-width);
         width: calc(100% - var(--nav-width));
-    }
-
-    #CodecInfo {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      z-index: 32; /* Above panels */
-      background: rgba(0,0,0,0.7);
-      color: var(--text-light);
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 18px;
-      text-shadow: 1px 1px 2px #000;
-      opacity: 0; /* Hidden by default */
-      transition: opacity 0.3s ease;
-      pointer-events: none; /* Don't block clicks */
-    }
-    #ChannelSettings.visible ~ #CodecInfo {
-      opacity: 1;
     }
   </style>
 </head>
@@ -223,6 +221,8 @@
       </div>
     </div>
     <div id="ChannelSettings">
+      <!-- FIX: Video Info Header -->
+      <div id="SettingsVideoInfo">Video: N/A | Audio: N/A</div>
       <div id="settings_container"> 
         <div id="SettingsMainMenu" class="custom-scrollbar"></div>
         <div id="SettingsVideoFormatMenu" class="custom-scrollbar"></div>
@@ -250,7 +250,6 @@
           <div id="SettingsModalContent"></div>
         </div>
     </div>
-    <div id="CodecInfo"></div>
   </div>
 <script>
 let player = null;
@@ -272,7 +271,7 @@ const o = {
   SettingsVideoFormatMenu: document.getElementById('SettingsVideoFormatMenu'),
   SettingsContainer: document.getElementById('settings_container'), 
   ChannelSettings: document.getElementById('ChannelSettings'),
-  CodecInfo: document.getElementById('CodecInfo'),
+  SettingsVideoInfo: document.getElementById('SettingsVideoInfo'), // FIX: Added video info header
   Guide: document.getElementById('Guide'),
   GuideContent: document.getElementById('GuideContent'),
   EpgOverlay: document.getElementById('EpgOverlay'),
@@ -298,7 +297,7 @@ let channels = {
     jeepneytv: { name: "Jeepney TV", type: "clearkey", manifestUri: "https://abslive.akamaized.net/dash/live/2028025/jeepneytv/manifest.mpd", keyId: "90ea4079e02f418db7b170e8763e65f0", key: "1bfe2d166e31d03eee86ee568bd6c272", logo: "https://upload.wikimedia.org/wikipedia/en/1/15/Jeepney_TV_Logo_2015.svg", group: ["entertainment"] },
     aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
     sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
-    pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
+    pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "httpsIA.static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
     animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
@@ -329,6 +328,7 @@ let bEpgOpened = false;
 let iChannelSettingsIndex = 0;
 let iVideoSettingsIndex = 0;
 let iEpgChannelIndex = 0; 
+let aEpgFilteredChannelKeys = []; // FIX: Store EPG channel list separately
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 
 /* -------------------------
@@ -381,6 +381,15 @@ async function initPlayer() {
 
   player = new shaka.Player();
   ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
+  
+  // --- START FIX ---
+  // Restore default controls, ensure click-to-play, and HIDE SHAKA SPINNER
+  ui.configure({
+    'clickToPlay': true,
+    'showBuffering': false // Hide Shaka's default spinner
+  });
+  // --- END FIX ---
+
   ui.getControls();
   player.attach(o.AvPlayer);
 
@@ -393,6 +402,9 @@ async function initPlayer() {
     console.error('Shaka Error:', e.detail);
     showIdleAnimation(true); // Keep showing idle on error
   });
+  
+  // Add listener to update video info when tracks change
+  player.addEventListener('trackschanged', renderChannelSettings);
 
   loadInitialChannel();
 }
@@ -469,9 +481,16 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', channelKey);
 
-  // Loading indicator removed per request
+  // --- START FIX: LOADING SEQUENCE ---
+  // Show loading animations
+  // Only show anime bg transition if session is already active
+  if (isSessionActive && o.IdleAnimation) {
+      o.IdleAnimation.classList.remove('HIDDEN'); 
+  }
+  if (o.ChannelLoader) o.ChannelLoader.classList.remove('HIDDEN'); // Show loading text
+  hideChannelName(); // Hide channel info box
+  // --- END FIX: LOADING SEQUENCE ---
   
-  showChannelName(); 
   updateSelectedChannelInNav(); 
 
   try {
@@ -491,7 +510,10 @@ async function loadChannel(index, options = {}) {
     
     // Manage player state based on session activity
     if (isSessionActive) { 
-      hideIdleAnimation(); 
+      // --- START FIX: HIDE LOADING ANIM ---
+      if (o.IdleAnimation) o.IdleAnimation.classList.add('HIDDEN'); // Hide anime bg
+      // --- END FIX: HIDE LOADING ANIM ---
+
       if (o.AvPlayer) {
           o.AvPlayer.muted = false;
           o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e)); 
@@ -501,11 +523,16 @@ async function loadChannel(index, options = {}) {
          showIdleAnimation(true); 
     }
     
+    // --- START FIX: SHOW INFO ON SUCCESS ---
+    showChannelName(); 
+    // --- END FIX: SHOW INFO ON SUCCESS ---
+
   } catch (error) {
     console.error(`Error loading channel "${channel?.name}":`, error);
     showIdleAnimation(true); // Show idle screen on error
   } finally {
-     // Loading indicator removed per request
+     // Hide loading text overlay
+     if (o.ChannelLoader) o.ChannelLoader.classList.add('HIDDEN');
   }
 }
 
@@ -629,9 +656,13 @@ function selectGroup(index) {
     if (aFilteredChannelKeys.length > 0) {
       iCurrentChannel = 0; // Reset channel index to the first in the new list
       updateSelectedChannelInNav(); // Highlight the first channel visually
-      // Ensure idle screen is hidden if the session is already active
-      if (isSessionActive) { 
-          hideIdleAnimation(); 
+      
+      // FIX 1: Auto-load first channel in new group if session is active
+      if (isSessionActive) {
+          loadChannel(0);
+      } else {
+          // If session not active, just update highlight
+          updateSelectedChannelInNav();
       }
     } else {
       // If the selected group is empty
@@ -733,8 +764,8 @@ function updateSelectedChannelInNav() {
           const newItem = channelItems[iCurrentChannel];
           if (newItem) {
             newItem.classList.add('selected');
-            // Scroll only if Nav is open AND Group list is closed
-            if (bNavOpened && !bGroupsOpened && typeof newItem.scrollIntoView === 'function') { 
+            // FIX 2: Scroll into view whenever nav is visible, regardless of group state
+            if (bNavOpened && typeof newItem.scrollIntoView === 'function') { 
                 newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }
@@ -778,28 +809,33 @@ function updateSelectedGroupInNav() {
 /* -------------------------
     Settings & Modals
     ------------------------- */
-// ... (Keep the Settings & Modals functions: renderChannelSettings, showVideoFormatMenu, hideVideoFormatMenu, renderVideoFormatMenu, setAspectRatio, togglePlaybackControls, showSettingsModal, window.hideSettingsModal, renderModalContent, window.applyChannelEdit, window.applyQualitySetting, window.setSubtitles, window.setAudio, toggleFavourite) ...
 function renderChannelSettings() {
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iCurrentChannel >= aFilteredChannelKeys.length) return; 
   const currentChannelKey = aFilteredChannelKeys[iCurrentChannel];
   const currentChannel = channels[currentChannelKey];
   if (!currentChannel) return;
 
-  let vCodec = 'N/A';
-  let aCodec = 'N/A';
+  // FIX: Update Video Info Header
+  let vCodec = 'N/A', aCodec = 'N/A', vRes = '';
   try {
     if (player && typeof player.getActiveTracks === 'function') {
         const activeTracks = player.getActiveTracks();
         if (activeTracks) {
-          if (activeTracks.video && activeTracks.video.codec) vCodec = activeTracks.video.codec.split('.')[0].toUpperCase();
+          if (activeTracks.video) {
+              if(activeTracks.video.codec) vCodec = activeTracks.video.codec.split('.')[0].toUpperCase();
+              if(activeTracks.video.height) vRes = `${activeTracks.video.height}p`;
+          }
           if (activeTracks.audio && activeTracks.audio.codec) aCodec = activeTracks.audio.codec.split('.')[0].toUpperCase();
         }
     }
   } catch (e) { console.warn("Could not get active tracks:", e); }
   
-  if (o.CodecInfo) o.CodecInfo.textContent = `Video: ${vCodec} | Audio: ${aCodec}`;
+  if (o.SettingsVideoInfo) {
+      o.SettingsVideoInfo.textContent = `Video: ${vRes} (${vCodec}) | Audio: ${aCodec}`;
+  }
 
   if (o.SettingsMainMenu) {
+      const currentFormat = getAspectRatio(); // Get current format
       o.SettingsMainMenu.innerHTML = `
         <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
         <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
@@ -828,34 +864,59 @@ function hideVideoFormatMenu() {
 }
 
 function renderVideoFormatMenu() {
-  if (o.SettingsVideoFormatMenu) { 
+  if (o.SettingsVideoFormatMenu) {
+      const currentFormat = getAspectRatio(); // Get current format
+      // FIX 3: Change clicks to open modals
       o.SettingsVideoFormatMenu.innerHTML = `
         <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
-        <div class="settings-item-header">Video Format</div>
-        <div class="settings-item">
+        <div class="settings-item-header">Video Settings</div>
+        <div class="settings-item" onclick="showSettingsModal('format')">
           <span>Video format</span>
-          <select onchange="setAspectRatio(this.value)">
-            <option value="original">Original</option>
-            <option value="16:9">16:9</option>
-            <option value="stretch">Stretch</option>
-            <option value="zoom">Zoom</option>
-          </select>
+          <span style="color: var(--text-medium);">${currentFormat} &gt;</span>
         </div>
-        <div class="settings-item" onclick="showSettingsModal('quality')">Video track</div>
+        <div class="settings-item" onclick="showSettingsModal('quality')">
+          <span>Video track</span>
+          <span style="color: var(--text-medium);">&gt;</span>
+        </div>
       `;
       updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
   } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
 
+function getAspectRatio() {
+    if (!o.AvPlayer) return 'Original';
+    const style = o.AvPlayer.style;
+    if (style.objectFit === 'fill') return 'Stretch';
+    if (style.objectFit === 'cover') return 'Zoom';
+    // Default is 'contain' which we map to '16:9' or 'Original'
+    // For simplicity, let's read the last setting if available, or default
+    return localStorage.getItem('iptvAspectRatio') || 'Original';
+}
+
 function setAspectRatio(format) {
   if (!o.AvPlayer) return; 
   o.AvPlayer.style.transform = 'scale(1)';
+  let formatName = 'Original';
   switch(format) {
-    case 'stretch': o.AvPlayer.style.objectFit = 'fill'; break;
-    case '16:9': o.AvPlayer.style.objectFit = 'contain'; break;
-    case 'zoom': o.AvPlayer.style.objectFit = 'cover'; o.AvPlayer.style.transform = 'scale(1.15)'; break;
-    default: o.AvPlayer.style.objectFit = 'contain';
+    case 'stretch': 
+      o.AvPlayer.style.objectFit = 'fill'; 
+      formatName = 'Stretch';
+      break;
+    case '16:9': 
+      o.AvPlayer.style.objectFit = 'contain'; 
+      formatName = '16:9';
+      break;
+    case 'zoom': 
+      o.AvPlayer.style.objectFit = 'cover'; 
+      o.AvPlayer.style.transform = 'scale(1.15)'; 
+      formatName = 'Zoom';
+      break;
+    default: 
+      o.AvPlayer.style.objectFit = 'contain';
+      formatName = 'Original';
   }
+  localStorage.setItem('iptvAspectRatio', formatName); // Store the name
+  renderVideoFormatMenu(); // Re-render menu to show new value
 }
 
 function togglePlaybackControls() {
@@ -907,6 +968,16 @@ function renderModalContent(type) {
           itemsHtml += `<li onclick="this.querySelector('input').checked=true">${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
         });
         contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button onclick="hideSettingsModal()">CANCEL</button><button onclick="applyQualitySetting()">OK</button></div>`;
+      
+      } else if (type === 'format') {
+        // FIX 3: Add Modal for Video Format
+        const currentFormat = getAspectRatio();
+        contentHtml = `<h2>Video Format</h2><ul class="popup-content-list">
+            <li onclick="this.querySelector('input').checked=true">Original <input type="radio" name="format" value="original" ${currentFormat === 'Original' ? 'checked' : ''}></li>
+            <li onclick="this.querySelector('input').checked=true">16:9 <input type="radio" name="format" value="16:9" ${currentFormat === '16:9' ? 'checked' : ''}></li>
+            <li onclick="this.querySelector('input').checked=true">Stretch <input type="radio" name="format" value="stretch" ${currentFormat === 'Stretch' ? 'checked' : ''}></li>
+            <li onclick="this.querySelector('input').checked=true">Zoom <input type="radio" name="format" value="zoom" ${currentFormat === 'Zoom' ? 'checked' : ''}></li>
+          </ul><div class="popup-buttons"><button onclick="hideSettingsModal()">CANCEL</button><button onclick="applyFormatSetting()">OK</button></div>`;
       
       } else if (type === 'subtitles') {
         const textTracks = player.getTextTracks() || [];
@@ -974,6 +1045,15 @@ window.applyQualitySetting = () => {
   hideSettingsModal();
 };
 
+// FIX 3: Add apply function for format modal
+window.applyFormatSetting = () => {
+    const selectedRadio = document.querySelector('input[name="format"]:checked');
+    if (selectedRadio) {
+        setAspectRatio(selectedRadio.value);
+    }
+    hideSettingsModal();
+};
+
 window.setSubtitles = (track, isVisible) => {
   if (!player) return hideSettingsModal(); 
   try {
@@ -1026,6 +1106,12 @@ function toggleFavourite() {
     ------------------------- */
 // FIX: Only show play button if session is NOT active
 function showIdleAnimation(showPlayButton = false) {
+  // --- START FIX: REMOVED BLOCKING CHECK ---
+  // This function is for initial load or critical error
+  // The channel change transition manually controls the IdleAnimation
+  // We MUST allow this to run on errors, even if session is active.
+  // --- END FIX: REMOVED BLOCKING CHECK ---
+
   if (o.IdleAnimation) o.IdleAnimation.classList.remove('HIDDEN');
   if (o.PlayButton) {
       // Only show play button if session NOT active and requested
@@ -1047,7 +1133,7 @@ function clearUi(exclude) {
   // Close panels unless excluded
   if (exclude !== 'nav' && exclude !== 'epg' && exclude !== 'guide') hideNav();
   if (exclude !== 'channelSettings') hideChannelSettings();
-  if (exclude !== 'guide') hideGuide(); // Uses window.hideGuide
+  if (exclude !== 'guide') window.hideGuide(); // Uses window.hideGuide
   if (exclude !== 'channelName') hideChannelName();
   if (exclude !== 'settingsModal') window.hideSettingsModal(); // Uses window.hideSettingsModal
   if (exclude !== 'epg') hideEpg();
@@ -1060,6 +1146,8 @@ function showNav() {
   // clearUi('nav'); 
   bNavOpened = true;
   o.Nav.classList.add('visible');
+  // FIX 2: When nav opens, update and scroll to selected channel
+  updateSelectedChannelInNav(); 
 }
 
 function hideNav() {
@@ -1104,7 +1192,7 @@ function hideChannelSettings() {
   if (!o.ChannelSettings) return; 
   bChannelSettingsOpened = false;
   o.ChannelSettings.classList.remove('visible');
-  if (o.CodecInfo) o.CodecInfo.textContent = ''; 
+  // if (o.SettingsVideoInfo) o.SettingsVideoInfo.textContent = ''; // Don't clear info
 }
 
 window.showGuide = () => {
@@ -1143,11 +1231,19 @@ function renderGuideContent() {
 /* -------------------------
     EPG
     ------------------------- */
-// ... (Keep EPG functions: showEpg, hideEpg, renderEpg, generateDummyEpg) ...
 function showEpg() {
   if (!o.EpgOverlay || !o.EpgChannels || !o.EpgTimeline) return; 
   clearUi('epg');
-  iEpgChannelIndex = iCurrentChannel; 
+  
+  // FIX 4: Build EPG list from *all* channels, not filtered list
+  aEpgFilteredChannelKeys = Object.keys(channels)
+      .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
+  
+  // Find index of current channel in the *full* EPG list
+  const currentChannelKey = aFilteredChannelKeys[iCurrentChannel];
+  iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentChannelKey);
+  if (iEpgChannelIndex === -1) iEpgChannelIndex = 0; // Default to first channel
+  
   renderEpg(); 
   bEpgOpened = true;
   o.EpgOverlay.classList.remove('HIDDEN');
@@ -1161,13 +1257,8 @@ function renderEpg() {
   if (!o.EpgChannels || !o.EpgTimeline) return; 
   
   let channelsHtml = '';
-  // Ensure channels are filtered before rendering EPG list
-  if (aFilteredChannelKeys.length === 0 && sSelectedGroup) buildNav(); 
-  
-  // Use a snapshot of filtered keys at the time EPG is opened
-  const epgChannelKeys = [...aFilteredChannelKeys]; 
-
-  epgChannelKeys.forEach((key, index) => {
+  // Use the dedicated EPG channel list
+  aEpgFilteredChannelKeys.forEach((key, index) => {
     const ch = channels[key];
     if (!ch) return; 
     // Use iEpgChannelIndex for selection highlight
@@ -1176,6 +1267,8 @@ function renderEpg() {
     channelsHtml += `<div class="epg-ch-item ${selectedClass}">${ch.number || '?'}. ${safeName}</div>`;
   });
   o.EpgChannels.innerHTML = channelsHtml;
+  
+  // Generate EPG for the selected channel
   o.EpgTimeline.innerHTML = generateDummyEpg(); 
   
   try {
@@ -1187,6 +1280,8 @@ function renderEpg() {
 }
 
 function generateDummyEpg() {
+  // You could customize this based on aEpgFilteredChannelKeys[iEpgChannelIndex]
+  // For now, it's still a dummy
   return `
     <div class="epg-pr-item"><div class="epg-pr-time">Now Playing</div><div class="epg-pr-title">Current Program Title (Placeholder)</div></div>
     <div class="epg-pr-item"><div class="epg-pr-time">Up Next</div><div class="epg-pr-title">Next Program Title (Placeholder)</div></div>
@@ -1198,7 +1293,6 @@ function generateDummyEpg() {
 /* -------------------------
     Channel name display
     ------------------------- */
-// ... (Keep Channel Name functions: showChannelName, hideChannelName) ...
 function showChannelName() {
   clearTimeout(channelNameTimeout);
   if (!o.ChannelInfo || !o.ChannelInfoName || !o.ChannelInfoEpg || !o.ChannelInfoLogo) return; 
@@ -1223,7 +1317,6 @@ function hideChannelName() {
 /* -------------------------
     Favorites storage
     ------------------------- */
-// ... (Keep Favorites functions: loadFavoritesFromStorage, saveFavoritesToStorage) ...
 function loadFavoritesFromStorage() {
   try {
     const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]");
@@ -1248,7 +1341,6 @@ function saveFavoritesToStorage() {
 /* -------------------------
     First Play handling
     ------------------------- */
-// ... (Keep handleFirstPlay function) ...
 function handleFirstPlay() {
   if (isSessionActive) return; 
   isSessionActive = true; // Set session active *now*
@@ -1270,7 +1362,6 @@ function handleFirstPlay() {
 /* -------------------------
     Settings selection helper
     ------------------------- */
-// ... (Keep updateSettingsSelection function) ...
 function updateSettingsSelection(container, index) {
   if (!container || typeof container.querySelector !== 'function') return; 
   try {
@@ -1294,7 +1385,6 @@ function updateSettingsSelection(container, index) {
 /* -------------------------
     Event Listeners (keyboard / touch)
     ------------------------- */
-// ... (Keep Event Listeners section) ...
 if (o.PlayButton) {
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
 } else { console.error("PlayButton element not found."); }
@@ -1325,18 +1415,35 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') hideEpg();
     else if (e.key === 'ArrowUp') iEpgChannelIndex = Math.max(0, iEpgChannelIndex - 1);
     else if (e.key === 'ArrowDown') {
-         const itemCount = o.EpgChannels?.querySelectorAll('.epg-ch-item').length ?? 0;
-         iEpgChannelIndex = Math.min(itemCount - 1, iEpgChannelIndex + 1);
+         // Use the EPG list length
+         iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1);
     }
-    // else if (e.key === 'Enter') { /* Action */ }
-    renderEpg(); 
+    else if (e.key === 'Enter') { 
+        // Find the selected channel in the *main* filtered list
+        const selectedKey = aEpgFilteredChannelKeys[iEpgChannelIndex];
+        const mainIndex = aFilteredChannelKeys.indexOf(selectedKey);
+        if (mainIndex !== -1) {
+            // If found in current group, load it
+            loadChannel(mainIndex);
+        } else {
+            // If not in current group, switch to 'ALL' and load it
+            sSelectedGroup = '__all';
+            buildNav(); // Rebuild main nav for 'ALL'
+            const newMainIndex = aFilteredChannelKeys.indexOf(selectedKey);
+            if (newMainIndex !== -1) {
+                loadChannel(newMainIndex);
+            }
+        }
+        hideEpg();
+    }
+    renderEpg(); // Re-render to show selection change
     return; 
   }
 
   // Guide open
   if (bGuideOpened) {
      e.preventDefault();
-     if (e.key === 'Escape') hideGuide();
+     if (e.key === 'Escape') window.hideGuide();
      return; 
   }
 
@@ -1375,7 +1482,7 @@ document.addEventListener('keydown', (e) => {
         const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        else if (e.key === 'Enter') submenuItems[iVideoSettingsIndex]?.click(); 
+        else if (e.key === 'Enter' || e.key === 'ArrowRight') submenuItems[iVideoSettingsIndex]?.click(); // Open modal on Right too
         else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideVideoFormatMenu(); 
         updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
     } else { // Main settings menu
@@ -1390,8 +1497,14 @@ document.addEventListener('keydown', (e) => {
   }
 
   // Default player controls
-  const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape'];
+  const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
   if (!PLAYER_KEYS.includes(e.key)) return; 
+  
+  // Don't prevent default if player controls are focused
+  if (document.activeElement && document.activeElement.closest('.shaka-controls-container')) {
+      return; 
+  }
+
   e.preventDefault(); 
   switch (e.key) {
     case 'ArrowLeft': showNav(); break;
@@ -1401,6 +1514,7 @@ document.addEventListener('keydown', (e) => {
     case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
     case 'h': showGuide(); break;
     case 'e': showEpg(); break;
+    case 'm': showChannelSettings(); break; // 'm' for settings
     case 'Escape': clearUi(); break; 
   }
 });
@@ -1428,10 +1542,17 @@ document.addEventListener('touchend', () => {
 
   const isHorizontal = absDeltaX > absDeltaY;
 
+  // Check if tap was on Shaka controls
+  const targetElement = document.elementFromPoint(touchStartX, touchStartY);
+  if (targetElement && targetElement.closest('.shaka-controls-container')) {
+      touchStartX = touchStartY = touchEndX = touchEndY = 0;
+      return; // Let Shaka handle its own controls
+  }
+
   // TAP
   if (absDeltaX < tapThreshold && absDeltaY < tapThreshold) {
       if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
-          showChannelName(); 
+          // Let Shaka's 'clickToPlay' handle it
       }
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
       return;
