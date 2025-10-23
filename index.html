@@ -391,7 +391,7 @@ async function initPlayer() {
 
   player.addEventListener('error', e => {
     console.error('Shaka Error:', e.detail);
-    showIdleAnimation(true);
+    showIdleAnimation(true); // Keep showing idle on error
   });
 
   loadInitialChannel();
@@ -470,11 +470,7 @@ async function loadChannel(index, options = {}) {
   localStorage.setItem('iptvLastWatched', channelKey);
 
   // Loading indicator removed per request
-  // if (!options.isInitialLoad) {
-  //   if(o.ChannelLoader) o.ChannelLoader.classList.remove('HIDDEN');
-  //   if(o.BlurOverlay) o.BlurOverlay.classList.add('visible');
-  // }
-
+  
   showChannelName(); 
   updateSelectedChannelInNav(); 
 
@@ -509,11 +505,7 @@ async function loadChannel(index, options = {}) {
     console.error(`Error loading channel "${channel?.name}":`, error);
     showIdleAnimation(true); // Show idle screen on error
   } finally {
-    // Loading indicator removed per request
-    // if (!options.isInitialLoad) {
-    //   if(o.ChannelLoader) o.ChannelLoader.classList.add('HIDDEN');
-    //   if(o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
-    // }
+     // Loading indicator removed per request
   }
 }
 
@@ -604,9 +596,12 @@ function buildDynamicGroupNav() {
 
 
 
-// FIX: Removed auto loadChannel on category select
+// FIX: Use transitionend event listener
 function selectGroup(index) {
-  if (!o.GroupList) return; 
+  if (!o.GroupList || !o.ListContainer) {
+       console.error("GroupList or ListContainer not found.");
+       return; 
+  }
   
   const groupItems = o.GroupList.querySelectorAll('li');
   if (index < 0 || index >= groupItems.length) {
@@ -623,34 +618,35 @@ function selectGroup(index) {
   iGroupListIndex = index;
   updateSelectedGroupInNav(); 
 
-  hideGroups(); // Hide the group overlay panel
-  buildNav(); // Rebuild the channel list based on the new group
+  // Define the function to run after transition
+  const afterTransition = () => {
+    // Remove the listener to prevent multiple executions
+    o.ListContainer.removeEventListener('transitionend', afterTransition); 
 
-  // --- Update UI, Reset Index, Focus, but DO NOT load channel ---
-  if (aFilteredChannelKeys.length > 0) {
-    iCurrentChannel = 0; // Reset channel index to the first in the new list
-    updateSelectedChannelInNav(); // Highlight the first channel visually
-    // Ensure idle screen is hidden if the session is already active
-    if (isSessionActive) { 
-        hideIdleAnimation(); 
+    buildNav(); // Rebuild the channel list based on the new group
+
+    // --- Update UI, Reset Index ---
+    if (aFilteredChannelKeys.length > 0) {
+      iCurrentChannel = 0; // Reset channel index to the first in the new list
+      updateSelectedChannelInNav(); // Highlight the first channel visually
+      // Ensure idle screen is hidden if the session is already active
+      if (isSessionActive) { 
+          hideIdleAnimation(); 
+      }
+    } else {
+      // If the selected group is empty
+      try { player?.unload(); } catch {} // Unload current video if any
+      showIdleAnimation(!isSessionActive); // Show idle (with play button only if session hasn't started)
     }
-  } else {
-    // If the selected group is empty
-    try { player?.unload(); } catch {} // Unload current video if any
-    showIdleAnimation(!isSessionActive); // Show idle (with play button only if session hasn't started)
-  }
+  };
 
-  // --- Manage Nav Panel and Focus ---
-  // Ensure the main navigation panel remains visible
-  if (!bNavOpened) {
-      showNav();
-  }
-  // Set focus to the channel list for keyboard navigation
-  if (o.ChannelList) { 
-      o.ChannelList.setAttribute('tabindex', '-1'); // Make it focusable
-      o.ChannelList.focus(); // Attempt to set focus
-  }
+  // Add the event listener *before* starting the transition
+  o.ListContainer.addEventListener('transitionend', afterTransition, { once: true }); // { once: true } auto-removes listener
+
+  // Start the transition
+  hideGroups(); 
 }
+
 
 
 function buildNav() {
@@ -677,6 +673,10 @@ function buildNav() {
       console.error("Error filtering/sorting channels:", error);
       aFilteredChannelKeys = []; 
   }
+    
+  // --- Console Log for Debugging Blank Panel ---
+  console.log(`Building Nav for group: "${sSelectedGroup}", Found channels: ${aFilteredChannelKeys.length}`);
+
 
   o.ChannelList.innerHTML = ''; // Clear previous content
   o.ChannelList.scrollTop = 0; // Ensure scrolled to top
@@ -1024,15 +1024,19 @@ function toggleFavourite() {
 /* -------------------------
     UI State & Helpers
     ------------------------- */
-// ... (Keep UI State functions: showIdleAnimation, hideIdleAnimation, clearUi, showNav, hideNav, showGroups, hideGroups, showChannelSettings, hideChannelSettings, showGuide, hideGuide, renderGuideContent) ...
+// FIX: Only show play button if session is NOT active
 function showIdleAnimation(showPlayButton = false) {
   if (o.IdleAnimation) o.IdleAnimation.classList.remove('HIDDEN');
   if (o.PlayButton) {
       // Only show play button if session NOT active and requested
-      if (showPlayButton && !isSessionActive) o.PlayButton.classList.remove('HIDDEN');
-      else o.PlayButton.classList.add('HIDDEN');
+      if (showPlayButton && !isSessionActive) { 
+          o.PlayButton.classList.remove('HIDDEN');
+      } else {
+          o.PlayButton.classList.add('HIDDEN');
+      }
   }
 }
+
 function hideIdleAnimation() { 
     if (o.IdleAnimation) o.IdleAnimation.classList.add('HIDDEN'); 
     // Do NOT set isSessionActive here. Let handleFirstPlay manage it.
@@ -1052,7 +1056,8 @@ function clearUi(exclude) {
 
 function showNav() {
   if (!o.Nav) return; 
-  clearUi('nav'); 
+  // No need to call clearUi('nav') here, as it might hide things unintentionally.
+  // clearUi('nav'); 
   bNavOpened = true;
   o.Nav.classList.add('visible');
 }
