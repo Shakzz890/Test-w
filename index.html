@@ -115,9 +115,10 @@
     #IdleAnimation {
       z-index: 28; 
       display: flex; justify-content: flex-end; align-items: center;
-      /* background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop'); */
-      /* FIX 2: Use a simpler background to test, or ensure the image loads */
-      background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8));
+      /* FIX 2: Restored user's background image */
+      background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop');
+      /* Fallback color in case image fails */
+      background-color: #111;
       background-size: cover; background-position: center;
       pointer-events: none;
     }
@@ -475,8 +476,8 @@ async function loadChannel(index, options = {}) {
   const channel = channels[channelKey];
   
   if (!player) {
-      console.error("Player not initialized before loading channel.");
-      return;
+       console.error("Player not initialized before loading channel.");
+       return;
   }
 
   localStorage.setItem('iptvLastWatched', channelKey);
@@ -519,8 +520,8 @@ async function loadChannel(index, options = {}) {
           o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e)); 
       }
     } else if (options.isInitialLoad) { 
-         // If initial load AND session NOT active, keep idle screen + play button visible
-         showIdleAnimation(true); 
+           // If initial load AND session NOT active, keep idle screen + play button visible
+           showIdleAnimation(true); 
     }
     
     // --- START FIX: SHOW INFO ON SUCCESS ---
@@ -605,19 +606,19 @@ function buildDynamicGroupNav() {
   const fullGroupListItems = o.GroupList.querySelectorAll('li'); 
   
   fullGroupListItems.forEach((li, index) => {
-     // Clear any previous listener first to prevent duplicates
-     li.onclick = null; 
-     
-     // Add listener only if it's a clickable group item
-     if (li.hasAttribute('data-group')) {
-        li.onclick = () => selectGroup(index); // Use the index within the full list
-     } 
-     // Re-add listeners for static nav items (GUIDE/EPG) if necessary (though handled by setupMainMenuControls)
-     else if (li.id === 'guide_button') {
-         li.onclick = showGuide;
-     } else if (li.id === 'epg_button') {
-         li.onclick = showEpg;
-     }
+      // Clear any previous listener first to prevent duplicates
+      li.onclick = null; 
+      
+      // Add listener only if it's a clickable group item
+      if (li.hasAttribute('data-group')) {
+         li.onclick = () => selectGroup(index); // Use the index within the full list
+      } 
+      // Re-add listeners for static nav items (GUIDE/EPG) if necessary (though handled by setupMainMenuControls)
+      else if (li.id === 'guide_button') {
+          li.onclick = showGuide;
+      } else if (li.id === 'epg_button') {
+          li.onclick = showEpg;
+      }
   });
 }
 
@@ -968,7 +969,7 @@ function renderModalContent(type) {
           itemsHtml += `<li onclick="this.querySelector('input').checked=true">${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
         });
         contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button onclick="hideSettingsModal()">CANCEL</button><button onclick="applyQualitySetting()">OK</button></div>`;
-      
+        
       } else if (type === 'format') {
         // FIX 3: Add Modal for Video Format
         const currentFormat = getAspectRatio();
@@ -978,7 +979,7 @@ function renderModalContent(type) {
             <li onclick="this.querySelector('input').checked=true">Stretch <input type="radio" name="format" value="stretch" ${currentFormat === 'Stretch' ? 'checked' : ''}></li>
             <li onclick="this.querySelector('input').checked=true">Zoom <input type="radio" name="format" value="zoom" ${currentFormat === 'Zoom' ? 'checked' : ''}></li>
           </ul><div class="popup-buttons"><button onclick="hideSettingsModal()">CANCEL</button><button onclick="applyFormatSetting()">OK</button></div>`;
-      
+        
       } else if (type === 'subtitles') {
         const textTracks = player.getTextTracks() || [];
         const audioTracks = player.getAudioLanguagesAndRoles() || [];
@@ -991,7 +992,7 @@ function renderModalContent(type) {
         });
         let audioItemsHtml = audioTracks.map(track => `<li onclick="setAudio('${track.language}')">${track.language} (Audio)</li>`).join('');
         contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button onclick="hideSettingsModal()">CLOSE</button></div>`;
-      
+        
       } else if (type === 'edit') {
         if (!aFilteredChannelKeys || iCurrentChannel >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>';
         const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
@@ -1028,9 +1029,9 @@ window.applyChannelEdit = () => {
 };
 
 window.applyQualitySetting = () => {
-  if (!player) return hideSettingsModal(); 
+  if (!player) return; // FIX 4: Removed hideSettingsModal()
   const selectedRadio = document.querySelector('input[name="quality"]:checked');
-  if (!selectedRadio) return hideSettingsModal(); 
+  if (!selectedRadio) return; // FIX 4: Removed hideSettingsModal()
   const selected = selectedRadio.value;
   try {
       if (selected === 'auto') {
@@ -1042,7 +1043,7 @@ window.applyQualitySetting = () => {
         else { console.warn("Selected quality track not found:", selected); player.configure({ abr: { enabled: true } }); } // Fallback to auto
       }
   } catch(error) { console.error("Error applying quality setting:", error); try { player.configure({ abr: { enabled: true } }); } catch {} } // Fallback to auto on error
-  hideSettingsModal();
+  // hideSettingsModal(); // <-- FIX 4: REMOVED
 };
 
 // FIX 3: Add apply function for format modal
@@ -1051,7 +1052,7 @@ window.applyFormatSetting = () => {
     if (selectedRadio) {
         setAspectRatio(selectedRadio.value);
     }
-    hideSettingsModal();
+    // hideSettingsModal(); // <-- FIX 4: REMOVED
 };
 
 window.setSubtitles = (track, isVisible) => {
@@ -1331,8 +1332,8 @@ function loadFavoritesFromStorage() {
 function saveFavoritesToStorage() {
   try {
     const favs = Object.entries(channels)
-                 .filter(([,ch]) => ch && ch.favorite) 
-                 .map(([key]) => key);
+                   .filter(([,ch]) => ch && ch.favorite) 
+                   .map(([key]) => key);
     localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs));
   } catch(e) { console.error("Error saving favorites:", e); }
 }
@@ -1405,7 +1406,25 @@ if (o.SearchField) {
 } else { console.error("SearchField element not found."); }
 
 document.addEventListener('keydown', (e) => {
-  if (document.activeElement === o.SearchField || bSettingsModalOpened) return;
+  // FIX 3: Removed bSettingsModalOpened from this check
+  if (document.activeElement === o.SearchField) return;
+
+  // Guide open
+  if (bGuideOpened) {
+     e.preventDefault();
+     if (e.key === 'Escape') window.hideGuide();
+     return;
+  }
+  
+  // FIX 3: Add dedicated modal escape handler
+  if (bSettingsModalOpened) {
+      e.preventDefault();
+      if (e.key === 'Escape') {
+          window.hideSettingsModal();
+      }
+      // Block all other keys while modal is open
+      return; 
+  }
 
   // EPG open
   if (bEpgOpened) {
@@ -1428,6 +1447,18 @@ document.addEventListener('keydown', (e) => {
         } else {
             // If not in current group, switch to 'ALL' and load it
             sSelectedGroup = '__all';
+            
+            // --- FIX 1: Update group list UI selection ---
+            if (o.GroupList) {
+                const allGroupLiItems = o.GroupList.querySelectorAll('li');
+                const allGroupItemIndex = Array.from(allGroupLiItems).findIndex(li => li.dataset.group === '__all');
+                if (allGroupItemIndex !== -1) {
+                    iGroupListIndex = allGroupItemIndex;
+                    updateSelectedGroupInNav(); // Update visual highlight
+                }
+            }
+            // --- END FIX 1 ---
+            
             buildNav(); // Rebuild main nav for 'ALL'
             const newMainIndex = aFilteredChannelKeys.indexOf(selectedKey);
             if (newMainIndex !== -1) {
@@ -1438,13 +1469,6 @@ document.addEventListener('keydown', (e) => {
     }
     renderEpg(); // Re-render to show selection change
     return; 
-  }
-
-  // Guide open
-  if (bGuideOpened) {
-     e.preventDefault();
-     if (e.key === 'Escape') window.hideGuide();
-     return; 
   }
 
   // Nav open
@@ -1591,4 +1615,3 @@ document.addEventListener('DOMContentLoaded', initPlayer);
 </script>
 </body>
 </html>
-
