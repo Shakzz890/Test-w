@@ -30,7 +30,13 @@
       z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       position: relative;
     }
-    #avplayer { width: 100%; height: 100%; border: 0; background: transparent; transition: transform 0.3s ease, object-fit 0.3s ease; }
+    /* --- START: Added opacity transition for black flash fix --- */
+    #avplayer {
+        width: 100%; height: 100%; border: 0; background: transparent;
+        transition: transform 0.3s ease, object-fit 0.3s ease, opacity 0.3s ease;
+        opacity: 1; /* Default to visible */
+    }
+    /* --- END: Added opacity transition --- */
     .fullscreen { width: 100%; height: 100%; position: fixed; top: 0; left: 0; }
     .HIDDEN { display: none !important; }
 
@@ -539,13 +545,20 @@ function handleBuffering(event) {
 
     if (o.ChannelLoader) {
         if (event.buffering) {
-            // Show custom loader immediately when buffering starts
+            // Buffering started
             o.ChannelLoader.classList.remove('fade-out');
             o.ChannelLoader.style.opacity = '1';
             o.ChannelLoader.classList.remove('HIDDEN');
+            // --- START: Hide video to prevent black screen ---
+            if(o.AvPlayer) o.AvPlayer.style.opacity = '0';
+            // --- END: Hide video ---
         } else {
-            // Start fade out when buffering ends
+            // Buffering ended
             o.ChannelLoader.classList.add('fade-out');
+            // --- START: Show video ---
+            if(o.AvPlayer) o.AvPlayer.style.opacity = '1';
+            // --- END: Show video ---
+
             // Set timeout to hide completely after fade
             loaderFadeTimeout = setTimeout(() => {
                 // Check again in case buffering restarted quickly or loadChannel was called again
@@ -635,13 +648,14 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', channelKey);
 
-  // --- START: Show Loader at the beginning of loading ---
+  // --- START: Show Loader & Hide Video at the beginning of loading ---
   if (o.ChannelLoader) {
       o.ChannelLoader.classList.remove('fade-out');
       o.ChannelLoader.style.opacity = '1';
       o.ChannelLoader.classList.remove('HIDDEN');
   }
-  // --- END: Show Loader ---
+  if (o.AvPlayer) o.AvPlayer.style.opacity = '0'; // Hide video to prevent black flash
+  // --- END: Show Loader & Hide Video ---
 
   hideChannelName();
   updateSelectedChannelInNav();
@@ -688,6 +702,7 @@ async function loadChannel(index, options = {}) {
       o.ChannelLoader.style.opacity = '1'; // Reset for next time
       o.ChannelLoader.classList.remove('fade-out'); // Reset for next time
     }
+    if (o.AvPlayer) o.AvPlayer.style.opacity = '1'; // Show video element again even on error
     // --- END: Hide loader immediately on error ---
   }
   // --- REMOVED finally block as hiding is handled by buffering event ---
