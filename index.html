@@ -92,6 +92,8 @@
         height: 50px;
         animation: spin 1s linear infinite;
         margin-bottom: 20px; /* Space between spinner and text */
+        margin-left: auto; /* <-- ADDED */
+        margin-right: auto; /* <-- ADDED */
     }
     .loading-text {
         /* --- START: Increased Font Size --- */
@@ -498,9 +500,9 @@ async function initPlayer() {
     // --- START: Disable default click to play ---
     'clickToPlay': false,
     // --- END: Disable default click to play ---
-    // --- START: Disable Shaka's spinner ---
-    'addSpinner': false
-    // --- END: Disable Shaka's spinner ---
+    // --- START: RE-ENABLE Shaka's spinner for mid-stream buffering ---
+    'addSpinner': true
+    // --- END: RE-ENABLE Shaka's spinner ---
   });
 
   player.attach(o.AvPlayer);
@@ -522,6 +524,7 @@ async function initPlayer() {
       o.ChannelLoader.style.opacity = '1';
       o.ChannelLoader.classList.remove('fade-out');
     }
+    if (o.AvPlayer) o.AvPlayer.style.opacity = '1'; // Show video element again
     // --- END: Hide custom loader on error ---
   });
 
@@ -531,7 +534,13 @@ async function initPlayer() {
   player.addEventListener('buffering', handleBuffering);
   // --- END: Add Buffering Listener ---
 
-  setupDoubleTapListener();
+  // --- START: Add Playing Listener ---
+  player.addEventListener('playing', handlePlaying);
+  // --- END: Add Playing Listener ---
+
+  // --- START: NEW: Setup consolidated controls ---
+  setupControls();
+  // --- END: NEW: Setup consolidated controls ---
 
   // --- START: Show initial idle animation ---
   showIdleAnimation(true);
@@ -539,39 +548,227 @@ async function initPlayer() {
   loadInitialChannel(); // Load channel data, but don't play yet
 }
 
-// --- START: Add Buffering Handler ---
+// --- START: Updated Buffering Handler ---
 function handleBuffering(event) {
-    clearTimeout(loaderFadeTimeout); // Clear any pending hide timeout
+    clearTimeout(loaderFadeTimeout); // Always clear any pending transitions
 
-    if (o.ChannelLoader) {
-        if (event.buffering) {
-            // Buffering started
+    if (event.buffering) {
+        // --- BUFFERING STARTED ---
+        // Show our custom loader
+        if (o.ChannelLoader) {
             o.ChannelLoader.classList.remove('fade-out');
             o.ChannelLoader.style.opacity = '1';
             o.ChannelLoader.classList.remove('HIDDEN');
-            // --- START: Hide video to prevent black screen ---
-            if(o.AvPlayer) o.AvPlayer.style.opacity = '0';
-            // --- END: Hide video ---
-        } else {
-            // Buffering ended
-            o.ChannelLoader.classList.add('fade-out');
-            // --- START: Show video ---
-            if(o.AvPlayer) o.AvPlayer.style.opacity = '1';
-            // --- END: Show video ---
+        }
+        // Hide video
+        if(o.AvPlayer) o.AvPlayer.style.opacity = '0';
+    } else {
+        // --- BUFFERING ENDED ---
+        // This event fires when buffering stops.
+        // We can use this to hide the loader.
+        hideLoaderAndShowVideo();
+    }
+}
+// --- END: Updated Buffering Handler ---
 
-            // Set timeout to hide completely after fade
-            loaderFadeTimeout = setTimeout(() => {
-                // Check again in case buffering restarted quickly or loadChannel was called again
-                if (o.ChannelLoader && !player.isBuffering()) {
-                    o.ChannelLoader.classList.add('HIDDEN');
-                    o.ChannelLoader.style.opacity = '1'; // Reset opacity
-                    o.ChannelLoader.classList.remove('fade-out'); // Reset class
-                }
-            }, 500); // Match fade-out duration in CSS
+// --- START: Add Playing Handler ---
+function handlePlaying() {
+    // This fires when playback actually starts or resumes.
+    // This might fire *after* buffering=false, or instead of it.
+    // We call the same function to ensure the loader is hidden.
+    hideLoaderAndShowVideo();
+}
+// --- END: Add Playing Handler ---
+
+// --- START: NEW HELPER FUNCTION ---
+function hideLoaderAndShowVideo() {
+    clearTimeout(loaderFadeTimeout); // Clear any pending hide
+
+    // Show video
+    if(o.AvPlayer) o.AvPlayer.style.opacity = '1';
+
+    // If our custom loader is visible, fade it out.
+    if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
+        o.ChannelLoader.classList.add('fade-out');
+
+        loaderFadeTimeout = setTimeout(() => {
+            if (o.ChannelLoader) { 
+                o.ChannelLoader.classList.add('HIDDEN');
+                o.ChannelLoader.style.opacity = '1'; 
+                o.ChannelLoader.classList.remove('fade-out'); 
+            }
+        }, 500); // Match fade-out duration
+    }
+}
+// --- END: NEW HELPER FUNCTION ---
+
+
+// --- START: NEW CONSOLIDATED CONTROL LOGIC ---
+function setupControls() {
+    const playerContainer = o.PlayerContainer;
+
+    playerContainer.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchEndX = touchStartX; // Reset end points
+            touchEndY = touchStartY;
+        }
+    }, { passive: true });
+
+    playerContainer.addEventListener('touchmove', e => {
+        if (e.touches.length === 1) {
+            touchEndX = e.touches[0].clientX;
+            touchEndY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+
+    playerContainer.addEventListener('touchend', e => {
+        if (e.changedTouches.length !== 1) {
+            return; // Not a single touch
+        }
+
+        // Check if swipe started inside an overlay
+        const targetElement = document.elementFromPoint(touchStartX, touchStartY);
+        if (targetElement && (targetElement.closest('#nav') || targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay') )) {
+            touchStartX = touchStartY = touchEndX = touchEndY = 0;
+            return;
+        }
+        
+        // Check if we are over the play button
+        if (targetElement && targetElement.closest('#PlayButton')) {
+             // Let the PlayButton's own 'mousedown' handle it
+             touchStartX = touchStartY = touchEndX = touchEndY = 0;
+             return;
+        }
+
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        const absDeltaX = Math.abs(deltaX);
+        const absDeltaY = Math.abs(deltaY);
+        const SWIPE_THRESHOLD = 50;
+        const TAP_THRESHOLD = 15; // Increased slightly
+
+        // --- 1. Check for SWIPE ---
+        if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
+            handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
+            // Reset tap tracking
+            lastTapTime = 0;
+            touchStartX = touchStartY = touchEndX = touchEndY = 0;
+            return; // It was a swipe, we are done.
+        }
+
+        // --- 2. Check for TAP (if not a swipe) ---
+        if (absDeltaX < TAP_THRESHOLD && absDeltaY < TAP_THRESHOLD) {
+            const currentTime = new Date().getTime();
+            if (currentTime - lastTapTime < 300) { // 300ms for double-tap
+                // DOUBLE-TAP
+                e.preventDefault(); // Prevent zoom and click
+                handleDoubleTapAction();
+                lastTapTime = 0; // Reset after double-tap
+            } else {
+                // SINGLE-TAP
+                // We don't do the action here. We let the 'click' event fire.
+                // This ensures both touch taps and mouse clicks are handled by one 'click' listener.
+                lastTapTime = currentTime;
+            }
+        }
+        
+        // Reset coordinates
+        touchStartX = touchStartY = touchEndX = touchEndY = 0;
+    }, { passive: false }); // We need passive: false to call e.preventDefault() on double-tap
+
+    playerContainer.addEventListener('click', e => {
+        // This 'click' event fires for:
+        // 1. A real mouse click
+        // 2. A 'touchend' that was NOT a swipe and NOT a double-tap
+        
+        // Check if click was on the play button
+        if (e.target && e.target.closest('#PlayButton')) {
+            // Let the PlayButton's 'mousedown' listener handle it.
+            return;
+        }
+        
+        // Check if click was inside an open panel
+        if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay') )) {
+            // Click was inside UI, don't treat it as a player tap
+            return;
+        }
+
+        const currentTime = new Date().getTime();
+        // 350ms is just over double-tap, so this catches single taps/clicks
+        const isFromTap = (currentTime - lastTapTime) < 350;
+
+        if (isFromTap) {
+            // This is a single tap.
+            // The double-tap was already handled in 'touchend'.
+            handleSingleTapAction();
+        } else {
+            // This is a mouse click. Check for double-click.
+            if (currentTime - lastTapTime < 300) {
+                // Double-click
+                handleDoubleTapAction();
+                lastTapTime = 0;
+            } else {
+                // Single-click
+                handleSingleTapAction();
+                lastTapTime = currentTime;
+            }
+        }
+    });
+
+    // dblclick is for mouse users only. touchend handles touch double-tap.
+    playerContainer.addEventListener('dblclick', e => {
+        // This is for mouse-only double-click.
+        e.preventDefault();
+        handleDoubleTapAction(); // Ensure mouse double-click also works
+    });
+}
+
+function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
+    const isHorizontal = absDeltaX > absDeltaY;
+    if (isHorizontal) {
+        if (deltaX > 0) { // Swipe Right ->
+            if (bChannelSettingsOpened) hideChannelSettings();
+            else if (bGroupsOpened) hideGroups();
+            else if (!bNavOpened) showNav(); // Only open if not already open
+        } else { // Swipe Left <-
+            if (bNavOpened && !bGroupsOpened) showGroups();
+            else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings(); // Only open if no panels are open
+            else if (bNavOpened && bGroupsOpened) { /* Do nothing, or close nav: hideNav(); */ } 
+        }
+    } else { // Vertical Swipe
+        if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
+            if (deltaY > 0) {
+                loadChannel(iCurrentChannel + 1); // Swipe Down
+            } else {
+                loadChannel(iCurrentChannel - 1); // Swipe Up
+            }
         }
     }
 }
-// --- END: Add Buffering Handler ---
+
+function handleSingleTapAction() {
+    if (!isSessionActive) {
+        // If session hasn't started, do nothing on single tap
+        // (PlayButton handles the first play)
+        return;
+    }
+
+    // If any panel is open, single tap closes it.
+    if (bNavOpened || bChannelSettingsOpened || bGuideOpened || bEpgOpened || bSettingsModalOpened) {
+        clearUi();
+    } else {
+        // If no panels are open, show channel name
+        showChannelName();
+    }
+}
+
+function handleDoubleTapAction() {
+    toggleFullScreen();
+}
+// --- END: NEW CONSOLIDATED CONTROL LOGIC ---
+
 
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
@@ -648,14 +845,16 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', channelKey);
 
-  // --- START: Show Loader & Hide Video at the beginning of loading ---
+  // --- START: MODIFIED Show Loader ---
+  // We ONLY show the loader here. We let the 'buffering' event
+  // handle hiding the video element to prevent a black flash.
   if (o.ChannelLoader) {
       o.ChannelLoader.classList.remove('fade-out');
       o.ChannelLoader.style.opacity = '1';
       o.ChannelLoader.classList.remove('HIDDEN');
   }
-  if (o.AvPlayer) o.AvPlayer.style.opacity = '0'; // Hide video to prevent black flash
-  // --- END: Show Loader & Hide Video ---
+  // REMOVED: if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
+  // --- END: MODIFIED Show Loader ---
 
   hideChannelName();
   updateSelectedChannelInNav();
@@ -688,8 +887,8 @@ async function loadChannel(index, options = {}) {
     // else if (options.isInitialLoad) { // Handled in initPlayer now }
     // --- END: Play only if session active ---
 
-    // --- START: Remove hiding logic from here, handled by buffering event ---
-    // The buffering event listener will hide the loader when buffering stops.
+    // --- START: Remove hiding logic from here, handled by 'playing' event ---
+    // The 'playing' event listener will hide the loader when playback starts.
     // --- END: Remove hiding logic ---
 
   } catch (error) {
@@ -705,7 +904,7 @@ async function loadChannel(index, options = {}) {
     if (o.AvPlayer) o.AvPlayer.style.opacity = '1'; // Show video element again even on error
     // --- END: Hide loader immediately on error ---
   }
-  // --- REMOVED finally block as hiding is handled by buffering event ---
+  // --- REMOVED finally block as hiding is handled by 'playing' and 'error' events ---
 }
 
 /* -------------------------
@@ -1547,17 +1746,6 @@ function handleFirstPlay() {
       return;
   }
   // --- END: Load the initially selected channel now ---
-
-/* // Removed redundant play call, it's handled in loadChannel
-  if (o.AvPlayer) {
-      o.AvPlayer.muted = false;
-      o.AvPlayer.play().catch(e => {
-          console.warn("Autoplay was prevented.", e);
-          showIdleAnimation(true);
-          isSessionActive = false;
-      });
-  } else { console.error("AV Player element not found."); isSessionActive = false; }
-*/
 }
 
 
@@ -1609,44 +1797,9 @@ function updateSettingsModalSelection() {
 }
 // --- END NEW FUNCTION ---
 
-function setupDoubleTapListener() {
-    if (o.PlayerContainer) {
-        o.PlayerContainer.addEventListener('touchend', handleDoubleTap);
-        o.PlayerContainer.addEventListener('dblclick', toggleFullScreen);
-    } else {
-        console.error("Player container not found for double tap listener.");
-    }
-}
-
-function handleDoubleTap(event) {
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTapTime;
-    if (tapLength < 500 && tapLength > 0) {
-        event.preventDefault();
-        toggleFullScreen();
-    }
-    lastTapTime = currentTime;
-}
-
-// --- START: Add Player Click/Tap Listener for Play/Pause ---
-function handlePlayerTap(event) {
-    // Only handle taps/clicks if the session is active (already playing)
-    // and the target is the video or its container (not controls overlaying it, though we don't have many)
-    if (isSessionActive && (event.target === o.AvPlayer || event.target === o.PlayerContainer)) {
-        event.preventDefault(); // Prevent potential default browser actions
-        // --- START: Disable pausing via tap ---
-        if (o.AvPlayer.paused) {
-            // If paused (e.g., buffering), allow tap to resume play
-            o.AvPlayer.play().catch(e => console.warn("Play on tap prevented:", e));
-        }
-        // else {
-            // If playing, do nothing on tap to disable pause
-            // o.AvPlayer.pause(); // <--- This line is now correctly removed/commented
-        // }
-        // --- END: Disable pausing via tap ---
-    }
-}
-// --- END: Add Player Click/Tap Listener ---
+// --- REMOVED old setupDoubleTapListener ---
+// --- REMOVED old handleDoubleTap ---
+// --- REMOVED old handlePlayerTap ---
 
 function toggleFullScreen() {
     console.log("Toggle Fullscreen triggered");
@@ -1681,13 +1834,7 @@ function toggleFullScreen() {
 /* -------------------------
     Event Listeners (keyboard / touch)
     ------------------------- */
-// --- START: Attach the new player tap listener ---
-if (o.PlayerContainer) {
-    o.PlayerContainer.addEventListener('click', handlePlayerTap);
-    // Note: 'touchend' is already used for double-tap and swipe,
-    // relying on 'click' might be sufficient for simple play/pause tap.
-} else { console.error("PlayerContainer element not found for tap listener."); }
-// --- END: Attach the new player tap listener ---
+// --- REMOVED old PlayerContainer 'click' listener ---
 
 if (o.PlayButton) {
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
@@ -1923,77 +2070,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-
-document.addEventListener('touchstart', e => {
-  if (e.target === o.AvPlayer || o.PlayerContainer.contains(e.target)) {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      touchEndX = touchStartX;
-      touchEndY = touchStartY;
-  } else {
-      touchStartX = touchStartY = touchEndX = touchEndY = 0;
-  }
-}, { passive: true });
-
-document.addEventListener('touchmove', e => {
-  if (touchStartX !== 0 || touchStartY !== 0) {
-      touchEndX = e.touches[0].clientX;
-      touchEndY = e.touches[0].clientY;
-  }
-}, { passive: true });
-
-document.addEventListener('touchend', (event) => {
-    if (touchStartX === 0 && touchStartY === 0) {
-        return;
-    }
-
-  const deltaX = touchEndX - touchStartX;
-  const deltaY = touchEndY - touchStartY;
-  const absDeltaX = Math.abs(deltaX);
-  const absDeltaY = Math.abs(deltaY);
-  const swipeThreshold = 50;
-  const tapThreshold = 10; // Keep tap threshold low for differentiating taps vs swipes
-
-  const isHorizontal = absDeltaX > absDeltaY;
-
-  const targetElement = document.elementFromPoint(touchStartX, touchStartY);
-  if (targetElement && (targetElement.closest('#nav') || targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay') )) {
-      // If swipe starts inside an overlay, ignore it for player controls
-      touchStartX = touchStartY = touchEndX = touchEndY = 0;
-      return;
-  }
-
-  // --- START: Let handlePlayerTap manage simple taps ---
-  if (absDeltaX < tapThreshold && absDeltaY < tapThreshold) {
-      // It's likely a tap, let the 'click' event (handled by handlePlayerTap) manage play/pause
-      touchStartX = touchStartY = touchEndX = touchEndY = 0;
-      return; // Do nothing for simple taps here, rely on click listener
-  }
-  // --- END: Let handlePlayerTap manage simple taps ---
-
-  if (isHorizontal && absDeltaX > swipeThreshold) {
-    if (deltaX > 0) { // Swipe Right ->
-      // Close settings, OR close groups, OR open nav
-      if (bChannelSettingsOpened) hideChannelSettings();
-      else if (bGroupsOpened) hideGroups();
-      else showNav();
-    } else { // Swipe Left <-
-      // Open groups (if nav is open), OR open settings
-      // --- NOTE: This already uses Swipe Left to open the second panel (Groups) when the first (Nav) is open ---
-      if (bNavOpened && !bGroupsOpened) showGroups();
-      else if (!bChannelSettingsOpened) showChannelSettings();
-    }
-  } else if (!isHorizontal && absDeltaY > swipeThreshold) { // Vertical Swipe
-    // Change channel if no panels are open
-    if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
-      if (deltaY > 0) loadChannel(iCurrentChannel + 1); // Swipe Down
-      else loadChannel(iCurrentChannel - 1); // Swipe Up
-    }
-  }
-
-  touchStartX = touchStartY = touchEndX = touchEndY = 0;
-});
-
+// --- REMOVED all old 'document' touch listeners ---
 
 /* -------------------------
     Init
@@ -2003,4 +2080,3 @@ document.addEventListener('DOMContentLoaded', initPlayer);
 </script>
 </body>
 </html>
-
