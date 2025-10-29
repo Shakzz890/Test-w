@@ -415,7 +415,7 @@ let channels = {
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
     mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://example.com/placeholder/live.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
-    
+   
 };
 // --- END: Channel List Fixes ---
 
@@ -489,16 +489,13 @@ async function initPlayer() {
   ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
 
   ui.configure({
-    'controlPanelElements': [],
-    'addSeekBar': false,
-    'addBigPlayButton': false,
-    'showBuffering': false,
-    // --- START: Disable default click to play ---
-    'clickToPlay': false,
-    // --- END: Disable default click to play ---
-    // --- START: RE-ENABLE Shaka's spinner for mid-stream buffering ---
-    'addSpinner': true
-    // --- END: RE-ENABLE Shaka's spinner ---
+    // --- START: Removed quotes from keys AND enabled Shaka spinner ---
+    controlPanelElements: [],
+    addSeekBar: false,
+    addBigPlayButton: false,
+    showBuffering: true, // <-- SET TO TRUE
+    clickToPlay: false
+    // --- END: Removed quotes from keys AND enabled Shaka spinner ---
   });
 
   player.attach(o.AvPlayer);
@@ -550,13 +547,20 @@ function handleBuffering(event) {
 
     if (event.buffering) {
         // --- BUFFERING STARTED ---
-        // Show our custom loader
+        
+        // --- START: MODIFICATION ---
+        // Don't show the custom loader here.
+        // The Shaka spinner is enabled in config and will show.
+        /*
         if (o.ChannelLoader) {
             o.ChannelLoader.classList.remove('fade-out');
             o.ChannelLoader.style.opacity = '1';
             o.ChannelLoader.classList.remove('HIDDEN');
         }
-        // Hide video
+        */
+        // --- END: MODIFICATION ---
+
+        // Just hide video
         if(o.AvPlayer) o.AvPlayer.style.opacity = '0';
     } else {
         // --- BUFFERING ENDED ---
@@ -633,9 +637,9 @@ function setupControls() {
         
         // Check if we are over the play button
         if (targetElement && targetElement.closest('#PlayButton')) {
-             // Let the PlayButton's own 'mousedown' handle it
-             touchStartX = touchStartY = touchEndX = touchEndY = 0;
-             return;
+            // Let the PlayButton's own 'mousedown' handle it
+            touchStartX = touchStartY = touchEndX = touchEndY = 0;
+            return;
         }
 
         const deltaX = touchEndX - touchStartX;
@@ -726,10 +730,11 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     if (isHorizontal) {
         if (deltaX > 0) { // Swipe Right ->
             if (bChannelSettingsOpened) hideChannelSettings();
-            else if (bGroupsOpened) hideGroups();
-            else if (!bNavOpened) showNav(); // Only open if not already open
+            else if (bGroupsOpened) hideGroups(); // Swiped right from Group list
+            else if (bNavOpened && !bGroupsOpened) hideNav(); // Swiped right from Channel list
+            else if (!bNavOpened && !bChannelSettingsOpened) showNav(); // Swiped right from main screen
         } else { // Swipe Left <-
-            if (bNavOpened && !bGroupsOpened) showGroups();
+            if (bNavOpened && !bGroupsOpened) showGroups(); // Swiped left from Channel list
             else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings(); // Only open if no panels are open
             else if (bNavOpened && bGroupsOpened) { /* Do nothing, or close nav: hideNav(); */ } 
         }
@@ -794,7 +799,7 @@ function loadInitialChannel() {
        initialChannelKey = storedLast;
   }
   else if (!aFilteredChannelKeys.includes(initialChannelKey)) {
-      initialChannelKey = aFilteredChannelKeys[0];
+       initialChannelKey = aFilteredChannelKeys[0];
   }
 
   if (!initialChannelKey || !aFilteredChannelKeys.includes(initialChannelKey)) {
@@ -994,9 +999,10 @@ function selectGroup(index) {
       const hasFavorites = Object.values(channels).some(ch => ch.favorite === true);
       if (!hasFavorites) {
           showTempMessage("No favorite channels added yet.");
-          // Don't change group visually if no favorites
-          // updateSelectedGroupInNav(); // Keep the old selection visually
-          hideGroups(); // Still close the group list visually
+          // --- START: MODIFIED BEHAVIOR ---
+          // Instead of just hiding groups, hide the entire nav panel
+          hideNav(); 
+          // --- END: MODIFIED BEHAVIOR ---
           return; // <<<--- IMPORTANT: Stop execution here
       }
   }
@@ -1006,21 +1012,35 @@ function selectGroup(index) {
   iGroupListIndex = index;
   updateSelectedGroupInNav(); // Update visual selection now
 
+  // --- START: MODIFICATION ---
+  // Build the nav immediately instead of waiting for the transition.
+  buildNav(); // This rebuilds the channel list based on sSelectedGroup
+
+  // Check if the NEWLY BUILT list is empty
+  if (aFilteredChannelKeys.length > 0) {
+    iCurrentChannel = 0; // Reset channel index for the new group
+    updateSelectedChannelInNav(); // Update highlight in the new list
+  }
+  
+  // REMOVED THE EVENT LISTENER LOGIC
+  /*
   const afterTransition = () => {
     o.ListContainer.removeEventListener('transitionend', afterTransition);
-
-    buildNav(); // This rebuilds the channel list based on sSelectedGroup
-
-    // Check if the NEWLY BUILT list is empty
-    if (aFilteredChannelKeys.length > 0) {
-      iCurrentChannel = 0; // Reset channel index for the new group
-      updateSelectedChannelInNav(); // Update highlight in the new list
-    }
-    // No need to unload player here, buildNav handles empty message
+    // ... logic was moved up ...
   };
-
   o.ListContainer.addEventListener('transitionend', afterTransition, { once: true });
-  hideGroups(); // Close the group list to show the channel list
+  */
+
+  // --- START: NEW MODIFICATION ---
+  // Use requestAnimationFrame to ensure the new list is rendered
+  // before we trigger the animation to slide it into view.
+  // This prevents the "blank panel" bug.
+  requestAnimationFrame(() => {
+      hideGroups(); // Close the group list to show the channel list
+  });
+  // --- END: NEW MODIFICATION ---
+  
+  // --- END: MODIFICATION ---
 }
 
 function buildNav() {
@@ -1037,8 +1057,8 @@ function buildNav() {
           const ch = channels[key];
           if (!ch || typeof ch.name !== 'string') return false;
           const inGroup = sSelectedGroup === '__all' ||
-                          (sSelectedGroup === '__fav' && ch.favorite === true) ||
-                          (Array.isArray(ch.group) && ch.group.includes(sSelectedGroup));
+                            (sSelectedGroup === '__fav' && ch.favorite === true) ||
+                            (Array.isArray(ch.group) && ch.group.includes(sSelectedGroup));
           const inSearch = !searchTerm || ch.name.toLowerCase().includes(searchTerm);
           return inGroup && inSearch;
         })
@@ -1123,9 +1143,9 @@ function updateSelectedChannelInNav() {
            const firstItem = channelItems[0];
            if (firstItem) firstItem.classList.add('selected');
            console.warn("iCurrentChannel was out of bounds, selecting first channel.");
-      } else {
-        iCurrentChannel = 0; // Reset if list becomes empty
-      }
+       } else {
+      iCurrentChannel = 0; // Reset if list becomes empty
+       }
 
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
 }
@@ -1713,8 +1733,8 @@ function loadFavoritesFromStorage() {
 function saveFavoritesToStorage() {
   try {
     const favs = Object.entries(channels)
-                   .filter(([,ch]) => ch && ch.favorite)
-                   .map(([key]) => key);
+                      .filter(([,ch]) => ch && ch.favorite)
+                      .map(([key]) => key);
     localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs));
     // --- START: Added log for debugging save ---
     console.log("Saved Favorites:", favs);
@@ -1896,7 +1916,7 @@ document.addEventListener('keydown', (e) => {
           // Check if it's a list item or a button
           const selectedItem = items[iSettingsModalIndex];
           if (selectedItem) {
-              if (selectedItem.tagName === 'LI' && selectedItem.hasAttribute('data-value')) {
+               if (selectedItem.tagName === 'LI' && selectedItem.hasAttribute('data-value')) {
                    // If it's a list item with a value (quality/format), apply directly
                    const type = o.SettingsModalContent.querySelector('input[name="quality"]') ? 'quality' : 'format'; // Determine modal type
                    if (type === 'quality') {
@@ -1907,10 +1927,10 @@ document.addEventListener('keydown', (e) => {
                         // Default click for other list items (like subtitles/audio)
                          if (typeof selectedItem.click === 'function') selectedItem.click();
                    }
-              } else if (typeof selectedItem.click === 'function') {
-                  // If it's a button or other clickable item, just click it
-                  selectedItem.click();
-              }
+               } else if (typeof selectedItem.click === 'function') {
+                 // If it's a button or other clickable item, just click it
+                 selectedItem.click();
+               }
           }
           // --- END CHANGE ---
       } else if (e.key === 'Escape') {
@@ -1968,13 +1988,24 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (bGroupsOpened) {
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
-      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape'];
+      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft']; // <-- Added ArrowLeft
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
-      if (e.key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
-      else if (e.key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click();
-      else if (e.key === 'ArrowRight' || e.key === 'Escape') hideGroups();
+
+      // --- START: MODIFIED LOGIC ---
+      if (e.key === 'ArrowUp') {
+          iGroupListIndex = Math.max(0, iGroupListIndex - 1);
+      } else if (e.key === 'ArrowDown') {
+          iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
+      } else if (e.key === 'Enter' || e.key === 'ArrowRight') { // Right key acts like Enter
+          groupItems[iGroupListIndex]?.click();
+      } else if (e.key === 'Escape') {
+          hideGroups();
+      } else if (e.key === 'ArrowLeft') { // Left key closes nav
+          hideNav();
+      }
       updateSelectedGroupInNav();
+      // --- END: MODIFIED LOGIC ---
+
     } else { // Channel List
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
        if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
@@ -2054,7 +2085,11 @@ document.addEventListener('keydown', (e) => {
 
   e.preventDefault();
   switch (e.key) {
-    case 'ArrowLeft': showNav(); break;
+    // --- START: MODIFIED LOGIC ---
+    case 'ArrowLeft':
+        showNav(); // This will open the nav, defaulting to the Channel List
+        break;
+    // --- END: MODIFIED LOGIC ---
     case 'ArrowRight': showChannelSettings(); break;
     case 'Enter': showChannelName(); break;
     case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
@@ -2076,4 +2111,3 @@ document.addEventListener('DOMContentLoaded', initPlayer);
 </script>
 </body>
 </html>
-
