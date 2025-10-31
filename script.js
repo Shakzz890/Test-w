@@ -296,11 +296,11 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   if (isHorizontal) {
     if (deltaX > 0) { // Swipe Right ->
       if (bChannelSettingsOpened) hideChannelSettings();
-      else if (bGroupsOpened) hideGroups();
-      else if (bNavOpened && !bGroupsOpened) hideNav();
+      else if (bNavOpened && !bGroupsOpened) showGroups(); // <-- SWAPPED: Open groups
       else if (!bNavOpened && !bChannelSettingsOpened) showNav();
     } else { // Swipe Left <-
-      if (bNavOpened && !bGroupsOpened) showGroups();
+      if (bGroupsOpened) hideGroups(); // <-- SWAPPED: Close groups
+      else if (bNavOpened && !bGroupsOpened) hideNav();
       else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings();
     }
   } else { // Vertical Swipe
@@ -313,6 +313,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
+
 function handleSingleTapAction() {
   if (!isSessionActive) return;
 
@@ -1337,19 +1338,18 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
-// =============== THIS IS THE FIXED BLOCK ===============
 document.addEventListener('keydown', (e) => {
 
   if (document.activeElement === o.SearchField) {
       if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) {
           e.preventDefault();
-          iChannelListIndex = 0; // <-- FIXED
+          iChannelListIndex = 0;
           if(o.SearchField) o.SearchField.blur();
           updateSelectedChannelInNav();
       } else if (e.key === 'Escape') {
           e.preventDefault();
           if(o.SearchField) o.SearchField.blur();
-          iChannelListIndex = 0; // <-- FIXED
+          iChannelListIndex = 0;
           updateSelectedChannelInNav();
       }
       return;
@@ -1404,8 +1404,7 @@ document.addEventListener('keydown', (e) => {
 
   if (bEpgOpened) {
     e.preventDefault();
-    // Added 'Enter' to this list so we can capture it and do nothing
-    const EPG_KEYS = ['Escape', 'ArrowUp', 'ArrowDown', 'Enter']; // <-- FIXED
+    const EPG_KEYS = ['Escape', 'ArrowUp', 'ArrowDown', 'Enter'];
     if (!EPG_KEYS.includes(e.key)) return;
 
     if (e.key === 'Escape') {
@@ -1417,16 +1416,16 @@ document.addEventListener('keydown', (e) => {
         iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1);
         renderEpg(); // Update selection
     }
-    else if (e.key === 'Enter') { // <-- FIXED
-        // DO NOTHING. This stops 'Enter' from changing the channel.
-        // We capture it so it doesn't do anything else.
+    else if (e.key === 'Enter') { 
+        // DO NOTHING
     }
-    return; // Stop other key handlers
+    return;
   }
 
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
+      // Logic for when GROUP LIST is open
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
       const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
@@ -1435,51 +1434,51 @@ document.addEventListener('keydown', (e) => {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       } else if (e.key === 'ArrowDown') {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      } else if (e.key === 'Enter') { // <-- FIXED: Only 'Enter' clicks
+      } else if (e.key === 'Enter') {
           groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowRight') { // <-- FIXED: 'ArrowRight' now moves to the channel list
-          hideGroups();
+      } else if (e.key === 'ArrowLeft') { // <-- SWAPPED
+          hideGroups(); // Go back to channel list
       } else if (e.key === 'Escape') {
-          hideGroups();
-      } else if (e.key === 'ArrowLeft') {
-          hideNav();
+          hideGroups(); // Also go back
+      } else if (e.key === 'ArrowRight') { // <-- SWAPPED
+          hideNav(); // Close nav entirely
       }
       updateSelectedGroupInNav();
 
-    } else { // Channel List
+    } else { // Logic for when CHANNEL LIST is open
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
         if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
       
       if (e.key === 'ArrowUp') {
-          if (iChannelListIndex === 0 && o.SearchField) { // <-- FIXED
+          if (iChannelListIndex === 0 && o.SearchField) {
               o.SearchField.focus();
               const currentSelected = o.ChannelList.querySelector('.selected');
               if (currentSelected) currentSelected.classList.remove('selected');
-              iChannelListIndex = -1; // <-- FIXED: Indicate search field has focus
-          } else if (iChannelListIndex > 0) { // <-- FIXED
-              iChannelListIndex = (iChannelListIndex - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length; // <-- FIXED
+              iChannelListIndex = -1;
+          } else if (iChannelListIndex > 0) {
+              iChannelListIndex = (iChannelListIndex - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
               updateSelectedChannelInNav();
           }
       } else if (e.key === 'ArrowDown') {
-          if (iChannelListIndex === -1 && aFilteredChannelKeys.length > 0) { // <-- FIXED
+          if (iChannelListIndex === -1 && aFilteredChannelKeys.length > 0) {
               iChannelListIndex = 0;
               updateSelectedChannelInNav();
               o.SearchField.blur();
-          } else if (aFilteredChannelKeys.length > 0 && iChannelListIndex !== -1) { // <-- FIXED
-              iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length; // <-- FIXED
+          } else if (aFilteredChannelKeys.length > 0 && iChannelListIndex !== -1) {
+              iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length;
               updateSelectedChannelInNav();
           }
       } else if (e.key === 'Enter') {
-          if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) { // <-- FIXED
-              loadChannel(iChannelListIndex); // <-- FIXED
+          if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) {
+              loadChannel(iChannelListIndex);
               hideNav();
           }
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
-          hideNav();
-          if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur(); // <-- FIXED
-      } else if (e.key === 'ArrowLeft') {
-          if (iChannelListIndex !== -1) { // <-- FIXED
-              showGroups();
+      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- SWAPPED
+          hideNav(); // Close nav
+          if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur();
+      } else if (e.key === 'ArrowRight') { // <-- SWAPPED
+          if (iChannelListIndex !== -1) {
+              showGroups(); // Open group list
           }
       }
     }
@@ -1495,15 +1494,14 @@ document.addEventListener('keydown', (e) => {
         const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        else if (e.key === 'Enter') { // <-- FIXED: Removed 'ArrowRight'
+        else if (e.key === 'Enter') {
             submenuItems[iVideoSettingsIndex]?.click();
         }
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- FIXED: 'ArrowLeft' can now go back
-            // Also trigger 'Back' if ArrowLeft is pressed on it (index 0)
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
             if (iVideoSettingsIndex === 0 && e.key === 'ArrowLeft') {
-                submenuItems[0]?.click(); // Click the 'Back' button
+                submenuItems[0]?.click();
             } else {
-                hideVideoFormatMenu(); // Default back action
+                hideVideoFormatMenu();
             }
         }
         updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
@@ -1511,17 +1509,14 @@ document.addEventListener('keydown', (e) => {
         const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
-        else if (e.key === 'Enter') { // <-- FIXED: Only 'Enter' clicks
+        else if (e.key === 'Enter') {
             mainItems[iChannelSettingsIndex]?.click();
         }
-        else if (e.key === 'ArrowRight') { // <-- FIXED: Special case for 'ArrowRight'
+        else if (e.key === 'ArrowRight') {
             const selectedItem = mainItems[iChannelSettingsIndex];
-            // Only click if it's the "Video / Format" button (index 1)
-            // This is what opens the submenu.
             if (selectedItem && iChannelSettingsIndex === 1) { // 0: Sub/Audio, 1: Vid/Format, 2: Fav
                 selectedItem.click(); 
             }
-            // Otherwise, ArrowRight does nothing on 'Subtitle/Audio' or 'Favorites'
         }
         else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideChannelSettings();
         updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
@@ -1540,15 +1535,14 @@ document.addEventListener('keydown', (e) => {
         break;
     case 'ArrowRight': showChannelSettings(); break;
     case 'Enter': showChannelName(); break;
-    case 'ArrowUp': loadChannel(iActiveChannelIndex - 1); break; // <-- FIXED
-    case 'ArrowDown': loadChannel(iActiveChannelIndex + 1); break; // <-- FIXED
+    case 'ArrowUp': loadChannel(iActiveChannelIndex - 1); break;
+    case 'ArrowDown': loadChannel(iActiveChannelIndex + 1); break;
     case 'h': showGuide(); break;
     case 'e': showEpg(); break;
     case 'm': showChannelSettings(); break;
     case 'Escape': clearUi(); break;
   }
 });
-// =============== END OF FIXED BLOCK ===============
 
 
 /**
