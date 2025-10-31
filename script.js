@@ -1530,9 +1530,45 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
+function updateStreamInfo() {
+  const infoOverlay = document.getElementById('StreamInfoOverlay');
+  if (!player) {
+    return;
+  }
 
+  const variant = player.getVariantTracks().find(t => t.active);
 
-/* -------------------------
-    Init
-    ------------------------- */
+  if (!variant) {
+    infoOverlay.innerHTML = 'Stream Info: N/A';
+    return;
+  }
+
+  const codecs = variant.codecs || 'N/A';
+  const resolution = `${variant.width}x${variant.height}`;
+  const bandwidth = (variant.bandwidth / 1000000).toFixed(2); // In Mbit/s
+
+  // Use template literals to format the text
+  infoOverlay.innerHTML = `Codecs:     ${codecs}
+Resolution: ${resolution}
+Bandwidth:  ${bandwidth} Mbit/s`;
+}
+    player.addEventListener('adaptation', updateStreamInfo);
+    player.addEventListener('streaming', updateStreamInfo);
+function toggleSettingsPanel() {
+  const settingsPanel = document.getElementById('ChannelSettings');
+  
+  // This is just an example check
+  if (settingsPanel.classList.contains('HIDDEN')) {
+    // Panel is being SHOWN
+    settingsPanel.classList.remove('HIDDEN');
+    
+    // --- ADD THESE TWO LINES ---
+    updateStreamInfo(); // Get the latest info
+    document.getElementById('StreamInfoOverlay').classList.remove('HIDDEN');
+    
+  } else {
+    settingsPanel.classList.add('HIDDEN');
+    document.getElementById('StreamInfoOverlay').classList.add('HIDDEN');
+  }
+}
 document.addEventListener('DOMContentLoaded', initPlayer);
