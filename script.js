@@ -1328,6 +1328,7 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
+// =============== THIS IS THE FIXED BLOCK ===============
 document.addEventListener('keydown', (e) => {
 
   if (document.activeElement === o.SearchField) {
@@ -1394,41 +1395,24 @@ document.addEventListener('keydown', (e) => {
 
   if (bEpgOpened) {
     e.preventDefault();
-    const EPG_KEYS = ['Escape', 'ArrowUp', 'ArrowDown', 'Enter'];
+    // Added 'Enter' to this list so we can capture it and do nothing
+    const EPG_KEYS = ['Escape', 'ArrowUp', 'ArrowDown', 'Enter']; // <-- FIXED
     if (!EPG_KEYS.includes(e.key)) return;
-    if (e.key === 'Escape') hideEpg();
-    else if (e.key === 'ArrowUp') iEpgChannelIndex = Math.max(0, iEpgChannelIndex - 1);
-    else if (e.key === 'ArrowDown') {
-        iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1);
-    }
-    else if (e.key === 'Enter') {
-        const selectedKey = aEpgFilteredChannelKeys[iEpgChannelIndex];
-        const mainIndex = aFilteredChannelKeys.indexOf(selectedKey);
 
-        if (mainIndex !== -1) {
-            loadChannel(mainIndex);
-        } else {
-            sSelectedGroup = '__all';
-            if (o.GroupList) {
-                const allGroupLiItems = o.GroupList.querySelectorAll('li');
-                const allGroupItemIndex = Array.from(allGroupLiItems).findIndex(li => li.dataset.group === '__all');
-                if (allGroupItemIndex !== -1) {
-                    iGroupListIndex = allGroupItemIndex;
-                    updateSelectedGroupInNav();
-                }
-            }
-            buildNav();
-            const newMainIndex = aFilteredChannelKeys.indexOf(selectedKey);
-            if (newMainIndex !== -1) {
-                loadChannel(newMainIndex);
-            } else {
-                console.warn("Selected EPG channel not found even in 'ALL' group:", selectedKey);
-            }
-        }
+    if (e.key === 'Escape') {
         hideEpg();
+    } else if (e.key === 'ArrowUp') {
+        iEpgChannelIndex = Math.max(0, iEpgChannelIndex - 1);
+        renderEpg(); // Update selection
+    } else if (e.key === 'ArrowDown') {
+        iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1);
+        renderEpg(); // Update selection
     }
-    renderEpg();
-    return;
+    else if (e.key === 'Enter') { // <-- FIXED
+        // DO NOTHING. This stops 'Enter' from changing the channel.
+        // We capture it so it doesn't do anything else.
+    }
+    return; // Stop other key handlers
   }
 
   if (bNavOpened) {
@@ -1442,8 +1426,10 @@ document.addEventListener('keydown', (e) => {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       } else if (e.key === 'ArrowDown') {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
+      } else if (e.key === 'Enter') { // <-- FIXED: Only 'Enter' clicks
           groupItems[iGroupListIndex]?.click();
+      } else if (e.key === 'ArrowRight') { // <-- FIXED: 'ArrowRight' now moves to the channel list
+          hideGroups();
       } else if (e.key === 'Escape') {
           hideGroups();
       } else if (e.key === 'ArrowLeft') {
@@ -1500,20 +1486,41 @@ document.addEventListener('keydown', (e) => {
         const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        else if (e.key === 'Enter' || e.key === 'ArrowRight') submenuItems[iVideoSettingsIndex]?.click();
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideVideoFormatMenu();
+        else if (e.key === 'Enter') { // <-- FIXED: Removed 'ArrowRight'
+            submenuItems[iVideoSettingsIndex]?.click();
+        }
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- FIXED: 'ArrowLeft' can now go back
+            // Also trigger 'Back' if ArrowLeft is pressed on it (index 0)
+            if (iVideoSettingsIndex === 0 && e.key === 'ArrowLeft') {
+                submenuItems[0]?.click(); // Click the 'Back' button
+            } else {
+                hideVideoFormatMenu(); // Default back action
+            }
+        }
         updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-    } else {
+    } else { // This is the main settings menu
         const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
-        else if (e.key === 'Enter' || e.key === 'ArrowRight') mainItems[iChannelSettingsIndex]?.click();
+        else if (e.key === 'Enter') { // <-- FIXED: Only 'Enter' clicks
+            mainItems[iChannelSettingsIndex]?.click();
+        }
+        else if (e.key === 'ArrowRight') { // <-- FIXED: Special case for 'ArrowRight'
+            const selectedItem = mainItems[iChannelSettingsIndex];
+            // Only click if it's the "Video / Format" button (index 1)
+            // This is what opens the submenu.
+            if (selectedItem && iChannelSettingsIndex === 1) { // 0: Sub/Audio, 1: Vid/Format, 2: Fav
+                selectedItem.click(); 
+            }
+            // Otherwise, ArrowRight does nothing on 'Subtitle/Audio' or 'Favorites'
+        }
         else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideChannelSettings();
         updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
     }
     return;
   }
 
+  // This is the default player key handling
   const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
   if (!PLAYER_KEYS.includes(e.key)) return;
 
@@ -1532,6 +1539,8 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
+// =============== END OF FIXED BLOCK ===============
+
 
 /**
  * Gets stats from Shaka Player and updates the Stream Info overlay.
