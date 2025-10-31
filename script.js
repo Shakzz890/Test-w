@@ -1,25 +1,84 @@
-// script.js — Refactored + merged + fixes
-// GPT-5 Thinking mini — merged & cleaned version for Shakzz TV player
+/* script.js — Cleaned, merged & fixed
+   - Keeps original structure & channels
+   - Fixes: double-click blank panel, mobile back button (history/popstate),
+     play button touch, double-tap fullscreen, buffering spinner, consistent animations,
+     and optimized DOM access / debounced toggles.
+*/
 
 /* -------------------------
-   Globals & state
+   Globals & cached elements
    ------------------------- */
 let player = null;
 let ui = null;
-const o = {}; // DOM refs will be populated in initPlayer()
 
-let channels = {
-  // (keep your existing channels object — shortened example entries)
-  KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
-  SonictheHedgehog: { name: "Sonic the Hedgehog", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258004/hls/master.m3u8?ads.xumo_channelId=88258004", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Sonic_The_Hedgehog.svg/1200px-Sonic_The_Hedgehog.svg.png", group: ["cartoons & animations"] },
-  // ... keep the rest of your channels object unchanged ...
+const qs = (sel, root = document) => root.querySelector(sel);
+const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+const o = {
+  PlayerContainer: qs('#playerContainer'),
+  AvPlayer: qs('#avplayer'),
+  Nav: qs('#nav'),
+  GroupList: qs('#GroupList'),
+  DynamicGroupsList: qs('#DynamicGroupsList'),
+  ListContainer: qs('#list_container'),
+  ChannelList: qs('#ChannelList'),
+  ChannelLoader: qs('#ChannelLoader'),
+  IdleAnimation: qs('#IdleAnimation'),
+  PlayButton: qs('#PlayButton'),
+  BlurOverlay: qs('#BlurOverlay'),
+  ChannelInfo: qs('#ChannelInfo'),
+  SettingsMainMenu: qs('#SettingsMainMenu'),
+  SettingsVideoFormatMenu: qs('#SettingsVideoFormatMenu'),
+  SettingsContainer: qs('#settings_container'),
+  ChannelSettings: qs('#ChannelSettings'),
+  StreamInfoOverlay: qs('#StreamInfoOverlay'),
+  Guide: qs('#Guide'),
+  GuideContent: qs('#GuideContent'),
+  EpgOverlay: qs('#EpgOverlay'),
+  EpgChannels: qs('#EpgChannels'),
+  EpgTimeline: qs('#EpgTimeline'),
+  SettingsModal: qs('#SettingsModal'),
+  SettingsModalContent: qs('#SettingsModalContent'),
+  SearchField: qs('#SearchField'),
+  ChannelInfoName: qs('#channel_name'),
+  ChannelInfoEpg: qs('#channel_epg'),
+  ChannelInfoLogo: qs('#ch_logo'),
+  TempMessageOverlay: qs('#TempMessageOverlay'),
+  ListContainerScrollArea: qs('#list_container_scrollarea')
 };
 
+/* -------------------------
+   Channel list (unchanged content kept)
+   ------------------------- */
+let channels = {
+    KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
+    StrawberryShortcake: { name: "Strawberry Shortcake", type: "hls", manifestUri: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", logo: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"] },
+    SonictheHedgehog: { name: "Sonic the Hedgehog", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258004/hls/master.m3u8?ads.xumo_channelId=88258004", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Sonic_The_Hedgehog.svg/1200px-Sonic_The_Hedgehog.svg.png", group: ["cartoons & animations"] },
+    SuperMario: { name: "Super Mario", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258005/hls/master.m3u8?ads.xumo_channelId=88258005", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFkMkkUmZBGslGWGZMN2er5emlnqGCCU49wg&s", group: ["cartoons & animations"] },
+    Teletubbies: { name: "Teletubbies", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258003/hls/master.m3u8?ads.xumo_channelId=88258003", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/5a/Teletubbies_Logo.png/330px-Teletubbies_Logo.png", group: ["cartoons & animations"] },
+    anione: { name: "Ani One", type: "hls", manifestUri: "https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", group: ["cartoons & animations"] },
+    aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
+    sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
+    pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
+    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["documentary"] },
+    discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
+    nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["cartoons & animations"] },
+    nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["cartoons & animations"] },
+    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["movies", "entertainment"] },
+    angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
+    zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
+    mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://example.com/placeholder/live.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
+};
+
+/* -------------------------
+   State variables
+   ------------------------- */
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
 let iChannelListIndex = 0;
 let iActiveChannelIndex = 0;
 let iGroupListIndex = 1;
+let channelNameTimeout = null;
 let isSessionActive = false;
 let bNavOpened = false;
 let bGroupsOpened = false;
@@ -32,134 +91,80 @@ let iVideoSettingsIndex = 0;
 let iEpgChannelIndex = 0;
 let aEpgFilteredChannelKeys = [];
 let iSettingsModalIndex = 0;
-
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
 let loaderFadeTimeout = null;
-let channelNameTimeout = null;
 let tempMessageTimeout = null;
 
-// History overlay tracking (prevents mobile back from closing app)
-let lastPushedOverlay = null;
-
-// Guard map to prevent rapid duplicate UI toggles (double-click bug fix)
-const toggleGuards = {};
-function guard(key, ms = 350) {
+/* Debounce / throttle helpers to avoid duplicate UI toggles */
+let lastToggleAt = 0;
+function preventRapidToggle(ms = 300) {
   const now = Date.now();
-  if (toggleGuards[key] && (now - toggleGuards[key]) < ms) return false;
-  toggleGuards[key] = now;
-  return true;
+  if (now - lastToggleAt < ms) return true;
+  lastToggleAt = now;
+  return false;
 }
 
+/* Overlay history stack (for popstate back handling) */
+const overlayStack = [];
+function pushOverlayState(name) {
+  overlayStack.push(name);
+  try { history.pushState({ overlay: name }, ''); } catch(e) { /* noop for older browsers */ }
+}
+function popOverlayState() {
+  overlayStack.pop();
+}
+
+/* When the browser Back button is pressed we pop overlays instead of closing page */
+window.addEventListener('popstate', (ev) => {
+  // If an overlay exists in our stack, close it
+  if (overlayStack.length > 0) {
+    ev.preventDefault?.();
+    const top = overlayStack[overlayStack.length - 1];
+    // close top overlay
+    switch (top) {
+      case 'epg': hideEpg(); break;
+      case 'guide': hideGuide(); break;
+      case 'settingsModal': window.hideSettingsModal(); break;
+      case 'channelSettings': hideChannelSettings(); break;
+      case 'nav': hideNav(); break;
+      default:
+        // fallback: try to clear UI
+        clearUi();
+    }
+    popOverlayState();
+    // Replace state to avoid navigation if still overlays remain
+    try {
+      if (overlayStack.length === 0) history.replaceState({}, '');
+    } catch(e){}
+  } else {
+    // No overlayStack: let default behaviour happen (exit page)
+  }
+});
+
 /* -------------------------
-   Helpers
+   Utilities
    ------------------------- */
 const getEl = id => document.getElementById(id);
 
-// Safe innerHTML setter — prevents blank panels if value is falsy & keeps rendering atomic
-function safeInnerHTML(el, html) {
-  if (!el || typeof el.innerHTML === 'undefined') return;
-  // avoid setting empty strings which can cause blank panels during rapid toggles
-  if (html == null || html === '') return;
-  el.innerHTML = html;
-}
+function showTempMessage(message) {
+    if (!o.TempMessageOverlay) return;
+    clearTimeout(tempMessageTimeout);
+    o.TempMessageOverlay.textContent = message;
+    o.TempMessageOverlay.classList.remove('HIDDEN');
+    o.TempMessageOverlay.classList.add('visible');
 
-// Push overlay state — used when opening overlay panels so back button closes them first
-function pushOverlayState(overlayName) {
-  try {
-    if (!overlayName) return;
-    // push only if not already pushed
-    const state = history.state || {};
-    if (state && state.overlay === overlayName) return;
-    history.pushState({ overlay: overlayName }, '');
-    lastPushedOverlay = overlayName;
-  } catch (e) { /* ignore */ }
-}
-
-// Pop overlay state if it was the last pushed one
-function popOverlayStateIfMatches(overlayName) {
-  try {
-    const state = history.state || {};
-    if (state && state.overlay === overlayName) {
-      // go back one step (this triggers popstate)
-      history.back();
-    } else {
-      lastPushedOverlay = null;
-    }
-  } catch (e) {}
-}
-
-// Centralized show/hide for loader and idle animation
-function showLoadingOverlay(message = 'Loading Channel...') {
-  if (!o.ChannelLoader) return;
-  if (o.ChannelLoader.classList.contains('HIDDEN')) {
-    o.ChannelLoader.classList.remove('HIDDEN');
-    // Ensure it's visible (no immediate fade)
-    o.ChannelLoader.classList.remove('fade-out');
-  }
-  // update loading text if present
-  const txt = o.ChannelLoader.querySelector('.loading-text');
-  if (txt) txt.textContent = message;
-  // make video invisible/transparent to avoid black flash
-  if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
-  // ensure StreamInfo hides while loading
-  if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.add('HIDDEN');
-}
-
-function hideLoadingOverlay() {
-  clearTimeout(loaderFadeTimeout);
-  if (!o.ChannelLoader) return;
-  // fade out then hide for smoothness
-  o.ChannelLoader.classList.add('fade-out');
-  loaderFadeTimeout = setTimeout(() => {
-    if (o.ChannelLoader) {
-      o.ChannelLoader.classList.add('HIDDEN');
-      o.ChannelLoader.classList.remove('fade-out');
-    }
-  }, 450);
-  if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
-  // restore StreamInfo
-  if (o.StreamInfoOverlay && bChannelSettingsOpened) o.StreamInfoOverlay.classList.remove('HIDDEN');
+    tempMessageTimeout = setTimeout(() => {
+        o.TempMessageOverlay.classList.remove('visible');
+        setTimeout(() => o.TempMessageOverlay.classList.add('HIDDEN'), 300);
+    }, 3000);
 }
 
 /* -------------------------
-   DOM init & event wiring
+   Shaka + Player init
    ------------------------- */
 async function initPlayer() {
-  // populate DOM refs (safe — script is included at end of body)
-  Object.assign(o, {
-    PlayerContainer: getEl('playerContainer'),
-    AvPlayer: getEl('avplayer'),
-    Nav: getEl('nav'),
-    GroupList: getEl('GroupList'),
-    DynamicGroupsList: getEl('DynamicGroupsList'),
-    ListContainer: getEl('list_container'),
-    ChannelList: getEl('ChannelList'),
-    ChannelLoader: getEl('ChannelLoader'),
-    IdleAnimation: getEl('IdleAnimation'),
-    PlayButton: getEl('PlayButton'),
-    BlurOverlay: getEl('BlurOverlay'),
-    ChannelInfo: getEl('ChannelInfo'),
-    SettingsMainMenu: getEl('SettingsMainMenu'),
-    SettingsVideoFormatMenu: getEl('SettingsVideoFormatMenu'),
-    SettingsContainer: getEl('settings_container'),
-    ChannelSettings: getEl('ChannelSettings'),
-    StreamInfoOverlay: getEl('StreamInfoOverlay'),
-    Guide: getEl('Guide'),
-    GuideContent: getEl('GuideContent'),
-    EpgOverlay: getEl('EpgOverlay'),
-    EpgChannels: getEl('EpgChannels'),
-    EpgTimeline: getEl('EpgTimeline'),
-    SettingsModal: getEl('SettingsModal'),
-    SettingsModalContent: getEl('SettingsModalContent'),
-    SearchField: getEl('SearchField'),
-    ChannelInfoName: getEl('channel_name'),
-    ChannelInfoEpg: getEl('channel_epg'),
-    ChannelInfoLogo: getEl('ch_logo'),
-    TempMessageOverlay: getEl('TempMessageOverlay')
-  });
-
-  // initialize channel numeric fields
+  // assign numbers/keys to channels
   Object.keys(channels).forEach((key, i) => {
     channels[key].number = i + 1;
     channels[key].key = key;
@@ -170,46 +175,42 @@ async function initPlayer() {
   buildDynamicGroupNav();
   sSelectedGroup = '__all';
 
-  // set initial group index more robustly
+  // choose initial group index if possible
   if (o.GroupList) {
-    const allGroupLiItems = o.GroupList.querySelectorAll('li');
-    const initialGroupItem = Array.from(allGroupLiItems).find(li => li.dataset && li.dataset.group === '__all');
-    if (initialGroupItem) {
-      iGroupListIndex = Array.from(allGroupLiItems).indexOf(initialGroupItem);
-    } else {
-      iGroupListIndex = Math.max(1, Math.min(Array.from(allGroupLiItems).length - 1, iGroupListIndex));
-    }
+      const allGroupLiItems = qsa('li', o.GroupList);
+      const initialGroupItem = allGroupLiItems.find(li => li.dataset.group === '__all');
+      iGroupListIndex = initialGroupItem ? allGroupLiItems.indexOf(initialGroupItem) : (allGroupLiItems.findIndex(li => li.textContent.trim() === 'ALL CHANNELS') || 1);
   }
 
   buildNav();
   updateSelectedGroupInNav();
 
-  // Shaka initialization
   await shaka.polyfill.installAll();
   if (!shaka.Player.isBrowserSupported()) {
-    console.error("Shaka Player not supported on this browser.");
+    console.error("Browser not supported");
     return;
   }
 
   player = new shaka.Player();
-  ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
+  ui = new shaka.ui.Overlay(player, o.PlayerContainer || document.body, o.AvPlayer || document.createElement('video'));
 
   ui.configure({
     controlPanelElements: [],
     addSeekBar: false,
     addBigPlayButton: false,
-    showBuffering: false, // we'll show our custom loader
+    showBuffering: true,
     clickToPlay: false
   });
 
-  player.attach(o.AvPlayer);
-
+  if (o.AvPlayer) {
+    player.attach(o.AvPlayer);
+  }
   player.configure({
     abr: { defaultBandwidthEstimate: 500000 },
     streaming: { rebufferingGoal: 2, bufferingGoal: 3 }
   });
 
-  // Shaka events
+  // events
   player.addEventListener('error', e => {
     console.error('Shaka Error:', e.detail);
     const isNetworkOrMediaError =
@@ -217,68 +218,70 @@ async function initPlayer() {
       e.detail.category === shaka.util.Error.Category.MEDIA ||
       e.detail.category === shaka.util.Error.Category.STREAMING;
 
-    // On other errors show idle animation
     if (!isNetworkOrMediaError) {
       showIdleAnimation(true);
     }
-    hideLoadingOverlay();
+    // show/hide loader safely
+    if (o.ChannelLoader) {
+      clearTimeout(loaderFadeTimeout);
+      o.ChannelLoader.classList.add('HIDDEN');
+      o.ChannelLoader.style.opacity = '1';
+      o.ChannelLoader.classList.remove('fade-out');
+    }
     if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
   });
 
-  // track changes -> re-render channel settings
   player.addEventListener('trackschanged', renderChannelSettings);
-  player.addEventListener('buffering', handleBuffering);
+  player.addEventListener('buffering', (event) => {
+    // show loader when buffering true, hide when false
+    if (event.buffering) {
+      if (o.ChannelLoader) {
+        o.ChannelLoader.classList.remove('HIDDEN');
+        o.ChannelLoader.classList.remove('fade-out');
+        o.ChannelLoader.style.opacity = '1';
+      }
+    } else {
+      // slight delay to allow smooth fade
+      hideLoaderAndShowVideo();
+    }
+  });
   player.addEventListener('playing', handlePlaying);
 
-  // updates for stream info occasionally
+  // keep stream info updated
   player.addEventListener('adaptation', updateStreamInfo);
   player.addEventListener('streaming', updateStreamInfo);
 
-  // Event wiring (moved here so DOM refs exist)
   setupControls();
-  setupEventListeners();
-
-  // show idle UI until play
   showIdleAnimation(true);
   loadInitialChannel();
 }
 
-/* -------------------------
-   Buffering & playing handlers
-   ------------------------- */
-function handleBuffering(evt) {
-  // evt.buffering: true when buffering start, false when end
-  if (evt && evt.buffering) {
-    // Show the custom loader with anime background
-    showLoadingOverlay('Buffering...');
-    // also show the IdleAnimation background behind loader to maintain visuals
-    if (o.IdleAnimation) o.IdleAnimation.classList.add('visible'); 
-  } else {
-    // Buffering ended
-    hideLoadingOverlay();
-    if (o.IdleAnimation && !isSessionActive) {
-      // keep IdleAnimation visible if session not active (idle)
-      o.IdleAnimation.classList.remove('visible');
-    } else {
-      if (o.IdleAnimation) o.IdleAnimation.classList.remove('visible');
-    }
+/* Loader helpers */
+function handlePlaying() {
+  hideLoaderAndShowVideo();
+}
+function hideLoaderAndShowVideo() {
+  clearTimeout(loaderFadeTimeout);
+  if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
+  if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
+    o.ChannelLoader.classList.add('fade-out');
+    loaderFadeTimeout = setTimeout(() => {
+      if (o.ChannelLoader) {
+        o.ChannelLoader.classList.add('HIDDEN');
+        o.ChannelLoader.style.opacity = '1';
+        o.ChannelLoader.classList.remove('fade-out');
+      }
+    }, 500);
   }
 }
 
-function handlePlaying() {
-  hideLoadingOverlay();
-  // Hide idle animation when playback starts
-  if (o.IdleAnimation) o.IdleAnimation.classList.remove('visible');
-}
-
 /* -------------------------
-   Controls setup (touch / clicks / remote)
+   Touch / click / remote controls
    ------------------------- */
 function setupControls() {
-  const playerContainer = o.PlayerContainer;
-  if (!playerContainer) return;
+  const playerContainer = o.PlayerContainer || document.body;
 
-  // Touch gestures: swipe, tap, double-tap
+  // touch handlers for swipe and taps
   playerContainer.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
       touchStartX = e.touches[0].clientX;
@@ -298,7 +301,7 @@ function setupControls() {
   playerContainer.addEventListener('touchend', e => {
     if (e.changedTouches.length !== 1) return;
 
-    // Ignore gestures when interacting with overlays
+    // detect if the start point was inside a panel to avoid accidental closes
     const targetElement = document.elementFromPoint(touchStartX, touchStartY);
     if (targetElement && (targetElement.closest('#nav') || targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay'))) {
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
@@ -312,7 +315,6 @@ function setupControls() {
     const SWIPE_THRESHOLD = 50;
     const TAP_THRESHOLD = 15;
 
-    // Swipe
     if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
       handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
       lastTapTime = 0;
@@ -320,55 +322,75 @@ function setupControls() {
       return;
     }
 
-    // Tap / double-tap
+    // Tap detection
     if (absDeltaX < TAP_THRESHOLD && absDeltaY < TAP_THRESHOLD) {
       const currentTime = Date.now();
-      if (currentTime - lastTapTime < 300) { // double tap
-        handleDoubleTapAction();
+      if (currentTime - lastTapTime < 300) { // double-tap
         lastTapTime = 0;
+        handleDoubleTapAction();
       } else {
-        // single tap — handled by click handler below after a tiny delay
         lastTapTime = currentTime;
+        // on mobile single tap -> show channel name (if session active) after short delay
+        setTimeout(() => {
+          // if no second tap happened
+          if (Date.now() - lastTapTime >= 300) {
+            handleSingleTapAction();
+          }
+        }, 320);
       }
     }
 
     touchStartX = touchStartY = touchEndX = touchEndY = 0;
   }, { passive: false });
 
-  // click handler (handles single tap)
-  playerContainer.addEventListener('click', e => {
-    // ignore clicks on UI elements which should handle their own events
-    if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay'))) return;
-
-    const currentTime = Date.now();
-    const isDouble = (currentTime - lastTapTime) < 350;
-
-    if (isDouble) {
-      handleDoubleTapAction();
-      lastTapTime = 0;
-    } else {
-      handleSingleTapAction();
-      lastTapTime = currentTime;
+  // clicks / double clicks for mouse
+  playerContainer.addEventListener('click', (e) => {
+    // ignore if click is on UI control
+    if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay') || e.target.closest('#PlayButton'))) {
+      return;
     }
+    handleSingleTapAction();
   });
 
-  // disable native dblclick default behavior that may cause unexpected UI changes
-  playerContainer.addEventListener('dblclick', e => {
+  playerContainer.addEventListener('dblclick', (e) => {
     e.preventDefault();
     handleDoubleTapAction();
   });
+
+  // Play button should work for mouse and touch
+  if (o.PlayButton) {
+    // remove duplicates
+    o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
+    o.PlayButton.addEventListener('mousedown', handleFirstPlay);
+    // touch friendly
+    o.PlayButton.removeEventListener('touchend', handleFirstPlay);
+    o.PlayButton.addEventListener('touchend', (ev) => {
+      ev.preventDefault();
+      handleFirstPlay();
+    });
+  }
 }
 
+/* Swipe logic (mobile) */
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
 
-  // Close modals first on any swipe (fix: EPG/Guide closing directly)
-  if (bGuideOpened) { hideGuide(); return; }
-  if (bEpgOpened) { hideEpg(); return; }
-  if (bSettingsModalOpened) { window.hideSettingsModal(); return; }
+  // If modals open, horizontal swipe closes them
+  if (bGuideOpened) {
+    hideGuide();
+    return;
+  }
+  if (bEpgOpened) {
+    hideEpg();
+    return;
+  }
+  if (bSettingsModalOpened) {
+    window.hideSettingsModal();
+    return;
+  }
 
   if (isHorizontal) {
-    if (deltaX > 0) { // swipe right = left-to-right
+    if (deltaX > 0) { // swipe right
       if (bChannelSettingsOpened) {
         hideChannelSettings();
       } else if (bNavOpened && !bGroupsOpened) {
@@ -386,7 +408,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
       }
     }
   } else {
-    // vertical swipe changes channel when no panel open
+    // vertical: change channel (if no modal open)
     if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
       if (deltaY > 0) loadChannel(iActiveChannelIndex + 1);
       else loadChannel(iActiveChannelIndex - 1);
@@ -394,176 +416,240 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   }
 }
 
+/* Single / double tap actions */
 function handleSingleTapAction() {
   if (!isSessionActive) return;
   if (bNavOpened || bChannelSettingsOpened || bGuideOpened || bEpgOpened || bSettingsModalOpened) {
-    clearUi();
+    clearUi(); // close all overlays
   } else {
     showChannelName();
   }
 }
-
 function handleDoubleTapAction() {
   toggleFullScreen();
 }
 
 /* -------------------------
-   Event listeners (keyboard/remote/back button)
+   Channel loading & nav
    ------------------------- */
-function setupEventListeners() {
-  // Play button
-  if (o.PlayButton) {
-    o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
-    o.PlayButton.addEventListener('mousedown', handleFirstPlay);
-  }
-
-  // Search field
-  if (o.SearchField) {
-    o.SearchField.removeEventListener('input', onSearchInput);
-    o.SearchField.addEventListener('input', onSearchInput);
-  }
-
-  // group click wiring is done in buildDynamicGroupNav()
-
-  // One keydown listener for TV remotes / keyboards
-  document.removeEventListener('keydown', globalKeyHandler);
-  document.addEventListener('keydown', globalKeyHandler);
-
-  // popstate -> intercept back button to close overlays first
-  window.removeEventListener('popstate', onPopState);
-  window.addEventListener('popstate', onPopState);
-
-  // ensure we have only one resize handler if needed (not used heavily here)
-}
-
-// Search input handler extracted
-function onSearchInput() {
-  buildNav();
-  if (aFilteredChannelKeys.length > 0) {
-    iChannelListIndex = 0;
-    if (isSessionActive) { loadChannel(0); }
-    updateSelectedChannelInNav();
-  } else {
-    try { player?.unload(); } catch (e) {}
-    showIdleAnimation(true);
-  }
-}
-
-// Popstate handling: close overlays instead of leaving page
-function onPopState(e) {
-  const state = e.state || {};
-  if (!state || !state.overlay) {
-    // No overlay state — let default behaviour happen (may be initial load)
-    // If user pressed back and there is no overlay currently, we should keep default (exit)
-    // But only exit if no overlay is open
-    if (bEpgOpened || bGuideOpened || bSettingsModalOpened || bChannelSettingsOpened || bNavOpened) {
-      // If overlays open but state doesn't indicate overlay, close overlays gracefully
-      clearUi();
-      lastPushedOverlay = null;
-      // prevent navigating away by pushing a new state to maintain consistent back behavior
-      try { history.replaceState(null, ''); } catch (e) {}
+function loadInitialChannel() {
+  const storedLast = localStorage.getItem('iptvLastWatched');
+  let initialChannelKey = 'SonictheHedgehog';
+  if (!channels[initialChannelKey]) {
+    initialChannelKey = Object.keys(channels)[0];
+    if (!initialChannelKey) {
+      console.error("No channels defined.");
+      return;
     }
+  }
+
+  if (aFilteredChannelKeys.length === 0) {
+    sSelectedGroup = '__all';
+    buildNav();
+    if (aFilteredChannelKeys.length === 0) {
+        console.error("No channels available even in the '__all' group.");
+        return;
+    }
+  }
+
+  if (storedLast && channels[storedLast] && aFilteredChannelKeys.includes(storedLast)) {
+      initialChannelKey = storedLast;
+  } else if (!aFilteredChannelKeys.includes(initialChannelKey)) {
+      initialChannelKey = aFilteredChannelKeys[0];
+  }
+
+  if (!initialChannelKey || !aFilteredChannelKeys.includes(initialChannelKey)) {
+      console.error("Could not determine a valid initial channel from filtered list.");
+      return;
+  }
+
+  const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
+  iChannelListIndex = (initialIndex >= 0 ? initialIndex : 0);
+  iActiveChannelIndex = iChannelListIndex;
+  updateSelectedChannelInNav();
+}
+
+async function loadChannel(index, options = {}) {
+  clearTimeout(loaderFadeTimeout);
+
+  if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0) {
+    console.warn("loadChannel called with no filtered channels available.");
+    try { await player?.unload(); } catch {}
+    showIdleAnimation(!isSessionActive);
     return;
   }
 
-  // If overlay state exists, close that overlay
-  if (state.overlay === 'epg' && bEpgOpened) hideEpg();
-  else if (state.overlay === 'guide' && bGuideOpened) hideGuide();
-  else if (state.overlay === 'settingsModal' && bSettingsModalOpened) window.hideSettingsModal();
-  else if (state.overlay === 'channelSettings' && bChannelSettingsOpened) hideChannelSettings();
-  else if (state.overlay === 'nav' && bNavOpened) hideNav();
+  // wrap index with modulo: support negative
+  iChannelListIndex = (index < 0) ? (aFilteredChannelKeys.length - 1) : (index % aFilteredChannelKeys.length);
+  iActiveChannelIndex = iChannelListIndex;
 
-  lastPushedOverlay = null;
+  const channelKey = aFilteredChannelKeys[iChannelListIndex];
+  if (!channelKey || !channels[channelKey]) {
+    console.error(`Invalid channel key or data for index ${iChannelListIndex}: ${channelKey}`);
+    showIdleAnimation(!isSessionActive);
+    return;
+  }
+  const channel = channels[channelKey];
+
+  if (!player) {
+    console.error("Player not initialized before loading channel.");
+    return;
+  }
+
+  localStorage.setItem('iptvLastWatched', channelKey);
+
+  // Hide video element to avoid black flash during load
+  if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
+
+  if (o.ChannelLoader) {
+    o.ChannelLoader.classList.remove('fade-out');
+    o.ChannelLoader.style.opacity = '1';
+    o.ChannelLoader.classList.remove('HIDDEN');
+  }
+
+  hideChannelName();
+  updateSelectedChannelInNav();
+
+  try {
+    // Reset clearkeys each load to avoid leaks
+    player.configure('drm.clearKeys', {});
+    if (channel.type === 'clearkey' && channel.keyId && channel.key) {
+      player.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } });
+    }
+
+    player.getNetworkingEngine()?.clearAllRequestFilters();
+    if (channel.userAgent) {
+      player.getNetworkingEngine()?.registerRequestFilter((type, request) => {
+        request.headers['User-Agent'] = channel.userAgent;
+      });
+    }
+
+    // autoplay fix: unmute before load in session play
+    if (isSessionActive && o.AvPlayer) {
+        o.AvPlayer.muted = false;
+    }
+
+    // apply anime background on channel switch (animation)
+    if (o.ChannelLoader) {
+      // ensure the anime background we want (user-provided link)
+      o.ChannelLoader.style.backgroundImage = "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg')";
+    }
+
+    await player.load(channel.manifestUri);
+
+    // attempt autoplay
+    if (isSessionActive) {
+      if (o.AvPlayer) {
+        o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e));
+      }
+      showChannelName();
+    }
+  } catch (error) {
+    console.error(`Error loading channel "${channel?.name}":`, error);
+    showIdleAnimation(!isSessionActive);
+    if (o.ChannelLoader) {
+      clearTimeout(loaderFadeTimeout);
+      o.ChannelLoader.classList.add('HIDDEN');
+      o.ChannelLoader.style.opacity = '1';
+      o.ChannelLoader.classList.remove('fade-out');
+    }
+    if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
+  }
 }
 
 /* -------------------------
-   Navigation UI builders
+   Navigation & UI (keeping original logic but cleaner)
    ------------------------- */
 function setupMainMenuControls() {
   const guideBtn = getEl('guide_button');
   const epgBtn = getEl('epg_button');
-  if (guideBtn) guideBtn.onclick = () => { showGuide(); pushOverlayState('guide'); };
+  if (guideBtn) guideBtn.onclick = () => { showGuide(); };
   else console.warn("guide_button not found.");
-  if (epgBtn) epgBtn.onclick = () => { showEpg(); pushOverlayState('epg'); };
+  if (epgBtn) epgBtn.onclick = () => { showEpg(); };
   else console.warn("epg_button not found.");
 
   if (o.PlayButton) {
-    o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
-    o.PlayButton.addEventListener('mousedown', handleFirstPlay);
+      o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
+      o.PlayButton.addEventListener('mousedown', handleFirstPlay);
   } else {
-    console.error("PlayButton element not found.");
+      console.error("PlayButton element not found.");
   }
 }
 
 function buildDynamicGroupNav() {
   if (!o.DynamicGroupsList || !o.GroupList) {
-    console.error("Required group list elements not found.");
-    return;
+      console.error("Required group list elements not found.");
+      return;
   }
 
   let sortedGroups = [];
   try {
-    const allGroups = new Set(Object.values(channels).flatMap(ch => ch?.group || []));
-    sortedGroups = [...allGroups].sort();
+      const allGroups = new Set(Object.values(channels).flatMap(ch => ch?.group || []));
+      sortedGroups = [...allGroups].sort();
   } catch (error) { console.error("Error processing channel groups:", error); }
 
-  // build nodes dynamically (avoid innerHTML resets on GroupList root)
   o.DynamicGroupsList.innerHTML = '';
 
-  const makeLi = (text, dataset) => {
-    const li = document.createElement('li');
-    if (dataset) Object.keys(dataset).forEach(k => li.dataset[k] = dataset[k]);
-    li.textContent = text;
-    return li;
-  };
+  const allListItems = [];
 
-  const favLi = makeLi('FAVORITES', { group: '__fav' });
-  const allLi = makeLi('ALL CHANNELS', { group: '__all' });
+  const favLi = document.createElement('li');
+  favLi.dataset.group = '__fav';
+  favLi.textContent = 'FAVORITES';
+  allListItems.push(favLi);
 
-  o.DynamicGroupsList.appendChild(favLi);
-  o.DynamicGroupsList.appendChild(allLi);
+  const allLi = document.createElement('li');
+  allLi.dataset.group = '__all';
+  allLi.textContent = 'ALL CHANNELS';
+  allListItems.push(allLi);
 
   sortedGroups.forEach(name => {
-    const safeName = (name || 'Unnamed Group');
-    const dynamicLi = makeLi(safeName.toUpperCase(), { group: safeName });
-    o.DynamicGroupsList.appendChild(dynamicLi);
+    const safeName = (name || 'Unnamed Group').replace(/</g, '&lt;');
+    const dynamicLi = document.createElement('li');
+    dynamicLi.dataset.group = safeName;
+    dynamicLi.textContent = safeName.toUpperCase();
+    allListItems.push(dynamicLi);
   });
 
-  // wire onclick for all group list items (within GroupList area)
-  const fullGroupListItems = o.GroupList.querySelectorAll('li');
+  allListItems.forEach(li => o.DynamicGroupsList.appendChild(li));
+
+  // bind clicks to group list (we use on-the-fly index mapping)
+  const fullGroupListItems = qsa('li', o.GroupList);
   fullGroupListItems.forEach((li, index) => {
-    li.onclick = () => {
-      // Find index inside group list
-      const list = Array.from(o.GroupList.querySelectorAll('li'));
-      const idx = list.indexOf(li);
-      selectGroup(idx);
-    };
+      li.onclick = null;
+      if (li.hasAttribute('data-group')) {
+          li.onclick = () => selectGroup(index);
+      }
+      else if (li.id === 'guide_button') {
+          li.onclick = showGuide;
+      } else if (li.id === 'epg_button') {
+          li.onclick = showEpg;
+      }
   });
 }
 
 function selectGroup(index) {
   if (!o.GroupList || !o.ListContainer) {
-    console.error("GroupList or ListContainer not found.");
-    return;
+      console.error("GroupList or ListContainer not found.");
+      return;
   }
 
-  const groupItems = o.GroupList.querySelectorAll('li');
+  const groupItems = qsa('li', o.GroupList);
   if (index < 0 || index >= groupItems.length) {
-    console.warn("Invalid index passed to selectGroup:", index);
-    return;
+      console.warn("Invalid index passed to selectGroup:", index);
+      return;
   }
   const item = groupItems[index];
-  if (!item || !item.dataset || !item.dataset.group) {
-    return;
+  if (!item || !item.hasAttribute('data-group')) {
+      return;
   }
 
   if (item.dataset.group === '__fav') {
-    const hasFavorites = Object.values(channels).some(ch => ch.favorite === true);
-    if (!hasFavorites) {
-      showTempMessage("No favorite channels added yet.");
-      hideNav();
-      return;
-    }
+      const hasFavorites = Object.values(channels).some(ch => ch.favorite === true);
+      if (!hasFavorites) {
+          showTempMessage("No favorite channels added yet.");
+          hideNav();
+          return;
+      }
   }
 
   sSelectedGroup = item.dataset.group;
@@ -577,49 +663,49 @@ function selectGroup(index) {
     updateSelectedChannelInNav();
   }
 
-  // close groups after selection & push/pop state for back handling
-  requestAnimationFrame(() => hideGroups());
+  requestAnimationFrame(() => {
+      hideGroups();
+  });
 }
 
-/* -------------------------
-   Build channel nav list
-   ------------------------- */
 function buildNav() {
   if (!o.ChannelList || !o.SearchField) {
-    console.error("ChannelList or SearchField element not found.");
-    return;
+      console.error("ChannelList or SearchField element not found.");
+      return;
   }
 
   const searchTerm = (o.SearchField.value || '').toLowerCase();
 
   try {
-    aFilteredChannelKeys = Object.keys(channels)
-      .filter(key => {
-        const ch = channels[key];
-        if (!ch || typeof ch.name !== 'string') return false;
-        const inGroup = sSelectedGroup === '__all' ||
-          (sSelectedGroup === '__fav' && ch.favorite === true) ||
-          (Array.isArray(ch.group) && ch.group.includes(sSelectedGroup));
-        const inSearch = !searchTerm || ch.name.toLowerCase().includes(searchTerm);
-        return inGroup && inSearch;
-      })
-      .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
+      aFilteredChannelKeys = Object.keys(channels)
+        .filter(key => {
+          const ch = channels[key];
+          if (!ch || typeof ch.name !== 'string') return false;
+          const inGroup = sSelectedGroup === '__all' ||
+                            (sSelectedGroup === '__fav' && ch.favorite === true) ||
+                            (Array.isArray(ch.group) && ch.group.includes(sSelectedGroup));
+          const inSearch = !searchTerm || ch.name.toLowerCase().includes(searchTerm);
+          return inGroup && inSearch;
+        })
+        .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
   } catch (error) {
-    console.error("Error filtering/sorting channels:", error);
-    aFilteredChannelKeys = [];
+      console.error("Error filtering/sorting channels:", error);
+      aFilteredChannelKeys = [];
   }
 
   console.log(`Building Nav for group: "${sSelectedGroup}", Found channels: ${aFilteredChannelKeys.length}`);
 
-  // remove children safely
-  o.ChannelList.innerHTML = '';
-  o.ChannelList.scrollTop = 0;
+  // keep a reference to scroll top if needed
+  if (o.ChannelList) {
+    o.ChannelList.innerHTML = '';
+    o.ChannelList.scrollTop = 0;
+  }
 
   if (aFilteredChannelKeys.length === 0) {
     const msg = sSelectedGroup === '__fav'
-      ? 'No favorite channels found. Add channels using the settings menu (→).'
-      : 'No channels found in this category.';
-    safeInnerHTML(o.ChannelList, `<li style="justify-content:center; color:#888; padding:12px; height: auto; line-height: normal; white-space: normal; text-align: center;">${msg}</li>`);
+        ? 'No favorite channels found. Add channels using the settings menu (→).'
+        : 'No channels found in this category.';
+    o.ChannelList.innerHTML = `<li style="justify-content:center; color:#888; padding:12px; height: auto; line-height: normal; white-space: normal; text-align: center;">${msg}</li>`;
     return;
   }
 
@@ -630,10 +716,9 @@ function buildNav() {
 
     const item = document.createElement('li');
     item.className = 'channel-item';
-    item.dataset.index = index;
     item.onclick = () => {
-      // prevent rapid toggles when double-clicking
-      if (!guard('channelClick')) return;
+      // debounce double clicks
+      if (preventRapidToggle(220)) return;
       if (isSessionActive) {
         loadChannel(index);
       } else {
@@ -645,8 +730,8 @@ function buildNav() {
 
     const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : '';
     const logoHtml = ch.logo
-      ? `<div class="nav_logo"><img src="${ch.logo}" alt="" onerror="this.style.display='none'; this.onerror=null;"></div>`
-      : '<div class="nav_logo" style="width: 50px;"></div>';
+        ? `<div class="nav_logo"><img src="${ch.logo}" alt="" onerror="this.style.display='none'; this.onerror=null;"></div>`
+        : '<div class="nav_logo" style="width: 50px;"></div>';
 
     const safeName = (ch.name || 'Unknown Channel').replace(/</g, '&lt;');
 
@@ -658,65 +743,62 @@ function buildNav() {
   updateSelectedChannelInNav();
 }
 
-/* -------------------------
-   Selected item update helpers
-   ------------------------- */
+/* updateSelectedChannelInNav with extra guards */
 function updateSelectedChannelInNav() {
   if (!o.ChannelList) return;
   try {
-    // remove previous selected & playing classes
-    const currentSelected = o.ChannelList.querySelector('.selected');
-    if (currentSelected) currentSelected.classList.remove('selected');
+      const currentSelected = o.ChannelList.querySelector('.selected');
+      if (currentSelected) currentSelected.classList.remove('selected');
 
-    const playing = o.ChannelList.querySelector('.playing');
-    if (playing) playing.classList.remove('playing');
+      const channelItems = qsa('li.channel-item', o.ChannelList);
 
-    const channelItems = Array.from(o.ChannelList.querySelectorAll('li.channel-item'));
-
-    if (iChannelListIndex >= 0 && iChannelListIndex < channelItems.length) {
-      const newItem = channelItems[iChannelListIndex];
-      if (newItem) {
-        newItem.classList.add('selected');
-        // mark the actively playing item (for better highlighting)
-        if (iActiveChannelIndex === iChannelListIndex) newItem.classList.add('playing');
-        if (bNavOpened && typeof newItem.scrollIntoView === 'function') {
-          newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+      if (iChannelListIndex >= 0 && iChannelListIndex < channelItems.length) {
+          const newItem = channelItems[iChannelListIndex];
+          if (newItem) {
+            newItem.classList.add('selected');
+            // highlight the currently-playing item with a class for styling
+            channelItems.forEach((li, idx) => {
+              li.classList.toggle('playing', idx === iChannelListIndex);
+            });
+            if (bNavOpened && typeof newItem.scrollIntoView === 'function') {
+                newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+      } else if (aFilteredChannelKeys.length > 0 && channelItems.length > 0) {
+          iChannelListIndex = 0;
+          const firstItem = channelItems[0];
+          if (firstItem) firstItem.classList.add('selected');
+          console.warn("iChannelListIndex was out of bounds, selecting first channel.");
+      } else {
+        iChannelListIndex = 0;
       }
-    } else if (aFilteredChannelKeys.length > 0 && channelItems.length > 0) {
-      iChannelListIndex = 0;
-      const firstItem = channelItems[0];
-      if (firstItem) firstItem.classList.add('selected');
-      console.warn("iChannelListIndex was out of bounds, selecting first channel.");
-    } else {
-      iChannelListIndex = 0;
-    }
+
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
 }
 
 function updateSelectedGroupInNav() {
-  if (!o.GroupList) return;
-  try {
-    const currentSelected = o.GroupList.querySelector('.selected');
-    if (currentSelected) currentSelected.classList.remove('selected');
+    if (!o.GroupList) return;
+    try {
+        const currentSelected = o.GroupList.querySelector('.selected');
+        if (currentSelected) currentSelected.classList.remove('selected');
 
-    const allLis = o.GroupList.querySelectorAll('li');
-    if (iGroupListIndex >= 0 && iGroupListIndex < allLis.length) {
-      const newItem = allLis[iGroupListIndex];
-      if (newItem) {
-        newItem.classList.add('selected');
-        if (bGroupsOpened && typeof newItem.scrollIntoView === 'function') {
-          newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const allLis = qsa('li', o.GroupList);
+        if (iGroupListIndex >= 0 && iGroupListIndex < allLis.length) {
+            const newItem = allLis[iGroupListIndex];
+            if (newItem) {
+                newItem.classList.add('selected');
+                if (bGroupsOpened && typeof newItem.scrollIntoView === 'function') {
+                    newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        } else {
+            console.warn("Cannot update selected group, invalid iGroupListIndex:", iGroupListIndex);
         }
-      }
-    } else {
-      console.warn("Cannot update selected group, invalid iGroupListIndex:", iGroupListIndex);
-    }
-  } catch (error) { console.error("Error updating selected group in nav:", error); }
+    } catch (error) { console.error("Error updating selected group in nav:", error); }
 }
 
 /* -------------------------
-   Settings & Modals (unchanged logic, cleaned)
+   Settings & Modals (fixed blank panel / double clicks)
    ------------------------- */
 function renderChannelSettings() {
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return;
@@ -725,66 +807,83 @@ function renderChannelSettings() {
   if (!currentChannel) return;
 
   if (o.SettingsMainMenu) {
-    const currentFormat = getAspectRatio();
-    safeInnerHTML(o.SettingsMainMenu, `
-      <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
-      <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
-      <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
-    `);
-    updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+      const currentFormat = getAspectRatio();
+      // Build HTML once and set it atomically
+      const html = `
+        <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
+        <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
+        <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
+      `;
+      // requestAnimationFrame to avoid innerHTML glitches on mobile when toggling quickly
+      requestAnimationFrame(() => {
+        o.SettingsMainMenu.innerHTML = html;
+        updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+      });
   } else { console.error("SettingsMainMenu element not found"); }
 }
 
 function showVideoFormatMenu() {
+  if (preventRapidToggle(220)) return;
   if (o.SettingsContainer) {
-    o.SettingsContainer.classList.add('submenu-visible');
-    iVideoSettingsIndex = 0;
-    renderVideoFormatMenu();
+    // use requestAnimationFrame before toggling to avoid blank UI on mobile
+    requestAnimationFrame(() => {
+      o.SettingsContainer.classList.add('submenu-visible');
+      iVideoSettingsIndex = 0;
+      renderVideoFormatMenu();
+      // push overlay state so back button closes settings submenu
+      pushOverlayState('channelSettings');
+    });
   } else { console.error("SettingsContainer element not found."); }
 }
 
 function hideVideoFormatMenu() {
   if (o.SettingsContainer) {
-    o.SettingsContainer.classList.remove('submenu-visible');
-    iChannelSettingsIndex = 1;
-    if (o.SettingsMainMenu) updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
-    else console.error("SettingsMainMenu element not found for focus update.");
+      o.SettingsContainer.classList.remove('submenu-visible');
+      iChannelSettingsIndex = 1;
+      if (o.SettingsMainMenu) {
+          updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+      } else { console.error("SettingsMainMenu element not found for focus update."); }
+      // pop overlay state if we pushed it earlier
+      popOverlayState();
   } else { console.error("SettingsContainer element not found."); }
 }
 
 function renderVideoFormatMenu() {
   if (o.SettingsVideoFormatMenu) {
-    const currentFormat = getAspectRatio();
-    safeInnerHTML(o.SettingsVideoFormatMenu, `
-      <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
-      <div class="settings-item-header">Video Settings</div>
-      <div class="settings-item" onclick="showSettingsModal('format')">
-        <span>Video format</span>
-        <span style="color: var(--text-medium);">${currentFormat} &gt;</span>
-      </div>
-      <div class="settings-item" onclick="showSettingsModal('quality')">
-        <span>Video track</span>
-        <span style="color: var(--text-medium);">&gt;</span>
-      </div>
-    `);
-    updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+      const currentFormat = getAspectRatio();
+      const html = `
+        <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
+        <div class="settings-item-header">Video Settings</div>
+        <div class="settings-item" onclick="showSettingsModal('format')">
+          <span>Video format</span>
+          <span style="color: var(--text-medium);">${currentFormat} &gt;</span>
+        </div>
+        <div class="settings-item" onclick="showSettingsModal('quality')">
+          <span>Video track</span>
+          <span style="color: var(--text-medium);">&gt;</span>
+        </div>
+      `;
+      requestAnimationFrame(() => {
+        o.SettingsVideoFormatMenu.innerHTML = html;
+        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+      });
   } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
 
+/* Aspect ratio helpers — unchanged */
 function getAspectRatio() {
-  if (!o.AvPlayer) return 'Original';
-  const style = o.AvPlayer.style;
-  if (style.objectFit === 'fill') return 'Stretch';
-  if (style.objectFit === 'cover' && style.transform === 'scale(1.15)') return 'Zoom';
-  if (style.objectFit === 'cover') return 'Fill';
-  return localStorage.getItem('iptvAspectRatio') || 'Original';
+    if (!o.AvPlayer) return 'Original';
+    const style = o.AvPlayer.style;
+    if (style.objectFit === 'fill') return 'Stretch';
+    if (style.objectFit === 'cover' && style.transform === 'scale(1.15)') return 'Zoom';
+    if (style.objectFit === 'cover') return 'Fill';
+    return localStorage.getItem('iptvAspectRatio') || 'Original';
 }
-
 function setAspectRatio(format) {
   if (!o.AvPlayer) return;
   o.AvPlayer.style.transform = 'scale(1)';
   let formatName = 'Original';
-  switch (format) {
+  switch(format) {
     case 'stretch':
       o.AvPlayer.style.objectFit = 'fill';
       formatName = 'Stretch';
@@ -810,27 +909,28 @@ function setAspectRatio(format) {
   renderVideoFormatMenu();
 }
 
-function togglePlaybackControls() {
-  hideChannelSettings();
-}
-
 function showSettingsModal(type) {
+  if (preventRapidToggle(220)) return;
   if (!o.SettingsModal || !o.SettingsModalContent || !o.BlurOverlay) {
-    console.error("Required modal elements not found.");
-    return;
+      console.error("Required modal elements not found.");
+      return;
   }
   clearUi('settingsModal');
   o.BlurOverlay.classList.add('visible');
   bSettingsModalOpened = true;
   iSettingsModalIndex = 0;
+  // Render modal content atomically (avoid repeated innerHTML resets)
   try {
-    o.SettingsModalContent.innerHTML = renderModalContent(type);
+      const content = renderModalContent(type);
+      requestAnimationFrame(() => {
+        o.SettingsModalContent.innerHTML = content;
+        o.SettingsModal.classList.remove('HIDDEN');
+        updateSettingsModalSelection();
+      });
   } catch (error) {
-    console.error("Error rendering modal content:", error);
-    o.SettingsModalContent.innerHTML = '<p>Error loading content.</p>';
+      console.error("Error rendering modal content:", error);
+      o.SettingsModalContent.innerHTML = '<p>Error loading content.</p>';
   }
-  o.SettingsModal.classList.remove('HIDDEN');
-  updateSettingsModalSelection();
   pushOverlayState('settingsModal');
 }
 
@@ -838,35 +938,27 @@ window.hideSettingsModal = () => {
   bSettingsModalOpened = false;
   if (o.SettingsModal) o.SettingsModal.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
-  // close overlay history
-  // If the last pushed overlay is settingsModal, step back
-  if (lastPushedOverlay === 'settingsModal') popOverlayStateIfMatches('settingsModal');
+  popOverlayState();
 };
-
-/* renderModalContent, applyChannelEdit, applyQualityAndClose, applyFormatAndClose,
-   setSubtitlesAndClose, setAudioAndClose, toggleFavourite
-   — keep the same logic as provided, with safeInnerHTML usage where relevant.
-   (I preserved your original implementations but placed them below)
-*/
 
 function renderModalContent(type) {
   let contentHtml = '';
   try {
-    if (!player) return '<p>Player not initialized.</p>';
+      if (!player) return '<p>Player not initialized.</p>';
 
-    if (type === 'quality') {
-      const tracks = [...new Map((player.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a, b) => b.height - a.height);
-      let itemsHtml = `<li class="modal-selectable" data-value="auto" onclick="applyQualityAndClose('auto')">Auto <input type="radio" name="quality" value="auto" ${player.getConfiguration()?.abr?.enabled ? 'checked' : ''}></li>`;
-      tracks.forEach(track => {
-        const bps = track.bandwidth > 1000000 ? `${(track.bandwidth / 1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth / 1e3)} Kbps`;
-        const isChecked = track.active && !player.getConfiguration()?.abr?.enabled;
-        itemsHtml += `<li class="modal-selectable" data-value='${track.id}' onclick="applyQualityAndClose('${track.id}')">${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
-      });
-      contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CANCEL</button></div>`;
+      if (type === 'quality') {
+        const tracks = [...new Map((player.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a,b)=>b.height-a.height);
+        let itemsHtml = `<li class="modal-selectable" data-value="auto" onclick="applyQualityAndClose('auto')">Auto <input type="radio" name="quality" value="auto" ${player.getConfiguration()?.abr?.enabled ? 'checked' : ''}></li>`;
+        tracks.forEach(track => {
+          const bps = track.bandwidth > 1000000 ? `${(track.bandwidth/1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth/1e3)} Kbps`;
+          const isChecked = track.active && !player.getConfiguration()?.abr?.enabled;
+          itemsHtml += `<li class="modal-selectable" data-value='${track.id}' onclick="applyQualityAndClose('${track.id}')">${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
+        });
+        contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CANCEL</button></div>`;
 
-    } else if (type === 'format') {
-      const currentFormat = getAspectRatio();
-      contentHtml = `<h2>Video Format</h2><ul class="popup-content-list">
+      } else if (type === 'format') {
+        const currentFormat = getAspectRatio();
+        contentHtml = `<h2>Video Format</h2><ul class="popup-content-list">
             <li class="modal-selectable" data-value="original" onclick="applyFormatAndClose('original')">Original <input type="radio" name="format" value="original" ${currentFormat === 'Original' ? 'checked' : ''}></li>
             <li class="modal-selectable" data-value="16:9" onclick="applyFormatAndClose('16:9')">16:9 <input type="radio" name="format" value="16:9" ${currentFormat === '16:9' ? 'checked' : ''}></li>
             <li class="modal-selectable" data-value="fill" onclick="applyFormatAndClose('fill')">Fill <input type="radio" name="format" value="fill" ${currentFormat === 'Fill' ? 'checked' : ''}></li>
@@ -874,42 +966,43 @@ function renderModalContent(type) {
             <li class="modal-selectable" data-value="zoom" onclick="applyFormatAndClose('zoom')">Zoom <input type="radio" name="format" value="zoom" ${currentFormat === 'Zoom' ? 'checked' : ''}></li>
           </ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CANCEL</button></div>`;
 
-    } else if (type === 'subtitles') {
-      const textTracks = player.getTextTracks() || [];
-      const audioTracks = player.getAudioLanguagesAndRoles() || [];
-      let subItemsHtml = `<li class="modal-selectable" onclick="setSubtitlesAndClose(null, false)">Off</li>`;
-      textTracks.forEach(track => {
-        const safeTrackData = { id: track.id, label: track.label, language: track.language };
-        const safeTrack = JSON.stringify(safeTrackData).replace(/</g, '\\u003c');
-        subItemsHtml += `<li class="modal-selectable" onclick='setSubtitlesAndClose(${safeTrack}, true)'>${track.label || track.language}</li>`;
-      });
-      let audioItemsHtml = audioTracks.map(track => `<li class="modal-selectable" onclick="setAudioAndClose('${track.language}')">${track.language} (Audio)</li>`).join('');
-      contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CLOSE</button></div>`;
+      } else if (type === 'subtitles') {
+        const textTracks = player.getTextTracks() || [];
+        const audioTracks = player.getAudioLanguagesAndRoles?.() || [];
+        let subItemsHtml = `<li class="modal-selectable" onclick="setSubtitlesAndClose(null, false)">Off</li>`;
+        textTracks.forEach(track => {
+          const safeTrackData = { id: track.id, label: track.label, language: track.language };
+          const safeTrack = JSON.stringify(safeTrackData).replace(/</g, '\\u003c');
+          subItemsHtml += `<li class="modal-selectable" onclick='setSubtitlesAndClose(${safeTrack}, true)'>${track.label || track.language}</li>`;
+        });
+        let audioItemsHtml = audioTracks.map(track => `<li class="modal-selectable" onclick="setAudioAndClose('${track.language}')">${track.language} (Audio)</li>`).join('');
+        contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
-    } else if (type === 'edit') {
-      if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>';
-      const currentChannel = channels[aFilteredChannelKeys[iActiveChannelIndex]];
-      if (!currentChannel) return '<p>Channel data missing.</p>';
-      const safeName = (currentChannel.name || '').replace(/"/g, '&quot;');
-      const safeLogo = (currentChannel.logo || '').replace(/"/g, '&quot;');
-      contentHtml = `<h2>Edit Channel</h2><div style="padding: 15px 25px;">
+      } else if (type === 'edit') {
+        if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>';
+        const currentChannel = channels[aFilteredChannelKeys[iActiveChannelIndex]];
+        if (!currentChannel) return '<p>Channel data missing.</p>';
+        const safeName = (currentChannel.name || '').replace(/"/g, '&quot;');
+        const safeLogo = (currentChannel.logo || '').replace(/"/g, '&quot;');
+        contentHtml = `<h2>Edit Channel</h2><div style="padding: 15px 25px;">
           <label>Name</label><br><input type="text" id="edit_ch_name" class="edit-modal-field" value="${safeName}"><br>
           <label>Logo URL</label><br><input type="text" id="edit_ch_logo" class="edit-modal-field" value="${safeLogo}">
         </div><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CANCEL</button><button class="modal-selectable" onclick="applyChannelEdit()">SAVE</button></div>`;
-    }
+      }
   } catch (error) {
-    console.error("Error generating modal content:", error);
-    contentHtml = "<p>Error displaying options.</p>";
+      console.error("Error generating modal content:", error);
+      contentHtml = "<p>Error displaying options.</p>";
   }
   return contentHtml;
 }
 
+/* modal helpers */
 window.applyChannelEdit = () => {
   const nameInput = getEl('edit_ch_name');
   const logoInput = getEl('edit_ch_logo');
   if (!nameInput || !logoInput) {
-    console.error("Edit modal inputs not found.");
-    return hideSettingsModal();
+      console.error("Edit modal inputs not found.");
+      return hideSettingsModal();
   }
   if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return hideSettingsModal();
   const key = aFilteredChannelKeys[iActiveChannelIndex];
@@ -922,66 +1015,55 @@ window.applyChannelEdit = () => {
 };
 
 window.applyQualityAndClose = (selected) => {
-  if (!player) return;
-  console.log("Applying Quality:", selected);
-  try {
-    if (selected === 'auto') {
-      player.configure({ abr: { enabled: true } });
-    } else {
-      player.configure({ abr: { enabled: false } });
-      const trackToSelect = (player.getVariantTracks() || []).find(t => t.id == selected);
-      if (trackToSelect) {
-        player.selectVariantTrack(trackToSelect, true);
-      } else {
-        console.warn("Selected quality track not found:", selected);
-        player.configure({ abr: { enabled: true } }); // Fallback to auto
-      }
+    if (!player) return;
+    try {
+        if (selected === 'auto') {
+            player.configure({ abr: { enabled: true } });
+        } else {
+            player.configure({ abr: { enabled: false } });
+            const trackToSelect = (player.getVariantTracks() || []).find(t => t.id == selected);
+            if (trackToSelect) {
+                player.selectVariantTrack(trackToSelect, true);
+            } else {
+                player.configure({ abr: { enabled: true } });
+            }
+        }
+    } catch (error) {
+        console.error("Error applying quality setting:", error);
+        try { player.configure({ abr: { enabled: true } }); } catch { }
     }
-  } catch (error) {
-    console.error("Error applying quality setting:", error);
-    try { player.configure({ abr: { enabled: true } }); } catch { }
-  }
-  hideSettingsModal();
+    hideSettingsModal();
 }
 
 window.applyFormatAndClose = (value) => {
-  console.log("Applying Format:", value);
-  setAspectRatio(value);
-  hideSettingsModal();
+    setAspectRatio(value);
+    hideSettingsModal();
 }
 
 window.setSubtitlesAndClose = (track, isVisible) => {
-  if (!player) return;
-  console.log("Applying Subtitles:", track, isVisible);
-  try {
-    player.setTextTrackVisibility(isVisible);
-    if (isVisible && track && typeof track.id !== 'undefined') {
-      const trackToSelect = (player.getTextTracks() || []).find(t => t.id === track.id);
-      if (trackToSelect) {
-        player.selectTextTrack(trackToSelect);
-      } else {
-        console.warn("Subtitle track not found:", track.id);
-      }
+    if (!player) return;
+    try {
+        player.setTextTrackVisibility(isVisible);
+        if (isVisible && track && typeof track.id !== 'undefined') {
+            const trackToSelect = (player.getTextTracks() || []).find(t => t.id === track.id);
+            if (trackToSelect) player.selectTextTrack(trackToSelect);
+        }
+    } catch (error) {
+        console.error("Error setting subtitles:", error);
     }
-  } catch (error) {
-    console.error("Error setting subtitles:", error);
-  }
-  hideSettingsModal();
+    hideSettingsModal();
 }
 
 window.setAudioAndClose = (lang) => {
-  if (!player) return;
-  console.log("Applying Audio:", lang);
-  if (typeof lang === 'string' && lang) {
-    try {
-      player.selectAudioLanguage(lang);
-    } catch (error) {
-      console.error("Error setting audio language:", error);
+    if (!player) return;
+    if (typeof lang === 'string' && lang) {
+        try {
+            player.selectAudioLanguage(lang);
+        } catch (error) {
+            console.error("Error setting audio language:", error);
+        }
     }
-  } else {
-    console.warn("Invalid audio language provided:", lang);
-  }
-  hideSettingsModal();
+    hideSettingsModal();
 }
 
 function toggleFavourite() {
@@ -992,53 +1074,45 @@ function toggleFavourite() {
   channels[key].favorite = !channels[key].favorite;
   saveFavoritesToStorage();
 
-  if (bChannelSettingsOpened) renderChannelSettings();
+  if (bChannelSettingsOpened) {
+      renderChannelSettings();
+  }
 
   if (bNavOpened && (sSelectedGroup === '__fav' || sSelectedGroup === '__all')) {
-    buildNav();
-    const newIndex = aFilteredChannelKeys.indexOf(key);
-    if (newIndex !== -1) iChannelListIndex = newIndex;
-    else if (aFilteredChannelKeys.length > 0) iChannelListIndex = 0;
-    else iChannelListIndex = 0;
-    updateSelectedChannelInNav();
+      buildNav();
+      const newIndex = aFilteredChannelKeys.indexOf(key);
+      if (newIndex !== -1) {
+          iChannelListIndex = newIndex;
+      } else if (aFilteredChannelKeys.length > 0) {
+          iChannelListIndex = 0;
+      } else {
+          iChannelListIndex = 0;
+      }
+      updateSelectedChannelInNav();
   }
 }
 
 /* -------------------------
-   UI helpers (channel name, idle, temp messages)
+   UI State & Helpers
    ------------------------- */
-function showTempMessage(message) {
-  if (!o.TempMessageOverlay) return;
-  clearTimeout(tempMessageTimeout);
-  o.TempMessageOverlay.textContent = message;
-  o.TempMessageOverlay.classList.remove('HIDDEN');
-  o.TempMessageOverlay.classList.add('visible');
-
-  tempMessageTimeout = setTimeout(() => {
-    o.TempMessageOverlay.classList.remove('visible');
-    setTimeout(() => o.TempMessageOverlay.classList.add('HIDDEN'), 300);
-  }, 3000);
-}
-
-function showIdleAnimation(showPlayButton = false, useAnimeBackground = true) {
-  if (!o.IdleAnimation) return;
-  // allow immediate visual change
-  o.IdleAnimation.classList.add('visible');
+function showIdleAnimation(showPlayButton = false) {
+  if (o.IdleAnimation) {
+    // ensure the anime background is applied consistently for idle too
+    o.IdleAnimation.style.backgroundImage = "linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0) 100%), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop')";
+    o.IdleAnimation.classList.remove('HIDDEN');
+  }
   if (o.PlayButton) {
-    if (showPlayButton && !isSessionActive) o.PlayButton.classList.remove('HIDDEN');
-    else o.PlayButton.classList.add('HIDDEN');
-  }
-  // make ChannelLoader background align with IdleAnimation if desired
-  if (useAnimeBackground && o.ChannelLoader) {
-    // keep same background (user's CSS uses the same image), no change necessary
+      if (showPlayButton && !isSessionActive) {
+          o.PlayButton.classList.remove('HIDDEN');
+      } else {
+          o.PlayButton.classList.add('HIDDEN');
+      }
   }
 }
-
 function hideIdleAnimation() {
-  if (o.IdleAnimation) o.IdleAnimation.classList.remove('visible');
+    if (o.IdleAnimation) o.IdleAnimation.classList.add('HIDDEN');
 }
 
-/* clear UI except optional exclude panel */
 function clearUi(exclude) {
   if (exclude !== 'nav' && exclude !== 'epg' && exclude !== 'guide') hideNav();
   if (exclude !== 'channelSettings' && exclude !== 'settingsModal') hideChannelSettings();
@@ -1048,18 +1122,16 @@ function clearUi(exclude) {
   if (exclude !== 'epg') hideEpg();
 
   if (o.TempMessageOverlay && !o.TempMessageOverlay.classList.contains('HIDDEN')) {
-    clearTimeout(tempMessageTimeout);
-    o.TempMessageOverlay.classList.remove('visible');
-    o.TempMessageOverlay.classList.add('HIDDEN');
+      clearTimeout(tempMessageTimeout);
+      o.TempMessageOverlay.classList.remove('visible');
+      o.TempMessageOverlay.classList.add('HIDDEN');
   }
 }
 
-/* -------------------------
-   Panels: Nav / Groups / Settings / ChannelSettings
-   ------------------------- */
+/* NAV / Groups toggles with overlay state push/pop */
 function showNav() {
   if (!o.Nav) return;
-  if (!guard('navToggle')) return; // guard from double toggles
+  if (preventRapidToggle()) return;
   bNavOpened = true;
   o.Nav.classList.add('visible');
   updateSelectedChannelInNav();
@@ -1071,8 +1143,10 @@ function hideNav() {
   bNavOpened = false;
   bGroupsOpened = false;
   o.Nav.classList.remove('visible');
-  if (o.ListContainer?.classList.contains('groups-opened')) hideGroups();
-  if (lastPushedOverlay === 'nav') popOverlayStateIfMatches('nav');
+  if (o.ListContainer?.classList.contains('groups-opened')) {
+      hideGroups();
+  }
+  popOverlayState();
 }
 
 function showGroups() {
@@ -1085,20 +1159,25 @@ function showGroups() {
 
 function hideGroups() {
   bGroupsOpened = false;
-  if (o.ListContainer) o.ListContainer.classList.remove('groups-opened');
+  if (o.ListContainer) {
+      o.ListContainer.classList.remove('groups-opened');
+  }
 }
 
 function showChannelSettings() {
   if (!o.ChannelSettings) return;
-  if (!guard('chanSettings')) return;
+  if (preventRapidToggle()) return;
+
   updateStreamInfo();
   if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.remove('HIDDEN');
+
   clearUi('channelSettings');
   hideVideoFormatMenu();
   iChannelSettingsIndex = 0;
   renderChannelSettings();
   bChannelSettingsOpened = true;
   o.ChannelSettings.classList.add('visible');
+
   pushOverlayState('channelSettings');
 }
 
@@ -1107,11 +1186,13 @@ function hideChannelSettings() {
   if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.add('HIDDEN');
   bChannelSettingsOpened = false;
   o.ChannelSettings.classList.remove('visible');
-  if (lastPushedOverlay === 'channelSettings') popOverlayStateIfMatches('channelSettings');
+  popOverlayState();
 }
 
+/* Guide */
 window.showGuide = () => {
   if (!o.Guide || !o.GuideContent || !o.BlurOverlay) return;
+  if (preventRapidToggle()) return;
   clearUi('guide');
   o.BlurOverlay.classList.add('visible');
   renderGuideContent();
@@ -1119,12 +1200,11 @@ window.showGuide = () => {
   o.Guide.classList.remove('HIDDEN');
   pushOverlayState('guide');
 };
-
 window.hideGuide = () => {
   bGuideOpened = false;
   if (o.Guide) o.Guide.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
-  if (lastPushedOverlay === 'guide') popOverlayStateIfMatches('guide');
+  popOverlayState();
 };
 
 function renderGuideContent() {
@@ -1154,31 +1234,33 @@ function renderGuideContent() {
    ------------------------- */
 function showEpg() {
   if (!o.EpgOverlay || !o.EpgChannels || !o.EpgTimeline) return;
+  if (preventRapidToggle()) return;
   clearUi('epg');
 
   aEpgFilteredChannelKeys = Object.keys(channels)
-    .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
+      .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
 
   const currentKey = aFilteredChannelKeys[iActiveChannelIndex];
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
   if (iEpgChannelIndex === -1) {
-    const currentChannelData = channels[aEpgFilteredChannelKeys[iActiveChannelIndex]];
-    if (currentChannelData) {
-      iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
-    }
-    if (iEpgChannelIndex === -1) iEpgChannelIndex = 0;
+      const currentChannelData = channels[aEpgFilteredChannelKeys[iActiveChannelIndex]];
+      if (currentChannelData) {
+          iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
+      }
+      if (iEpgChannelIndex === -1) iEpgChannelIndex = 0;
   }
 
   renderEpg();
   bEpgOpened = true;
   o.EpgOverlay.classList.remove('HIDDEN');
+
+  // push state so back button closes EPG instead of leaving page
   pushOverlayState('epg');
 }
-
 function hideEpg() {
-  bEpgOpened = false;
-  if (o.EpgOverlay) o.EpgOverlay.classList.add('HIDDEN');
-  if (lastPushedOverlay === 'epg') popOverlayStateIfMatches('epg');
+    bEpgOpened = false;
+    if (o.EpgOverlay) o.EpgOverlay.classList.add('HIDDEN');
+    popOverlayState();
 }
 
 function renderEpg() {
@@ -1193,14 +1275,13 @@ function renderEpg() {
     channelsHtml += `<div class="epg-ch-item ${selectedClass}">${ch.number || '?'}. ${safeName}</div>`;
   });
   o.EpgChannels.innerHTML = channelsHtml;
-
   o.EpgTimeline.innerHTML = generateDummyEpg();
 
   try {
-    const selectedItem = o.EpgChannels.querySelector('.selected');
-    if (selectedItem && typeof selectedItem.scrollIntoView === 'function') {
-      selectedItem.scrollIntoView({ behavior:'smooth', block:'center' });
-    }
+      const selectedItem = o.EpgChannels.querySelector('.selected');
+      if (selectedItem && typeof selectedItem.scrollIntoView === 'function') {
+          selectedItem.scrollIntoView({ behavior:'smooth', block:'center' });
+      }
   } catch (error) { console.error("Error scrolling EPG channel:", error); }
 }
 
@@ -1230,9 +1311,8 @@ function showChannelName() {
   o.ChannelInfo.classList.add('visible');
   channelNameTimeout = setTimeout(hideChannelName, 5000);
 }
-
 function hideChannelName() {
-  if (o.ChannelInfo) o.ChannelInfo.classList.remove('visible');
+    if (o.ChannelInfo) o.ChannelInfo.classList.remove('visible');
 }
 
 /* -------------------------
@@ -1242,9 +1322,9 @@ function loadFavoritesFromStorage() {
   try {
     const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]");
     if (Array.isArray(favs)) {
-      Object.keys(channels).forEach(key => {
-        if (channels[key]) channels[key].favorite = favs.includes(key);
-      });
+        Object.keys(channels).forEach(key => {
+            if (channels[key]) { channels[key].favorite = favs.includes(key); }
+        });
     } else { console.warn("Favorites data from localStorage is not an array."); }
   } catch(e) { console.error("Error loading favorites:", e); }
 }
@@ -1252,8 +1332,8 @@ function loadFavoritesFromStorage() {
 function saveFavoritesToStorage() {
   try {
     const favs = Object.entries(channels)
-      .filter(([,ch]) => ch && ch.favorite)
-      .map(([key]) => key);
+                        .filter(([,ch]) => ch && ch.favorite)
+                        .map(([key]) => key);
     localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs));
     console.log("Saved Favorites:", favs);
   } catch(e) { console.error("Error saving favorites:", e); }
@@ -1268,342 +1348,250 @@ function handleFirstPlay() {
 
   hideIdleAnimation();
 
-  if (aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length) {
-    loadChannel(iChannelListIndex);
+  if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){
+      loadChannel(iChannelListIndex);
   } else {
-    console.error("No valid channel selected on first play.");
-    showIdleAnimation(true);
-    isSessionActive = false;
-    return;
+      console.error("No valid channel selected on first play.");
+      showIdleAnimation(true);
+      isSessionActive = false;
+      return;
   }
 }
 
 /* -------------------------
-   Load channel
-   ------------------------- */
-async function loadInitialChannel() {
-  const storedLast = localStorage.getItem('iptvLastWatched');
-  let initialChannelKey = 'SonictheHedgehog';
-  if (!channels[initialChannelKey]) {
-    initialChannelKey = Object.keys(channels)[0];
-    if (!initialChannelKey) {
-      console.error("No channels defined.");
-      return;
-    }
-  }
-
-  if (aFilteredChannelKeys.length === 0) {
-    sSelectedGroup = '__all';
-    buildNav();
-    if (aFilteredChannelKeys.length === 0) {
-      console.error("No channels available even in the '__all' group.");
-      return;
-    }
-  }
-
-  if (storedLast && channels[storedLast] && aFilteredChannelKeys.includes(storedLast)) initialChannelKey = storedLast;
-  else if (!aFilteredChannelKeys.includes(initialChannelKey)) initialChannelKey = aFilteredChannelKeys[0];
-
-  if (!initialChannelKey || !aFilteredChannelKeys.includes(initialChannelKey)) {
-    console.error("Could not determine a valid initial channel from filtered list.");
-    return;
-  }
-
-  const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
-  iChannelListIndex = (initialIndex >= 0 ? initialIndex : 0);
-  iActiveChannelIndex = iChannelListIndex;
-  updateSelectedChannelInNav();
-}
-
-async function loadChannel(index, options = {}) {
-  clearTimeout(loaderFadeTimeout);
-
-  if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0) {
-    console.warn("loadChannel called with no filtered channels available.");
-    try { await player?.unload(); } catch {}
-    showIdleAnimation(!isSessionActive);
-    return;
-  }
-
-  // normalize index
-  iChannelListIndex = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
-  iActiveChannelIndex = iChannelListIndex;
-
-  const channelKey = aFilteredChannelKeys[iChannelListIndex];
-  if (!channelKey || !channels[channelKey]) {
-    console.error(`Invalid channel key or data for index ${iChannelListIndex}: ${channelKey}`);
-    showIdleAnimation(!isSessionActive);
-    return;
-  }
-  const channel = channels[channelKey];
-
-  if (!player) {
-    console.error("Player not initialized before loading channel.");
-    return;
-  }
-
-  localStorage.setItem('iptvLastWatched', channelKey);
-
-  // Hide video element before loading to avoid black flash
-  if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
-
-  // Show loader (with anime background per your CSS)
-  showLoadingOverlay('Loading Channel...');
-  // Show IdleAnimation background behind loader to unify visuals
-  if (o.IdleAnimation) o.IdleAnimation.classList.add('visible');
-
-  hideChannelName();
-  updateSelectedChannelInNav();
-
-  try {
-    player.configure('drm.clearKeys', {});
-    if (channel.type === 'clearkey' && channel.keyId && channel.key) {
-      player.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } });
-    }
-
-    // clear networking filters to avoid stale request filters
-    player.getNetworkingEngine()?.clearAllRequestFilters();
-    if (channel.userAgent) {
-      player.getNetworkingEngine()?.registerRequestFilter((type, request) => {
-        request.headers['User-Agent'] = channel.userAgent;
-      });
-    }
-
-    // Autoplay fix — ensure unmuted if session active (some browsers require)
-    if (isSessionActive && o.AvPlayer) o.AvPlayer.muted = false;
-
-    await player.load(channel.manifestUri);
-
-    // Mark playing item
-    updateSelectedChannelInNav();
-
-    if (isSessionActive) {
-      if (o.AvPlayer) o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e));
-      showChannelName();
-    }
-  } catch (error) {
-    console.error(`Error loading channel "${channel?.name}":`, error);
-    showIdleAnimation(!isSessionActive);
-    hideLoadingOverlay();
-    if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
-  }
-}
-
-/* -------------------------
-   Settings selection helper
+   Settings selection helpers
    ------------------------- */
 function updateSettingsSelection(container, index) {
   if (!container || typeof container.querySelector !== 'function') return;
   try {
-    const currentSelected = container.querySelector('.selected');
-    if (currentSelected) currentSelected.classList.remove('selected');
+      const currentSelected = container.querySelector('.selected');
+      if (currentSelected) currentSelected.classList.remove('selected');
 
-    const items = container.querySelectorAll('.settings-item');
-    if (items && index >= 0 && index < items.length) {
-      const item = items[index];
-      if (item) {
-        item.classList.add('selected');
-        if (typeof item.scrollIntoView === 'function') item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    } else { console.warn("Invalid index or no items for settings selection:", index); }
+      const items = qsa('.settings-item', container);
+      if (items && index >= 0 && index < items.length) {
+        const item = items[index];
+        if (item) {
+            item.classList.add('selected');
+            if (typeof item.scrollIntoView === 'function') {
+                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+      } else { console.warn("Invalid index or no items for settings selection:", index); }
   } catch (error) { console.error("Error updating settings selection:", error); }
 }
 
 function updateSettingsModalSelection() {
-  if (!o.SettingsModalContent) return;
-  try {
-    const currentSelected = o.SettingsModalContent.querySelector('.selected');
-    if (currentSelected) currentSelected.classList.remove('selected');
+    if (!o.SettingsModalContent) return;
+    try {
+        const currentSelected = o.SettingsModalContent.querySelector('.selected');
+        if (currentSelected) currentSelected.classList.remove('selected');
 
-    const items = o.SettingsModalContent.querySelectorAll('.modal-selectable');
-    if (items && iSettingsModalIndex >= 0 && iSettingsModalIndex < items.length) {
-      const item = items[iSettingsModalIndex];
-      if (item) {
-        item.classList.add('selected');
-        if (typeof item.scrollIntoView === 'function') item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    } else {
-      console.warn("Invalid index or no items for modal selection:", iSettingsModalIndex);
+        const items = qsa('.modal-selectable', o.SettingsModalContent);
+        if (items && iSettingsModalIndex >= 0 && iSettingsModalIndex < items.length) {
+            const item = items[iSettingsModalIndex];
+            if (item) {
+                item.classList.add('selected');
+                if (typeof item.scrollIntoView === 'function') {
+                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        } else {
+            console.warn("Invalid index or no items for modal selection:", iSettingsModalIndex);
+        }
+    } catch (error) {
+        console.error("Error updating settings modal selection:", error);
     }
-  } catch (error) {
-    console.error("Error updating settings modal selection:", error);
-  }
 }
 
+/* Fullscreen toggle (keeps original multi-browser support) */
 function toggleFullScreen() {
-  const elem = document.documentElement;
-  if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen().catch(err => console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
-    } else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
-    else if (elem.mozRequestFullScreen) { elem.mozRequestFullScreen(); }
-    else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
-    else console.warn("Fullscreen API not supported.");
-  } else {
-    if (document.exitFullscreen) document.exitFullscreen().catch(err => console.error(`Error attempting to disable full-screen mode: ${err.message} (${err.name})`));
-    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
-    else if (document.msExitFullscreen) document.msExitFullscreen();
-  }
+    const elem = document.documentElement;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.error(`Error enabling full-screen: ${err.message} (${err.name})`));
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.mozRequestFullScreen) {
+            elem.mozRequestFullScreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        } else {
+            console.warn("Fullscreen API not supported.");
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(err => console.error(`Error disabling full-screen: ${err.message} (${err.name})`));
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
 }
 
 /* -------------------------
-   Global key handler (remote/keyboard)
+   Key handling for remotes / keyboard
    ------------------------- */
-function globalKeyHandler(e) {
-  // normalize key aliases for TV remotes (some remotes map to Enter, others to 'OK' etc.)
-  const key = (e && (e.key || e.code)) ? (e.key || e.code) : null;
-
-  // If input focus is SearchField, handle a few keys locally
+document.addEventListener('keydown', (e) => {
+  // If search field focused — handle special keys
   if (document.activeElement === o.SearchField) {
-    if (key === 'ArrowDown' && bNavOpened && !bGroupsOpened) {
-      e.preventDefault();
-      iChannelListIndex = 0;
-      if (o.SearchField) o.SearchField.blur();
-      updateSelectedChannelInNav();
-    } else if (key === 'Escape') {
-      e.preventDefault();
-      if (o.SearchField) o.SearchField.blur();
-      iChannelListIndex = 0;
-      updateSelectedChannelInNav();
-    }
-    return;
-  }
-
-  // If Guide is opened
-  if (bGuideOpened) {
-    e.preventDefault();
-    if (key === 'Escape') hideGuide();
-    return;
-  }
-
-  // Settings modal nav
-  if (bSettingsModalOpened) {
-    e.preventDefault();
-    const items = o.SettingsModalContent.querySelectorAll?.('.modal-selectable') ?? [];
-    if (!items || items.length === 0) {
-      if (key === 'Escape') window.hideSettingsModal();
-      return;
-    }
-    if (key === 'ArrowUp') { iSettingsModalIndex = Math.max(0, iSettingsModalIndex - 1); updateSettingsModalSelection(); }
-    else if (key === 'ArrowDown') { iSettingsModalIndex = Math.min(items.length - 1, iSettingsModalIndex + 1); updateSettingsModalSelection(); }
-    else if (key === 'Enter') {
-      const selectedItem = items[iSettingsModalIndex];
-      if (selectedItem) {
-        if (selectedItem.tagName === 'LI' && selectedItem.hasAttribute('data-value')) {
-          const type = o.SettingsModalContent.querySelector('input[name="quality"]') ? 'quality' : 'format';
-          if (type === 'quality') window.applyQualityAndClose(selectedItem.dataset.value);
-          else if (type === 'format') window.applyFormatAndClose(selectedItem.dataset.value);
-          else if (typeof selectedItem.click === 'function') selectedItem.click();
-        } else if (typeof selectedItem.click === 'function') selectedItem.click();
+      if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) {
+          e.preventDefault();
+          iChannelListIndex = 0;
+          o.SearchField.blur();
+          updateSelectedChannelInNav();
+      } else if (e.key === 'Escape') {
+          e.preventDefault();
+          o.SearchField.blur();
+          iChannelListIndex = 0;
+          updateSelectedChannelInNav();
       }
-    } else if (key === 'Escape') {
-      const closeButton = Array.from(items).find(btn => btn.tagName === 'BUTTON' && (btn.textContent === 'CANCEL' || btn.textContent === 'CLOSE'));
-      if (closeButton) closeButton.click(); else window.hideSettingsModal();
-    }
-    return;
+      return;
   }
 
-  // EPG open: navigate channels
+  if (bGuideOpened) {
+      e.preventDefault();
+      if (e.key === 'Escape') window.hideGuide();
+      return;
+  }
+
+  if (bSettingsModalOpened) {
+      e.preventDefault();
+      const items = o.SettingsModalContent ? qsa('.modal-selectable', o.SettingsModalContent) : [];
+      if (!items || items.length === 0) {
+          if (e.key === 'Escape') window.hideSettingsModal();
+          return;
+      }
+
+      if (e.key === 'ArrowUp') {
+          iSettingsModalIndex = Math.max(0, iSettingsModalIndex - 1);
+          updateSettingsModalSelection();
+      } else if (e.key === 'ArrowDown') {
+          iSettingsModalIndex = Math.min(items.length - 1, iSettingsModalIndex + 1);
+          updateSettingsModalSelection();
+      } else if (e.key === 'Enter') {
+          const selectedItem = items[iSettingsModalIndex];
+          if (selectedItem) {
+              if (selectedItem.tagName === 'LI' && selectedItem.hasAttribute('data-value')) {
+                  const type = o.SettingsModalContent.querySelector('input[name="quality"]') ? 'quality' : 'format';
+                  if (type === 'quality') {
+                      window.applyQualityAndClose(selectedItem.dataset.value);
+                  } else if (type === 'format') {
+                      window.applyFormatAndClose(selectedItem.dataset.value);
+                  } else {
+                      if (typeof selectedItem.click === 'function') selectedItem.click();
+                  }
+              } else if (typeof selectedItem.click === 'function') {
+                  selectedItem.click();
+              }
+          }
+      } else if (e.key === 'Escape') {
+          const closeButton = Array.from(items).find(btn => btn.tagName === 'BUTTON' && (btn.textContent === 'CANCEL' || btn.textContent === 'CLOSE'));
+          if (closeButton) closeButton.click();
+          else window.hideSettingsModal();
+      }
+      return;
+  }
+
   if (bEpgOpened) {
     e.preventDefault();
     const EPG_KEYS = ['Escape', 'ArrowUp', 'ArrowDown', 'Enter'];
-    if (!EPG_KEYS.includes(key)) return;
-    if (key === 'Escape') hideEpg();
-    else if (key === 'ArrowUp') { iEpgChannelIndex = Math.max(0, iEpgChannelIndex - 1); renderEpg(); }
-    else if (key === 'ArrowDown') { iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1); renderEpg(); }
-    else if (key === 'Enter') { /* do nothing */ }
+    if (!EPG_KEYS.includes(e.key)) return;
+    if (e.key === 'Escape') hideEpg();
+    else if (e.key === 'ArrowUp') { iEpgChannelIndex = Math.max(0, iEpgChannelIndex - 1); renderEpg(); }
+    else if (e.key === 'ArrowDown') { iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1); renderEpg(); }
+    else if (e.key === 'Enter') { /* no-op */ }
     return;
   }
 
-  // Nav open handling
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
-      const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
+      const groupItems = o.GroupList ? qsa('li', o.GroupList) : [];
       const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
-      if (!GROUP_LIST_KEYS.includes(key)) return;
+      if (!GROUP_LIST_KEYS.includes(e.key)) return;
 
-      if (key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
-      else if (key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      else if (key === 'Enter') groupItems[iGroupListIndex]?.click();
-      else if (key === 'ArrowRight') hideGroups();
-      else if (key === 'Escape') hideGroups();
-      // ArrowLeft intentionally does nothing (last panel)
+      if (e.key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
+      else if (e.key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
+      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click();
+      else if (e.key === 'ArrowRight') hideGroups();
+      else if (e.key === 'Escape') hideGroups();
+      else if (e.key === 'ArrowLeft') { /* intentionally do nothing - last panel */ }
       updateSelectedGroupInNav();
     } else {
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
-      if (!CHANNEL_LIST_KEYS.includes(key)) return;
-
-      if (key === 'ArrowUp') {
-        if (iChannelListIndex === 0 && o.SearchField) {
-          o.SearchField.focus();
-          const currentSelected = o.ChannelList.querySelector('.selected');
-          if (currentSelected) currentSelected.classList.remove('selected');
-          iChannelListIndex = -1;
-        } else if (iChannelListIndex > 0) {
-          iChannelListIndex = (iChannelListIndex - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
-          updateSelectedChannelInNav();
-        }
-      } else if (key === 'ArrowDown') {
-        if (iChannelListIndex === -1 && aFilteredChannelKeys.length > 0) {
-          iChannelListIndex = 0;
-          updateSelectedChannelInNav();
-          o.SearchField.blur();
-        } else if (aFilteredChannelKeys.length > 0 && iChannelListIndex !== -1) {
-          iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length;
-          updateSelectedChannelInNav();
-        }
-      } else if (key === 'Enter') {
-        if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) {
-          loadChannel(iChannelListIndex);
+      if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
+      if (e.key === 'ArrowUp') {
+          if (iChannelListIndex === 0 && o.SearchField) {
+              o.SearchField.focus();
+              const currentSelected = o.ChannelList.querySelector('.selected');
+              if (currentSelected) currentSelected.classList.remove('selected');
+              iChannelListIndex = -1;
+          } else if (iChannelListIndex > 0) {
+              iChannelListIndex = (iChannelListIndex - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
+              updateSelectedChannelInNav();
+          }
+      } else if (e.key === 'ArrowDown') {
+          if (iChannelListIndex === -1 && aFilteredChannelKeys.length > 0) {
+              iChannelListIndex = 0;
+              updateSelectedChannelInNav();
+              o.SearchField.blur();
+          } else if (aFilteredChannelKeys.length > 0 && iChannelListIndex !== -1) {
+              iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length;
+              updateSelectedChannelInNav();
+          }
+      } else if (e.key === 'Enter') {
+          if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) {
+              loadChannel(iChannelListIndex);
+              hideNav();
+          }
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
           hideNav();
-        }
-      } else if (key === 'ArrowRight' || key === 'Escape') {
-        hideNav();
-        if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur();
-      } else if (key === 'ArrowLeft') {
-        if (iChannelListIndex !== -1) showGroups();
+          if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur();
+      } else if (e.key === 'ArrowLeft') {
+          if (iChannelListIndex !== -1) showGroups();
       }
     }
     return;
   }
 
-  // Channel settings open
   if (bChannelSettingsOpened) {
     e.preventDefault();
     const isSubmenu = o.SettingsContainer?.classList.contains('submenu-visible');
     const SETTINGS_KEYS = ['Escape', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight'];
-    if (!SETTINGS_KEYS.includes(key)) return;
+    if (!SETTINGS_KEYS.includes(e.key)) return;
     if (isSubmenu) {
-      const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
-      if (key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
-      else if (key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-      else if (key === 'Enter') submenuItems[iVideoSettingsIndex]?.click();
-      else if (key === 'ArrowLeft' || key === 'Escape') {
-        if (iVideoSettingsIndex === 0 && key === 'ArrowLeft') submenuItems[0]?.click();
-        else hideVideoFormatMenu();
-      }
-      updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+        const submenuItems = qsa('.settings-item', o.SettingsVideoFormatMenu) ?? [];
+        if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
+        else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
+        else if (e.key === 'Enter') submenuItems[iVideoSettingsIndex]?.click();
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+            if (iVideoSettingsIndex === 0 && e.key === 'ArrowLeft') submenuItems[0]?.click();
+            else hideVideoFormatMenu();
+        }
+        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
     } else {
-      const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
-      if (key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
-      else if (key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
-      else if (key === 'Enter') mainItems[iChannelSettingsIndex]?.click();
-      else if (key === 'ArrowRight') {
-        const selectedItem = mainItems[iChannelSettingsIndex];
-        if (selectedItem && iChannelSettingsIndex === 1) selectedItem.click();
-      } else if (key === 'ArrowLeft' || key === 'Escape') hideChannelSettings();
-      updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+        const mainItems = qsa('.settings-item', o.SettingsMainMenu) ?? [];
+        if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
+        else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
+        else if (e.key === 'Enter') mainItems[iChannelSettingsIndex]?.click();
+        else if (e.key === 'ArrowRight') {
+            const selectedItem = mainItems[iChannelSettingsIndex];
+            if (selectedItem && iChannelSettingsIndex === 1) selectedItem.click();
+        } else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideChannelSettings();
+        updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
     }
     return;
   }
 
-  // Default player key handling (player controls when no overlay open)
+  // default player keys
   const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
-  if (!PLAYER_KEYS.includes(key)) return;
+  if (!PLAYER_KEYS.includes(e.key)) return;
+
   e.preventDefault();
-  switch (key) {
+  switch (e.key) {
     case 'ArrowLeft': showNav(); break;
     case 'ArrowRight': showChannelSettings(); break;
     case 'Enter': showChannelName(); break;
@@ -1613,9 +1601,8 @@ function globalKeyHandler(e) {
     case 'e': showEpg(); break;
     case 'm': showChannelSettings(); break;
     case 'Escape': clearUi(); break;
-    default: break;
   }
-}
+});
 
 /* -------------------------
    Stream info overlay
@@ -1626,7 +1613,7 @@ function updateStreamInfo() {
   if (!player) return;
 
   try {
-    const variant = player.getVariantTracks().find(t => t.active);
+    const variant = (player.getVariantTracks() || []).find(t => t.active);
     if (!variant) {
       infoOverlay.innerHTML = 'Stream Info: N/A';
       return;
@@ -1634,9 +1621,7 @@ function updateStreamInfo() {
     const codecs = variant.codecs || 'N/A';
     const resolution = `${variant.width}x${variant.height}`;
     const bandwidth = (variant.bandwidth / 1000000).toFixed(2);
-    infoOverlay.innerHTML = `Codecs:     ${codecs}
-Resolution: ${resolution}
-Bandwidth:  ${bandwidth} Mbit/s`;
+    infoOverlay.innerHTML = `Codecs:     ${codecs}\nResolution: ${resolution}\nBandwidth:  ${bandwidth} Mbit/s`;
   } catch (error) {
     console.warn("Could not get stream info:", error);
     infoOverlay.innerHTML = 'Stream Info: Error';
@@ -1644,6 +1629,6 @@ Bandwidth:  ${bandwidth} Mbit/s`;
 }
 
 /* -------------------------
-   Start
+   Init on DOMContentLoaded
    ------------------------- */
 document.addEventListener('DOMContentLoaded', initPlayer);
