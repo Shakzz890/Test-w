@@ -293,22 +293,27 @@ function setupControls() {
 
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
+  
+  // Guard horizontal swipes if a modal is open
+  if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
+
   if (isHorizontal) {
     if (deltaX > 0) { // Swipe Right ->
       if (bChannelSettingsOpened) hideChannelSettings();
-      else if (bNavOpened && !bGroupsOpened) showGroups(); // <-- SWAPPED: Open groups
+      else if (bNavOpened && !bGroupsOpened) showGroups(); // <-- SWAPPED
       else if (!bNavOpened && !bChannelSettingsOpened) showNav();
     } else { // Swipe Left <-
-      if (bGroupsOpened) hideGroups(); // <-- SWAPPED: Close groups
+      if (bGroupsOpened) hideGroups(); // <-- SWAPPED
       else if (bNavOpened && !bGroupsOpened) hideNav();
       else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings();
     }
   } else { // Vertical Swipe
-    if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
+    // This part is already correct
+    if (!bNavOpened && !bChannelSettingsOpened) {
       if (deltaY > 0) {
-        loadChannel(iActiveChannelIndex + 1); // <-- FIXED: Use active channel index
+        loadChannel(iActiveChannelIndex + 1);
       } else {
-        loadChannel(iActiveChannelIndex - 1); // <-- FIXED: Use active channel index
+        loadChannel(iActiveChannelIndex - 1);
       }
     }
   }
