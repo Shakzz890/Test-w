@@ -274,3 +274,23 @@ input[type="radio"]:checked { border-color: var(--primary-color); background-col
     left: var(--nav-width);
     width: calc(100% - var(--nav-width));
 }
+
+#StreamInfoOverlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre; 
+}
+
+/* You should already have this, but it's important */
+.HIDDEN {
+  display: none !important;
+}
