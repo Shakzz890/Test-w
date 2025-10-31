@@ -1,13 +1,16 @@
 /* script.js — Cleaned, merged & fixed
-   - Keeps original structure & channels
-   - Fixes: double-click blank panel, mobile back button (history/popstate),
-     play button touch, double-tap fullscreen, buffering spinner, consistent animations,
-     and optimized DOM access / debounced toggles.
+    - Keeps original structure & channels
+    - Fixes: double-click blank panel, mobile back button (history/popstate),
+      play button touch, double-tap fullscreen, buffering spinner, consistent animations,
+      and optimized DOM access / debounced toggles.
+    - MODIFIED:
+      - [FIX #2] popstate listener corrected to avoid double-pop.
+      - [FIX #3] touchend listener updated to allow right-swipe inside #nav.
 */
 
 /* -------------------------
-   Globals & cached elements
-   ------------------------- */
+    Globals & cached elements
+    ------------------------- */
 let player = null;
 let ui = null;
 
@@ -48,8 +51,8 @@ const o = {
 };
 
 /* -------------------------
-   Channel list (unchanged content kept)
-   ------------------------- */
+    Channel list (unchanged content kept)
+    ------------------------- */
 let channels = {
     KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
     StrawberryShortcake: { name: "Strawberry Shortcake", type: "hls", manifestUri: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", logo: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"] },
@@ -59,7 +62,7 @@ let channels = {
     anione: { name: "Ani One", type: "hls", manifestUri: "https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", group: ["cartoons & animations"] },
     aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
     sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
-    pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
+    pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "httpss://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
     animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["cartoons & animations"] },
@@ -71,8 +74,8 @@ let channels = {
 };
 
 /* -------------------------
-   State variables
-   ------------------------- */
+    State variables
+    ------------------------- */
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
 let iChannelListIndex = 0;
@@ -115,6 +118,7 @@ function popOverlayState() {
   overlayStack.pop();
 }
 
+/* FIX #2: Removed 'popOverlayState()' from here to prevent double-pop on back button */
 /* When the browser Back button is pressed we pop overlays instead of closing page */
 window.addEventListener('popstate', (ev) => {
   // If an overlay exists in our stack, close it
@@ -132,7 +136,7 @@ window.addEventListener('popstate', (ev) => {
         // fallback: try to clear UI
         clearUi();
     }
-    popOverlayState();
+    // popOverlayState(); // <--- REMOVED THIS LINE
     // Replace state to avoid navigation if still overlays remain
     try {
       if (overlayStack.length === 0) history.replaceState({}, '');
@@ -143,8 +147,8 @@ window.addEventListener('popstate', (ev) => {
 });
 
 /* -------------------------
-   Utilities
-   ------------------------- */
+    Utilities
+    ------------------------- */
 const getEl = id => document.getElementById(id);
 
 function showTempMessage(message) {
@@ -161,8 +165,8 @@ function showTempMessage(message) {
 }
 
 /* -------------------------
-   Shaka + Player init
-   ------------------------- */
+    Shaka + Player init
+    ------------------------- */
 async function initPlayer() {
   // assign numbers/keys to channels
   Object.keys(channels).forEach((key, i) => {
@@ -276,8 +280,8 @@ function hideLoaderAndShowVideo() {
 }
 
 /* -------------------------
-   Touch / click / remote controls
-   ------------------------- */
+    Touch / click / remote controls
+    ------------------------- */
 function setupControls() {
   const playerContainer = o.PlayerContainer || document.body;
 
@@ -298,15 +302,9 @@ function setupControls() {
     }
   }, { passive: true });
 
+/* FIX #3: Replaced the 'touchend' listener for improved panel swipe logic */
   playerContainer.addEventListener('touchend', e => {
     if (e.changedTouches.length !== 1) return;
-
-    // detect if the start point was inside a panel to avoid accidental closes
-    const targetElement = document.elementFromPoint(touchStartX, touchStartY);
-    if (targetElement && (targetElement.closest('#nav') || targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay'))) {
-      touchStartX = touchStartY = touchEndX = touchEndY = 0;
-      return;
-    }
 
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
@@ -315,14 +313,48 @@ function setupControls() {
     const SWIPE_THRESHOLD = 50;
     const TAP_THRESHOLD = 15;
 
+    // detect if the start point was inside a panel
+    const targetElement = document.elementFromPoint(touchStartX, touchStartY);
+    const startedInNav = targetElement?.closest('#nav');
+    const startedInOtherModal = targetElement && (targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay'));
+
+
+    // Check for swipe gesture
     if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
-      handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
-      lastTapTime = 0;
-      touchStartX = touchStartY = touchEndX = touchEndY = 0;
-      return;
+        
+        // If swipe started in Nav...
+        if (startedInNav) {
+            // ...only allow horizontal right-swipes (to open groups)
+            const isHorizontal = absDeltaX > absDeltaY;
+            if (isHorizontal && deltaX > 0) { 
+                 handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
+            }
+            // ... and ignore all other swipes (like vertical scrolling or left-swipe)
+        
+        // If swipe started in another modal, ignore it completely
+        } else if (startedInOtherModal) {
+            // ignore
+        
+        // Otherwise, it's a swipe on the main player, handle it
+        } else {
+            handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
+        }
+
+        lastTapTime = 0; // Reset tap time on any swipe
+        touchStartX = touchStartY = touchEndX = touchEndY = 0;
+        return;
     }
 
-    // Tap detection
+    // --- Tap Detection Logic ---
+
+    // If it wasn't a swipe, check if it was a tap that started in *any* panel.
+    // If so, ignore it. We don't want taps in panels to trigger player actions.
+    if (startedInNav || startedInOtherModal) {
+        touchStartX = touchStartY = touchEndX = touchEndY = 0;
+        return;
+    }
+
+    // Tap detection (only runs if tap was on the main player area)
     if (absDeltaX < TAP_THRESHOLD && absDeltaY < TAP_THRESHOLD) {
       const currentTime = Date.now();
       if (currentTime - lastTapTime < 300) { // double-tap
@@ -430,8 +462,8 @@ function handleDoubleTapAction() {
 }
 
 /* -------------------------
-   Channel loading & nav
-   ------------------------- */
+    Channel loading & nav
+    ------------------------- */
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
   let initialChannelKey = 'SonictheHedgehog';
@@ -558,8 +590,8 @@ async function loadChannel(index, options = {}) {
 }
 
 /* -------------------------
-   Navigation & UI (keeping original logic but cleaner)
-   ------------------------- */
+    Navigation & UI (keeping original logic but cleaner)
+    ------------------------- */
 function setupMainMenuControls() {
   const guideBtn = getEl('guide_button');
   const epgBtn = getEl('epg_button');
@@ -798,8 +830,8 @@ function updateSelectedGroupInNav() {
 }
 
 /* -------------------------
-   Settings & Modals (fixed blank panel / double clicks)
-   ------------------------- */
+    Settings & Modals (fixed blank panel / double clicks)
+    ------------------------- */
 function renderChannelSettings() {
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return;
   const currentChannelKey = aFilteredChannelKeys[iActiveChannelIndex];
@@ -1093,8 +1125,8 @@ function toggleFavourite() {
 }
 
 /* -------------------------
-   UI State & Helpers
-   ------------------------- */
+    UI State & Helpers
+    ------------------------- */
 function showIdleAnimation(showPlayButton = false) {
   if (o.IdleAnimation) {
     // ensure the anime background is applied consistently for idle too
@@ -1230,8 +1262,8 @@ function renderGuideContent() {
 }
 
 /* -------------------------
-   EPG
-   ------------------------- */
+    EPG
+    ------------------------- */
 function showEpg() {
   if (!o.EpgOverlay || !o.EpgChannels || !o.EpgTimeline) return;
   if (preventRapidToggle()) return;
@@ -1294,8 +1326,8 @@ function generateDummyEpg() {
 }
 
 /* -------------------------
-   Channel name display
-   ------------------------- */
+    Channel name display
+    ------------------------- */
 function showChannelName() {
   clearTimeout(channelNameTimeout);
   if (!o.ChannelInfo || !o.ChannelInfoName || !o.ChannelInfoEpg || !o.ChannelInfoLogo) return;
@@ -1316,8 +1348,8 @@ function hideChannelName() {
 }
 
 /* -------------------------
-   Favorites storage
-   ------------------------- */
+    Favorites storage
+    ------------------------- */
 function loadFavoritesFromStorage() {
   try {
     const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]");
@@ -1340,8 +1372,8 @@ function saveFavoritesToStorage() {
 }
 
 /* -------------------------
-   First Play handling
-   ------------------------- */
+    First Play handling
+    ------------------------- */
 function handleFirstPlay() {
   if (isSessionActive) return;
   isSessionActive = true;
@@ -1359,8 +1391,8 @@ function handleFirstPlay() {
 }
 
 /* -------------------------
-   Settings selection helpers
-   ------------------------- */
+    Settings selection helpers
+    ------------------------- */
 function updateSettingsSelection(container, index) {
   if (!container || typeof container.querySelector !== 'function') return;
   try {
@@ -1432,8 +1464,8 @@ function toggleFullScreen() {
 }
 
 /* -------------------------
-   Key handling for remotes / keyboard
-   ------------------------- */
+    Key handling for remotes / keyboard
+    ------------------------- */
 document.addEventListener('keydown', (e) => {
   // If search field focused — handle special keys
   if (document.activeElement === o.SearchField) {
@@ -1605,8 +1637,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* -------------------------
-   Stream info overlay
-   ------------------------- */
+    Stream info overlay
+    ------------------------- */
 function updateStreamInfo() {
   const infoOverlay = o.StreamInfoOverlay;
   if (!infoOverlay) return;
@@ -1621,7 +1653,7 @@ function updateStreamInfo() {
     const codecs = variant.codecs || 'N/A';
     const resolution = `${variant.width}x${variant.height}`;
     const bandwidth = (variant.bandwidth / 1000000).toFixed(2);
-    infoOverlay.innerHTML = `Codecs:     ${codecs}\nResolution: ${resolution}\nBandwidth:  ${bandwidth} Mbit/s`;
+    infoOverlay.innerHTML = `Codecs:      ${codecs}\nResolution: ${resolution}\nBandwidth:  ${bandwidth} Mbit/s`;
   } catch (error) {
     console.warn("Could not get stream info:", error);
     infoOverlay.innerHTML = 'Stream Info: Error';
@@ -1629,6 +1661,6 @@ function updateStreamInfo() {
 }
 
 /* -------------------------
-   Init on DOMContentLoaded
-   ------------------------- */
+    Init on DOMContentLoaded
+    ------------------------- */
 document.addEventListener('DOMContentLoaded', initPlayer);
