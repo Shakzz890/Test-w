@@ -54,8 +54,8 @@ let channels = {
 
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
-let iChannelListIndex = 0; // <-- FIXED: Tracks the highlighted item in the nav list
-let iActiveChannelIndex = 0; // <-- FIXED: Tracks the currently playing channel
+let iChannelListIndex = 0; // Tracks the highlighted item in the nav list
+let iActiveChannelIndex = 0; // Tracks the currently playing channel
 let iGroupListIndex = 1;
 let channelNameTimeout = null;
 let isSessionActive = false;
@@ -291,6 +291,7 @@ function setupControls() {
   });
 }
 
+// --- START: NEW UNIFIED SWIPE FUNCTION ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
@@ -298,17 +299,18 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
-    if (deltaX > 0) { // Swipe Right ->
-      if (bChannelSettingsOpened) hideChannelSettings();
-      else if (bNavOpened && !bGroupsOpened) showGroups(); // <-- SWAPPED
+    if (deltaX < 0) { // Swipe Left <- (Matches Arrow Left)
+      if (bNavOpened && !bGroupsOpened) showGroups();
+      else if (bGroupsOpened) hideNav();
       else if (!bNavOpened && !bChannelSettingsOpened) showNav();
-    } else { // Swipe Left <-
-      if (bGroupsOpened) hideGroups(); // <-- SWAPPED
+    } else if (deltaX > 0) { // Swipe Right -> (Matches Arrow Right)
+      if (bChannelSettingsOpened) hideChannelSettings();
+      else if (bGroupsOpened) hideGroups();
       else if (bNavOpened && !bGroupsOpened) hideNav();
-      else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings();
+      else if (!bNavOpened && !bChannelSettingsOpened) showChannelSettings();
     }
   } else { // Vertical Swipe
-    // This part is already correct
+    // This logic is for channel changing
     if (!bNavOpened && !bChannelSettingsOpened) {
       if (deltaY > 0) {
         loadChannel(iActiveChannelIndex + 1);
@@ -318,6 +320,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
+// --- END: NEW UNIFIED SWIPE FUNCTION ---
 
 function handleSingleTapAction() {
   if (!isSessionActive) return;
@@ -367,8 +370,8 @@ function loadInitialChannel() {
   }
 
   const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
-  iChannelListIndex = (initialIndex >= 0 ? initialIndex : 0); // <-- FIXED
-  iActiveChannelIndex = iChannelListIndex; // <-- FIXED: Lock in the active channel
+  iChannelListIndex = (initialIndex >= 0 ? initialIndex : 0); 
+  iActiveChannelIndex = iChannelListIndex; // Lock in the active channel
   updateSelectedChannelInNav();
 }
 
@@ -383,12 +386,12 @@ async function loadChannel(index, options = {}) {
     return;
   }
 
-  iChannelListIndex = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length; // <-- FIXED
-  iActiveChannelIndex = iChannelListIndex; // <-- FIXED
+  iChannelListIndex = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length; 
+  iActiveChannelIndex = iChannelListIndex; 
 
-  const channelKey = aFilteredChannelKeys[iChannelListIndex]; // <-- FIXED
+  const channelKey = aFilteredChannelKeys[iChannelListIndex]; 
   if (!channelKey || !channels[channelKey]) {
-      console.error(`Invalid channel key or data for index ${iChannelListIndex}: ${channelKey}`); // <-- FIXED
+      console.error(`Invalid channel key or data for index ${iChannelListIndex}: ${channelKey}`); 
       showIdleAnimation(!isSessionActive);
       return;
   }
@@ -550,7 +553,7 @@ function selectGroup(index) {
   buildNav();
 
   if (aFilteredChannelKeys.length > 0) {
-    iChannelListIndex = 0; // <-- FIXED
+    iChannelListIndex = 0; 
     updateSelectedChannelInNav();
   }
   
@@ -608,7 +611,7 @@ function buildNav() {
       if (isSessionActive) {
         loadChannel(index);
       } else {
-        iChannelListIndex = index; // <-- FIXED
+        iChannelListIndex = index; 
         updateSelectedChannelInNav();
       }
       setTimeout(hideNav, 50);
@@ -638,8 +641,8 @@ function updateSelectedChannelInNav() {
 
       const channelItems = o.ChannelList.querySelectorAll('li.channel-item');
 
-      if (iChannelListIndex >= 0 && iChannelListIndex < channelItems.length) { // <-- FIXED
-          const newItem = channelItems[iChannelListIndex]; // <-- FIXED
+      if (iChannelListIndex >= 0 && iChannelListIndex < channelItems.length) { 
+          const newItem = channelItems[iChannelListIndex]; 
           if (newItem) {
             newItem.classList.add('selected');
             if (bNavOpened && typeof newItem.scrollIntoView === 'function') {
@@ -647,12 +650,12 @@ function updateSelectedChannelInNav() {
             }
           }
       } else if (aFilteredChannelKeys.length > 0 && channelItems.length > 0) {
-          iChannelListIndex = 0; // <-- FIXED
+          iChannelListIndex = 0; 
           const firstItem = channelItems[0];
           if (firstItem) firstItem.classList.add('selected');
-          console.warn("iChannelListIndex was out of bounds, selecting first channel."); // <-- FIXED
+          console.warn("iChannelListIndex was out of bounds, selecting first channel.");
       } else {
-        iChannelListIndex = 0; // <-- FIXED
+        iChannelListIndex = 0; 
       }
 
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
@@ -684,15 +687,10 @@ function updateSelectedGroupInNav() {
     Settings & Modals
     ------------------------- */
 function renderChannelSettings() {
-  if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- FIXED
-  const currentChannelKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
+  if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return; 
+  const currentChannelKey = aFilteredChannelKeys[iActiveChannelIndex]; 
   const currentChannel = channels[currentChannelKey];
   if (!currentChannel) return;
-
-  // THIS BLOCK WAS REMOVED AS REQUESTED
-  // if (o.SettingsVideoInfo) {
-  //     o.SettingsVideoInfo.textContent = `Video: ${vRes} (${vCodec}) | Audio: ${aCodec}`;
-  // }
 
   if (o.SettingsMainMenu) {
       const currentFormat = getAspectRatio();
@@ -848,8 +846,8 @@ function renderModalContent(type) {
         contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
       } else if (type === 'edit') {
-        if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>'; // <-- FIXED
-        const currentChannel = channels[aFilteredChannelKeys[iActiveChannelIndex]]; // <-- FIXED
+        if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>'; 
+        const currentChannel = channels[aFilteredChannelKeys[iActiveChannelIndex]]; 
         if (!currentChannel) return '<p>Channel data missing.</p>';
         const safeName = (currentChannel.name || '').replace(/"/g, '&quot;');
         const safeLogo = (currentChannel.logo || '').replace(/"/g, '&quot;');
@@ -872,8 +870,8 @@ window.applyChannelEdit = () => {
       console.error("Edit modal inputs not found.");
       return hideSettingsModal();
   }
-  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return hideSettingsModal(); // <-- FIXED
-  const key = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
+  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return hideSettingsModal(); 
+  const key = aFilteredChannelKeys[iActiveChannelIndex]; 
   if (!channels[key]) return hideSettingsModal();
 
   channels[key].name = nameInput.value;
@@ -948,8 +946,8 @@ window.setAudioAndClose = (lang) => {
 
 
 function toggleFavourite() {
-  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- FIXED
-  const key = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
+  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; 
+  const key = aFilteredChannelKeys[iActiveChannelIndex]; 
   if (!channels[key]) return;
 
   channels[key].favorite = !channels[key].favorite;
@@ -963,11 +961,11 @@ function toggleFavourite() {
       buildNav();
       const newIndex = aFilteredChannelKeys.indexOf(key);
      if (newIndex !== -1) {
-          iChannelListIndex = newIndex; // <-- FIXED
+          iChannelListIndex = newIndex; 
       } else if (aFilteredChannelKeys.length > 0) {
-          iChannelListIndex = 0; // <-- FIXED
+          iChannelListIndex = 0; 
       } else {
-          iChannelListIndex = 0; // <-- FIXED
+          iChannelListIndex = 0; 
       }
       updateSelectedChannelInNav();
   }
@@ -1126,10 +1124,10 @@ function showEpg() {
   aEpgFilteredChannelKeys = Object.keys(channels)
       .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
 
-  const currentKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
+  const currentKey = aFilteredChannelKeys[iActiveChannelIndex]; 
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
   if (iEpgChannelIndex === -1) {
-      const currentChannelData = channels[aFilteredChannelKeys[iActiveChannelIndex]]; // <-- FIXED
+      const currentChannelData = channels[aFilteredChannelKeys[iActiveChannelIndex]]; 
       if (currentChannelData) {
           iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
       }
@@ -1183,8 +1181,8 @@ function generateDummyEpg() {
 function showChannelName() {
   clearTimeout(channelNameTimeout);
   if (!o.ChannelInfo || !o.ChannelInfoName || !o.ChannelInfoEpg || !o.ChannelInfoLogo) return;
-  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- FIXED
-  const chKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
+  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; 
+  const chKey = aFilteredChannelKeys[iActiveChannelIndex]; 
   const ch = channels[chKey];
   if (!ch) return;
 
@@ -1235,8 +1233,8 @@ function handleFirstPlay() {
 
   hideIdleAnimation();
 
-  if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){ // <-- FIXED
-      loadChannel(iChannelListIndex); // <-- FIXED
+  if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){ 
+      loadChannel(iChannelListIndex); 
   } else {
       console.error("No valid channel selected on first play.");
       showIdleAnimation(true);
@@ -1333,7 +1331,7 @@ if (o.SearchField) {
     o.SearchField.addEventListener('input', () => {
       buildNav();
       if (aFilteredChannelKeys.length > 0) {
-        iChannelListIndex = 0; // <-- FIXED
+        iChannelListIndex = 0; 
         if (isSessionActive) { loadChannel(0); }
         updateSelectedChannelInNav();
       } else {
@@ -1343,18 +1341,19 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
+// =============== THIS IS THE UNIFIED KEYDOWN/REMOTE BLOCK ===============
 document.addEventListener('keydown', (e) => {
 
   if (document.activeElement === o.SearchField) {
       if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) {
           e.preventDefault();
-          iChannelListIndex = 0;
+          iChannelListIndex = 0; 
           if(o.SearchField) o.SearchField.blur();
           updateSelectedChannelInNav();
       } else if (e.key === 'Escape') {
           e.preventDefault();
           if(o.SearchField) o.SearchField.blur();
-          iChannelListIndex = 0;
+          iChannelListIndex = 0; 
           updateSelectedChannelInNav();
       }
       return;
@@ -1409,7 +1408,7 @@ document.addEventListener('keydown', (e) => {
 
   if (bEpgOpened) {
     e.preventDefault();
-    const EPG_KEYS = ['Escape', 'ArrowUp', 'ArrowDown', 'Enter'];
+    const EPG_KEYS = ['Escape', 'ArrowUp', 'ArrowDown', 'Enter']; 
     if (!EPG_KEYS.includes(e.key)) return;
 
     if (e.key === 'Escape') {
@@ -1422,7 +1421,7 @@ document.addEventListener('keydown', (e) => {
         renderEpg(); // Update selection
     }
     else if (e.key === 'Enter') { 
-        // DO NOTHING
+        // DO NOTHING.
     }
     return;
   }
@@ -1439,14 +1438,14 @@ document.addEventListener('keydown', (e) => {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       } else if (e.key === 'ArrowDown') {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      } else if (e.key === 'Enter') {
+      } else if (e.key === 'Enter') { 
           groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowLeft') { // <-- SWAPPED
-          hideGroups(); // Go back to channel list
+      } else if (e.key === 'ArrowRight') { // Go to Channel List
+          hideGroups(); 
       } else if (e.key === 'Escape') {
           hideGroups(); // Also go back
-      } else if (e.key === 'ArrowRight') { // <-- SWAPPED
-          hideNav(); // Close nav entirely
+      } else if (e.key === 'ArrowLeft') { // Close Nav
+          hideNav(); 
       }
       updateSelectedGroupInNav();
 
@@ -1455,35 +1454,35 @@ document.addEventListener('keydown', (e) => {
         if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
       
       if (e.key === 'ArrowUp') {
-          if (iChannelListIndex === 0 && o.SearchField) {
+          if (iChannelListIndex === 0 && o.SearchField) { 
               o.SearchField.focus();
               const currentSelected = o.ChannelList.querySelector('.selected');
               if (currentSelected) currentSelected.classList.remove('selected');
-              iChannelListIndex = -1;
-          } else if (iChannelListIndex > 0) {
-              iChannelListIndex = (iChannelListIndex - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
+              iChannelListIndex = -1; 
+          } else if (iChannelListIndex > 0) { 
+              iChannelListIndex = (iChannelListIndex - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length; 
               updateSelectedChannelInNav();
           }
       } else if (e.key === 'ArrowDown') {
-          if (iChannelListIndex === -1 && aFilteredChannelKeys.length > 0) {
+          if (iChannelListIndex === -1 && aFilteredChannelKeys.length > 0) { 
               iChannelListIndex = 0;
               updateSelectedChannelInNav();
               o.SearchField.blur();
-          } else if (aFilteredChannelKeys.length > 0 && iChannelListIndex !== -1) {
-              iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length;
+          } else if (aFilteredChannelKeys.length > 0 && iChannelListIndex !== -1) { 
+              iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length; 
               updateSelectedChannelInNav();
           }
       } else if (e.key === 'Enter') {
-          if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) {
-              loadChannel(iChannelListIndex);
+          if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) { 
+              loadChannel(iChannelListIndex); 
               hideNav();
           }
-      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- SWAPPED
-          hideNav(); // Close nav
-          if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur();
-      } else if (e.key === 'ArrowRight') { // <-- SWAPPED
-          if (iChannelListIndex !== -1) {
-              showGroups(); // Open group list
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // Close Nav
+          hideNav(); 
+          if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur(); 
+      } else if (e.key === 'ArrowLeft') { // Open Group List
+          if (iChannelListIndex !== -1) { 
+              showGroups(); 
           }
       }
     }
@@ -1548,6 +1547,7 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
+// =============== END OF UNIFIED BLOCK ===============
 
 
 /**
