@@ -54,8 +54,8 @@ let channels = {
 
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
-let iChannelListIndex = 0; 
-let iActiveChannelIndex = 0;
+let iChannelListIndex = 0; // <-- FIXED: Tracks the highlighted item in the nav list
+let iActiveChannelIndex = 0; // <-- FIXED: Tracks the currently playing channel
 let iGroupListIndex = 1;
 let channelNameTimeout = null;
 let isSessionActive = false;
@@ -306,9 +306,9 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   } else { // Vertical Swipe
     if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
       if (deltaY > 0) {
-        loadChannel(iCurrentChannel + 1); // Swipe Down
+        loadChannel(iActiveChannelIndex + 1); // <-- FIXED: Use active channel index
       } else {
-        loadChannel(iCurrentChannel - 1); // Swipe Up
+        loadChannel(iActiveChannelIndex - 1); // <-- FIXED: Use active channel index
       }
     }
   }
@@ -361,10 +361,11 @@ function loadInitialChannel() {
       return;
   }
 
- const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
-  iChannelListIndex = (initialIndex >= 0 ? initialIndex : 0);
-  iActiveChannelIndex = iChannelListIndex; // Lock in the active channel
+  const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
+  iChannelListIndex = (initialIndex >= 0 ? initialIndex : 0); // <-- FIXED
+  iActiveChannelIndex = iChannelListIndex; // <-- FIXED: Lock in the active channel
   updateSelectedChannelInNav();
+}
 
 
 async function loadChannel(index, options = {}) {
@@ -377,12 +378,12 @@ async function loadChannel(index, options = {}) {
     return;
   }
 
-  iChannelListIndex = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
-  iActiveChannelIndex = iChannelListIndex; 
+  iChannelListIndex = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length; // <-- FIXED
+  iActiveChannelIndex = iChannelListIndex; // <-- FIXED
 
-  const channelKey = aFilteredChannelKeys[iChannelListIndex];
+  const channelKey = aFilteredChannelKeys[iChannelListIndex]; // <-- FIXED
   if (!channelKey || !channels[channelKey]) {
-      console.error(`Invalid channel key or data for index ${iCurrentChannel}: ${channelKey}`);
+      console.error(`Invalid channel key or data for index ${iChannelListIndex}: ${channelKey}`); // <-- FIXED
       showIdleAnimation(!isSessionActive);
       return;
   }
@@ -544,7 +545,7 @@ function selectGroup(index) {
   buildNav();
 
   if (aFilteredChannelKeys.length > 0) {
-    iCurrentChannel = 0;
+    iChannelListIndex = 0; // <-- FIXED
     updateSelectedChannelInNav();
   }
   
@@ -602,7 +603,7 @@ function buildNav() {
       if (isSessionActive) {
         loadChannel(index);
       } else {
-        iCurrentChannel = index;
+        iChannelListIndex = index; // <-- FIXED
         updateSelectedChannelInNav();
       }
       setTimeout(hideNav, 50);
@@ -632,8 +633,8 @@ function updateSelectedChannelInNav() {
 
       const channelItems = o.ChannelList.querySelectorAll('li.channel-item');
 
-      if (iCurrentChannel >= 0 && iCurrentChannel < channelItems.length) {
-          const newItem = channelItems[iCurrentChannel];
+      if (iChannelListIndex >= 0 && iChannelListIndex < channelItems.length) { // <-- FIXED
+          const newItem = channelItems[iChannelListIndex]; // <-- FIXED
           if (newItem) {
             newItem.classList.add('selected');
             if (bNavOpened && typeof newItem.scrollIntoView === 'function') {
@@ -641,12 +642,12 @@ function updateSelectedChannelInNav() {
             }
           }
       } else if (aFilteredChannelKeys.length > 0 && channelItems.length > 0) {
-          iCurrentChannel = 0;
+          iChannelListIndex = 0; // <-- FIXED
           const firstItem = channelItems[0];
           if (firstItem) firstItem.classList.add('selected');
-          console.warn("iCurrentChannel was out of bounds, selecting first channel.");
+          console.warn("iChannelListIndex was out of bounds, selecting first channel."); // <-- FIXED
       } else {
-        iCurrentChannel = 0;
+        iChannelListIndex = 0; // <-- FIXED
       }
 
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
@@ -678,8 +679,8 @@ function updateSelectedGroupInNav() {
     Settings & Modals
     ------------------------- */
 function renderChannelSettings() {
-  if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- USE ACTIVE
-  const currentChannelKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- USE ACTIVE
+  if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- FIXED
+  const currentChannelKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
   const currentChannel = channels[currentChannelKey];
   if (!currentChannel) return;
 
@@ -842,8 +843,8 @@ function renderModalContent(type) {
         contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
       } else if (type === 'edit') {
-        if (!aFilteredChannelKeys || iCurrentChannel >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>';
-        const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
+        if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>'; // <-- FIXED
+        const currentChannel = channels[aFilteredChannelKeys[iActiveChannelIndex]]; // <-- FIXED
         if (!currentChannel) return '<p>Channel data missing.</p>';
         const safeName = (currentChannel.name || '').replace(/"/g, '&quot;');
         const safeLogo = (currentChannel.logo || '').replace(/"/g, '&quot;');
@@ -866,8 +867,8 @@ window.applyChannelEdit = () => {
       console.error("Edit modal inputs not found.");
       return hideSettingsModal();
   }
-  if (!aFilteredChannelKeys || iCurrentChannel >= aFilteredChannelKeys.length) return hideSettingsModal();
-  const key = aFilteredChannelKeys[iCurrentChannel];
+  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return hideSettingsModal(); // <-- FIXED
+  const key = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
   if (!channels[key]) return hideSettingsModal();
 
   channels[key].name = nameInput.value;
@@ -942,8 +943,8 @@ window.setAudioAndClose = (lang) => {
 
 
 function toggleFavourite() {
-  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- USE ACTIVE
-  const key = aFilteredChannelKeys[iActiveChannelIndex]; // <-- USE ACTIVE
+  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- FIXED
+  const key = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
   if (!channels[key]) return;
 
   channels[key].favorite = !channels[key].favorite;
@@ -957,11 +958,11 @@ function toggleFavourite() {
       buildNav();
       const newIndex = aFilteredChannelKeys.indexOf(key);
      if (newIndex !== -1) {
-          iChannelListIndex = newIndex; // <-- USE LIST INDEX
+          iChannelListIndex = newIndex; // <-- FIXED
       } else if (aFilteredChannelKeys.length > 0) {
-          iChannelListIndex = 0; // <-- USE LIST INDEX
+          iChannelListIndex = 0; // <-- FIXED
       } else {
-          iChannelListIndex = 0; // <-- USE LIST INDEX
+          iChannelListIndex = 0; // <-- FIXED
       }
       updateSelectedChannelInNav();
   }
@@ -1120,10 +1121,10 @@ function showEpg() {
   aEpgFilteredChannelKeys = Object.keys(channels)
       .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
 
-  const currentKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- USE ACTIVE
+  const currentKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
   if (iEpgChannelIndex === -1) {
-      const currentChannelData = channels[aFilteredChannelKeys[iActiveChannelIndex]]; // <-- USE ACTIVE
+      const currentChannelData = channels[aFilteredChannelKeys[iActiveChannelIndex]]; // <-- FIXED
       if (currentChannelData) {
           iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
       }
@@ -1177,8 +1178,8 @@ function generateDummyEpg() {
 function showChannelName() {
   clearTimeout(channelNameTimeout);
   if (!o.ChannelInfo || !o.ChannelInfoName || !o.ChannelInfoEpg || !o.ChannelInfoLogo) return;
-  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- USE ACTIVE
-  const chKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- USE ACTIVE
+  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- FIXED
+  const chKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- FIXED
   const ch = channels[chKey];
   if (!ch) return;
 
@@ -1229,8 +1230,8 @@ function handleFirstPlay() {
 
   hideIdleAnimation();
 
-  if(aFilteredChannelKeys.length > 0 && iCurrentChannel >= 0 && iCurrentChannel < aFilteredChannelKeys.length){
-      loadChannel(iCurrentChannel);
+  if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){ // <-- FIXED
+      loadChannel(iChannelListIndex); // <-- FIXED
   } else {
       console.error("No valid channel selected on first play.");
       showIdleAnimation(true);
@@ -1327,7 +1328,7 @@ if (o.SearchField) {
     o.SearchField.addEventListener('input', () => {
       buildNav();
       if (aFilteredChannelKeys.length > 0) {
-        iCurrentChannel = 0;
+        iChannelListIndex = 0; // <-- FIXED
         if (isSessionActive) { loadChannel(0); }
         updateSelectedChannelInNav();
       } else {
@@ -1343,13 +1344,13 @@ document.addEventListener('keydown', (e) => {
   if (document.activeElement === o.SearchField) {
       if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) {
           e.preventDefault();
-          iCurrentChannel = 0;
+          iChannelListIndex = 0; // <-- FIXED
           if(o.SearchField) o.SearchField.blur();
           updateSelectedChannelInNav();
       } else if (e.key === 'Escape') {
           e.preventDefault();
           if(o.SearchField) o.SearchField.blur();
-          iCurrentChannel = 0;
+          iChannelListIndex = 0; // <-- FIXED
           updateSelectedChannelInNav();
       }
       return;
@@ -1451,34 +1452,34 @@ document.addEventListener('keydown', (e) => {
         if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
       
       if (e.key === 'ArrowUp') {
-          if (iCurrentChannel === 0 && o.SearchField) {
+          if (iChannelListIndex === 0 && o.SearchField) { // <-- FIXED
               o.SearchField.focus();
               const currentSelected = o.ChannelList.querySelector('.selected');
               if (currentSelected) currentSelected.classList.remove('selected');
-              iCurrentChannel = -1; // Indicate search field has focus
-          } else if (iCurrentChannel > 0) {
-              iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
+              iChannelListIndex = -1; // <-- FIXED: Indicate search field has focus
+          } else if (iChannelListIndex > 0) { // <-- FIXED
+              iChannelListIndex = (iChannelListIndex - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length; // <-- FIXED
               updateSelectedChannelInNav();
           }
       } else if (e.key === 'ArrowDown') {
-          if (iCurrentChannel === -1 && aFilteredChannelKeys.length > 0) {
-              iCurrentChannel = 0;
+          if (iChannelListIndex === -1 && aFilteredChannelKeys.length > 0) { // <-- FIXED
+              iChannelListIndex = 0;
               updateSelectedChannelInNav();
               o.SearchField.blur();
-          } else if (aFilteredChannelKeys.length > 0 && iCurrentChannel !== -1) {
-              iCurrentChannel = (iCurrentChannel + 1) % aFilteredChannelKeys.length;
+          } else if (aFilteredChannelKeys.length > 0 && iChannelListIndex !== -1) { // <-- FIXED
+              iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length; // <-- FIXED
               updateSelectedChannelInNav();
           }
       } else if (e.key === 'Enter') {
-          if (iCurrentChannel !== -1 && aFilteredChannelKeys.length > 0) {
-              loadChannel(iCurrentChannel);
+          if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) { // <-- FIXED
+              loadChannel(iChannelListIndex); // <-- FIXED
               hideNav();
           }
       } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
           hideNav();
-          if (iCurrentChannel === -1 && o.SearchField) o.SearchField.blur();
+          if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur(); // <-- FIXED
       } else if (e.key === 'ArrowLeft') {
-          if (iCurrentChannel !== -1) {
+          if (iChannelListIndex !== -1) { // <-- FIXED
               showGroups();
           }
       }
@@ -1540,8 +1541,8 @@ document.addEventListener('keydown', (e) => {
         break;
     case 'ArrowRight': showChannelSettings(); break;
     case 'Enter': showChannelName(); break;
-    case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
-    case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
+    case 'ArrowUp': loadChannel(iActiveChannelIndex - 1); break; // <-- FIXED
+    case 'ArrowDown': loadChannel(iActiveChannelIndex + 1); break; // <-- FIXED
     case 'h': showGuide(); break;
     case 'e': showEpg(); break;
     case 'm': showChannelSettings(); break;
