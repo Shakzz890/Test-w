@@ -135,9 +135,16 @@ async function initPlayer() {
     streaming: { rebufferingGoal: 3, bufferingGoal: 10 }
   });
 
-  player.addEventListener('error', e => {
+ player.addEventListener('error', e => {
     console.error('Shaka Error:', e.detail);
-    showIdleAnimation(true);
+    const isNetworkOrMediaError =
+      e.detail.category === shaka.util.Error.Category.NETWORK ||
+      e.detail.category === shaka.util.Error.Category.MEDIA ||
+      e.detail.category === shaka.util.Error.Category.STREAMING;
+
+    if (!isNetworkOrMediaError) {
+      showIdleAnimation(true);
+    }
     if (o.ChannelLoader) {
       clearTimeout(loaderFadeTimeout);
       o.ChannelLoader.classList.add('HIDDEN');
