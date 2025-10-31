@@ -66,9 +66,9 @@ html, body {
   opacity: 1;
   transition: opacity 0.5s ease-out;
 }
- #ChannelLoader.fade-out {
-    opacity: 0;
- }
+  #ChannelLoader.fade-out {
+     opacity: 0;
+  }
 .loader-content {
     text-align: center;
     color: var(--text-light);
@@ -203,20 +203,37 @@ input[type="radio"] { appearance: none; -webkit-appearance: none; width: 22px; h
 input[type="radio"]:checked { border-color: var(--primary-color); background-color: var(--primary-color); box-shadow: inset 0 0 0 3px #000; }
 .edit-modal-field { width:100%; background: #333; border: 1px solid #555; color: #fff; padding: 10px; margin-bottom: 15px; font-size: 18px; }
 
+/* --- START: UPDATED IDLEANIMATION STYLES --- */
 #IdleAnimation {
   z-index: 28;
   display: flex; justify-content: flex-end; align-items: center;
-  /* --- START: Restored background --- */
-  background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop');
+  /* This creates a shade on the left, fading to transparent on the right */
+  background-image: linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0) 100%), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop');
   background-color: #111;
   background-size: cover; background-position: center;
-  /* --- END: Restored background --- */
   pointer-events: none;
 }
 .idle-branding { position: relative; padding-right: 40px; text-align: right; color: white; text-shadow: 3px 3px 8px rgba(0,0,0,0.9); }
-.idle-branding h1 { font-size: 5vw; margin: 0; font-weight: bold; animation: pulseText 3s infinite ease-in-out; }
-.idle-branding p { font-size: 2vw; margin: 0; color: #00ff7f; font-weight: bold; }
-@keyframes pulseText { 0%, 100% { transform: scale(0.98); opacity: 0.9; } 50% { transform: scale(1); opacity: 1; } }
+
+.idle-branding h1 {
+  font-size: clamp(60px, 10vw, 150px); /* Larger, responsive font size */
+  margin: 0;
+  font-weight: 900; /* Bolder font */
+  letter-spacing: 5px; /* Spacing like the reference */
+  text-transform: uppercase;
+  /* animation: pulseText 3s infinite ease-in-out; */ /* Removed pulse to match reference */
+}
+.idle-branding p {
+  font-size: clamp(24px, 4vw, 50px); /* Smaller, but still large and responsive */
+  margin: 10px 0 0 0; /* Added top margin for spacing */
+  color: #fff; /* Changed from green to white */
+  font-weight: 700;
+  letter-spacing: 10px; /* More spacing like reference */
+  text-transform: uppercase;
+}
+/* @keyframes pulseText { 0%, 100% { transform: scale(0.98); opacity: 0.9; } 50% { transform: scale(1); opacity: 1; } } */ /* Animation removed */
+/* --- END: UPDATED IDLEANIMATION STYLES --- */
+
 
 #PlayButton {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
