@@ -1451,7 +1451,7 @@ document.addEventListener('keydown', (e) => {
           hideGroups(); // Also go back
       } else if (e.key === 'ArrowLeft') { 
           // --- TV REMOTE BUGFIX ---
-          // DO NOTHING. This is the last panel.
+          // DO NOTHING. This is the last panel, as you requested.
       }
       updateSelectedGroupInNav();
 
@@ -1553,7 +1553,6 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
-
 /**
  * Gets stats from Shaka Player and updates the Stream Info overlay.
  */
