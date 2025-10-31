@@ -313,7 +313,6 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
-
 function handleSingleTapAction() {
   if (!isSessionActive) return;
 
