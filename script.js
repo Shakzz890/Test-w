@@ -17,7 +17,7 @@ const o = {
   SettingsVideoFormatMenu: document.getElementById('SettingsVideoFormatMenu'),
   SettingsContainer: document.getElementById('settings_container'),
   ChannelSettings: document.getElementById('ChannelSettings'),
-  SettingsVideoInfo: document.getElementById('SettingsVideoInfo'),
+  StreamInfoOverlay: document.getElementById('StreamInfoOverlay'), // <-- ADDED THIS
   Guide: document.getElementById('Guide'),
   GuideContent: document.getElementById('GuideContent'),
   EpgOverlay: document.getElementById('EpgOverlay'),
@@ -75,13 +75,13 @@ let loaderFadeTimeout = null; // For loader fade-out
 let tempMessageTimeout = null; // For temp message
 
 /* -------------------------
-    Utilities
-    ------------------------- */
+    Utilities
+    ------------------------- */
 const getEl = (id) => document.getElementById(id);
 
 /* -------------------------
-    Core Player Functions
-    ------------------------- */
+    Core Player Functions
+    ------------------------- */
 async function initPlayer() {
   Object.keys(channels).forEach((key, i) => {
     channels[key].number = i + 1;
@@ -150,6 +150,10 @@ async function initPlayer() {
   player.addEventListener('trackschanged', renderChannelSettings);
   player.addEventListener('buffering', handleBuffering);
   player.addEventListener('playing', handlePlaying);
+
+  // ADDED EVENT LISTENERS HERE
+  player.addEventListener('adaptation', updateStreamInfo);
+  player.addEventListener('streaming', updateStreamInfo);
 
   setupControls();
   showIdleAnimation(true);
@@ -430,8 +434,8 @@ async function loadChannel(index, options = {}) {
 }
 
 /* -------------------------
-    UI and Navigation
-    ------------------------- */
+    UI and Navigation
+    ------------------------- */
 function setupMainMenuControls() {
   const guideBtn = getEl('guide_button');
   const epgBtn = getEl('epg_button');
@@ -662,31 +666,18 @@ function updateSelectedGroupInNav() {
 }
 
 /* -------------------------
-    Settings & Modals
-    ------------------------- */
+    Settings & Modals
+    ------------------------- */
 function renderChannelSettings() {
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iCurrentChannel >= aFilteredChannelKeys.length) return;
   const currentChannelKey = aFilteredChannelKeys[iCurrentChannel];
   const currentChannel = channels[currentChannelKey];
   if (!currentChannel) return;
 
-  let vCodec = 'N/A', aCodec = 'N/A', vRes = '';
-  try {
-    if (player && typeof player.getActiveTracks === 'function') {
-        const activeTracks = player.getActiveTracks();
-        if (activeTracks) {
-          if (activeTracks.video) {
-              if(activeTracks.video.codec) vCodec = activeTracks.video.codec.split('.')[0].toUpperCase();
-              if(activeTracks.video.height) vRes = `${activeTracks.video.height}p`;
-          }
-          if (activeTracks.audio && activeTracks.audio.codec) aCodec = activeTracks.audio.codec.split('.')[0].toUpperCase();
-        }
-    }
-  } catch (e) { console.warn("Could not get active tracks:", e); }
-
-  if (o.SettingsVideoInfo) {
-      o.SettingsVideoInfo.textContent = `Video: ${vRes} (${vCodec}) | Audio: ${aCodec}`;
-  }
+  // THIS BLOCK WAS REMOVED AS REQUESTED
+  // if (o.SettingsVideoInfo) {
+  //     o.SettingsVideoInfo.textContent = `Video: ${vRes} (${vCodec}) | Audio: ${aCodec}`;
+  // }
 
   if (o.SettingsMainMenu) {
       const currentFormat = getAspectRatio();
@@ -969,8 +960,8 @@ function toggleFavourite() {
 
 
 /* -------------------------
-    UI State & Helpers
-    ------------------------- */
+    UI State & Helpers
+    ------------------------- */
 function showTempMessage(message) {
     if (!o.TempMessageOverlay) return;
     clearTimeout(tempMessageTimeout);
@@ -1051,6 +1042,12 @@ function hideGroups() {
 
 function showChannelSettings() {
   if (!o.ChannelSettings) return;
+
+  // MODIFIED HERE
+  updateStreamInfo(); // Get the latest info
+  if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.remove('HIDDEN');
+  // ---
+
   clearUi('channelSettings');
   hideVideoFormatMenu();
   iChannelSettingsIndex = 0;
@@ -1061,6 +1058,11 @@ function showChannelSettings() {
 
 function hideChannelSettings() {
   if (!o.ChannelSettings) return;
+
+  // MODIFIED HERE
+  if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.add('HIDDEN');
+  // ---
+
   bChannelSettingsOpened = false;
   o.ChannelSettings.classList.remove('visible');
 }
@@ -1100,8 +1102,8 @@ function renderGuideContent() {
 
 
 /* -------------------------
-    EPG
-    ------------------------- */
+    EPG
+    ------------------------- */
 function showEpg() {
   if (!o.EpgOverlay || !o.EpgChannels || !o.EpgTimeline) return;
   clearUi('epg');
@@ -1161,8 +1163,8 @@ function generateDummyEpg() {
 
 
 /* -------------------------
-    Channel name display
-    ------------------------- */
+    Channel name display
+    ------------------------- */
 function showChannelName() {
   clearTimeout(channelNameTimeout);
   if (!o.ChannelInfo || !o.ChannelInfoName || !o.ChannelInfoEpg || !o.ChannelInfoLogo) return;
@@ -1185,8 +1187,8 @@ function hideChannelName() {
 
 
 /* -------------------------
-    Favorites storage
-    ------------------------- */
+    Favorites storage
+    ------------------------- */
 function loadFavoritesFromStorage() {
   try {
     const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]");
@@ -1210,8 +1212,8 @@ function saveFavoritesToStorage() {
 
 
 /* -------------------------
-    First Play handling
-    ------------------------- */
+    First Play handling
+    ------------------------- */
 function handleFirstPlay() {
   if (isSessionActive) return;
   isSessionActive = true;
@@ -1231,8 +1233,8 @@ function handleFirstPlay() {
 
 
 /* -------------------------
-    Settings selection helper
-    ------------------------- */
+    Settings selection helper
+    ------------------------- */
 function updateSettingsSelection(container, index) {
   if (!container || typeof container.querySelector !== 'function') return;
   try {
@@ -1306,8 +1308,8 @@ function toggleFullScreen() {
 
 
 /* -------------------------
-    Event Listeners
-    ------------------------- */
+    Event Listeners
+    ------------------------- */
 if (o.PlayButton) {
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
 } else { console.error("PlayButton element not found."); }
@@ -1530,45 +1532,40 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
+
+/**
+ * Gets stats from Shaka Player and updates the Stream Info overlay.
+ */
 function updateStreamInfo() {
-  const infoOverlay = document.getElementById('StreamInfoOverlay');
+  // Use the cached element from the 'o' object
+  const infoOverlay = o.StreamInfoOverlay; 
+  if (!infoOverlay) return; // Check if element exists
+  
   if (!player) {
     return;
   }
 
-  const variant = player.getVariantTracks().find(t => t.active);
+  try {
+    const variant = player.getVariantTracks().find(t => t.active);
 
-  if (!variant) {
-    infoOverlay.innerHTML = 'Stream Info: N/A';
-    return;
-  }
+    if (!variant) {
+      infoOverlay.innerHTML = 'Stream Info: N/A';
+      return;
+    }
 
-  const codecs = variant.codecs || 'N/A';
-  const resolution = `${variant.width}x${variant.height}`;
-  const bandwidth = (variant.bandwidth / 1000000).toFixed(2); // In Mbit/s
+    const codecs = variant.codecs || 'N/A';
+    const resolution = `${variant.width}x${variant.height}`;
+    const bandwidth = (variant.bandwidth / 1000000).toFixed(2); // In Mbit/s
 
-  // Use template literals to format the text
-  infoOverlay.innerHTML = `Codecs:     ${codecs}
+    // Use template literals to format the text
+    infoOverlay.innerHTML = `Codecs:     ${codecs}
 Resolution: ${resolution}
 Bandwidth:  ${bandwidth} Mbit/s`;
-}
-    player.addEventListener('adaptation', updateStreamInfo);
-    player.addEventListener('streaming', updateStreamInfo);
-function toggleSettingsPanel() {
-  const settingsPanel = document.getElementById('ChannelSettings');
   
-  // This is just an example check
-  if (settingsPanel.classList.contains('HIDDEN')) {
-    // Panel is being SHOWN
-    settingsPanel.classList.remove('HIDDEN');
-    
-    // --- ADD THESE TWO LINES ---
-    updateStreamInfo(); // Get the latest info
-    document.getElementById('StreamInfoOverlay').classList.remove('HIDDEN');
-    
-  } else {
-    settingsPanel.classList.add('HIDDEN');
-    document.getElementById('StreamInfoOverlay').classList.add('HIDDEN');
+  } catch (error) {
+    console.warn("Could not get stream info:", error);
+    infoOverlay.innerHTML = 'Stream Info: Error';
   }
 }
+
 document.addEventListener('DOMContentLoaded', initPlayer);
