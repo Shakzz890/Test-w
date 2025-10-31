@@ -30,7 +30,7 @@ const o = {
   ChannelInfoEpg: document.getElementById('channel_epg'),
   ChannelInfoLogo: document.getElementById('ch_logo'),
   TempMessageOverlay: document.getElementById('TempMessageOverlay')
-  // <-- FIXED: REMOVED SettingsVideoInfo
+  // <-- FIXED: REMOVED SettingsVideoInfo from this list
 };
 
 let channels = {
@@ -43,7 +43,7 @@ let channels = {
     aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
     sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
-    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
+    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["cartoons & animations"] },
     nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "httpsIA803207.US.ARCHIVE.ORG/32/ITEMS/ZOO-MOO-KIDS-2020_202006/ZOOMOO-KIDS-2020.PNG", group: ["cartoons & animations"] },
@@ -296,10 +296,24 @@ function setupControls() {
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
-  // Ignore swipes if a modal is open
-  if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
-
   if (isHorizontal) {
+    // --- START NEW FIX for EPG/Guide ---
+    // First, check if a modal is open. If so, any horizontal swipe closes it.
+    if (bGuideOpened) {
+      window.hideGuide();
+      return;
+    }
+    if (bEpgOpened) {
+      hideEpg();
+      return;
+    }
+    if (bSettingsModalOpened) {
+      window.hideSettingsModal();
+      return;
+    }
+    // --- END NEW FIX ---
+
+    // If no modal is open, proceed with panel navigation
     if (deltaX > 0) { // Swipe Right --> (Left-to-Right)
       if (bChannelSettingsOpened) {
         hideChannelSettings(); // Go back from Settings
@@ -319,7 +333,8 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   } else { // Vertical Swipe
     // This logic is for channel changing
-    if (!bNavOpened && !bChannelSettingsOpened) {
+    // Also block vertical swipe if a modal is open
+    if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
       if (deltaY > 0) {
         loadChannel(iActiveChannelIndex + 1);
       } else {
@@ -334,7 +349,7 @@ function handleSingleTapAction() {
   if (!isSessionActive) return;
 
   if (bNavOpened || bChannelSettingsOpened || bGuideOpened || bEpgOpened || bSettingsModalOpened) {
-    clearUi();
+    clearUi(); // This is correct. Tapping the screen should close all UI.
   } else {
     showChannelName();
   }
@@ -1109,18 +1124,21 @@ function renderGuideContent() {
   if (!o.GuideContent) return;
   // UPDATED RENDERED CONTROLS TO MATCH NEW LOGIC
   o.GuideContent.innerHTML = `
-    <h2>Controls</h2>
+    <h2>Controls (TV Remote)</h2>
     <ul style="list-style: none; padding: 0; font-size: clamp(16px, 2.5vw, 22px); line-height: 1.8;">
-      <li><kbd>M</kbd> - Settings</li>
-      <li><kbd>E</kbd> - EPG</li>
-      <li><kbd>H</kbd> - User Manual (Guide)</li>
-      <li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li>
       <li><kbd>←</kbd> - Open Channel List</li>
-      <li><kbd>←</kbd> (when list open) - Open Group List</li>
+      <li><kbd>←</kbd> (in list) - Open Group List</li>
       <li><kbd>→</kbd> - Open Channel Settings</li>
-      <li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show Channel Info / Select Item</li>
+      <li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show Info / Select</li>
+      <li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li>
       <li><kbd>ESC</kbd> - Go Back / Close Panel</li>
-      <li><kbd>Double Tap/Click</kbd> - Toggle Fullscreen</li>
+    </ul>
+    <h2>Controls (Mobile)</h2>
+     <ul style="list-style: none; padding: 0; font-size: clamp(16px, 2.5vw, 22px); line-height: 1.8;">
+      <li><b>Swipe Left-to-Right</b> - Open Nav / Open Groups</li>
+      <li><b>Swipe Right-to-Left</b> - Open Settings / Close Nav</li>
+      <li><b>Swipe Up/Down</b> - Change channel</li>
+      <li><b>Single Tap</b> - Close Panel / Show Info</li>
     </ul>
   `;
 }
@@ -1136,7 +1154,7 @@ function showEpg() {
   aEpgFilteredChannelKeys = Object.keys(channels)
       .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
 
-  const currentKey = aEpgFilteredChannelKeys[iActiveChannelIndex]; 
+  const currentKey = aFilteredChannelKeys[iActiveChannelIndex]; 
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
   if (iEpgChannelIndex === -1) {
       const currentChannelData = channels[aEpgFilteredChannelKeys[iActiveChannelIndex]]; 
@@ -1245,6 +1263,7 @@ function handleFirstPlay() {
 
   hideIdleAnimation();
 
+  // --- LOADING BUG FIX ---
   if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){ 
       loadChannel(iChannelListIndex); 
   } else {
