@@ -12,13 +12,16 @@
 </head>
 <body>
   <div id="playerContainer">
-      <video id="avplayer" autoplay muted playsinline></video>
-      <div id="ChannelLoader" class="HIDDEN">
-        <div class="loader-content">
-            <div class="loading-spinner"></div>
-            <span class="loading-text">Loading Channel...</span>
-        </div>
-        </div>
+    <video id="avplayer" autoplay muted playsinline></video>
+    
+    <div id="StreamInfoOverlay" class="HIDDEN"></div>
+    
+    <div id="ChannelLoader" class="HIDDEN">
+      <div class="loader-content">
+        <div class="loading-spinner"></div>
+        <span class="loading-text">Loading Channel...</span>
+      </div>
+    </div>
   </div>
   <div id="BlurOverlay" class="fullscreen"></div>
   <div id="TempMessageOverlay" class="HIDDEN"></div>
@@ -37,20 +40,20 @@
         <div id="list_container">
           <div id="GroupList" class="custom-scrollbar">
             <ul id="main_nav">
-                <li id="guide_button">GUIDE</li>
-                <li id="epg_button">EPG</li>
+              <li id="guide_button">GUIDE</li>
+              <li id="epg_button">EPG</li>
             </ul>
             <div class="HR" style="margin:16px 6px; height:1px; background: var(--primary-gradient);"></div>
             <h2 class="list_headline">CATEGORIES</h2>
             <ul id="DynamicGroupsList">
-               </ul>
+            </ul>
           </div>
           <div id="ChannelList" class="custom-scrollbar"></div>
         </div>
       </div>
     </div>
     <div id="ChannelSettings">
-      <div id="SettingsVideoInfo">Video: N/A | Audio: N/A</div>
+      
       <div id="settings_container">
         <div id="SettingsMainMenu" class="custom-scrollbar"></div>
         <div id="SettingsVideoFormatMenu" class="custom-scrollbar"></div>
@@ -82,5 +85,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
-
