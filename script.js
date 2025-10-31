@@ -132,7 +132,7 @@ async function initPlayer() {
 
   player.configure({
     abr: { defaultBandwidthEstimate: 500000 },
-    streaming: { rebufferingGoal: 3, bufferingGoal: 10 }
+    streaming: { rebufferingGoal: 2, bufferingGoal: 3 }
   });
 
  player.addEventListener('error', e => {
