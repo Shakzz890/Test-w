@@ -291,23 +291,29 @@ function setupControls() {
   });
 }
 
-// --- START: NEW UNIFIED SWIPE FUNCTION ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
-  // Guard horizontal swipes if a modal is open
+  // Ignore swipes if a modal is open
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
-    if (deltaX < 0) { // Swipe Left <- (Matches Arrow Left)
-      if (bNavOpened && !bGroupsOpened) showGroups();
-      else if (bGroupsOpened) hideNav();
-      else if (!bNavOpened && !bChannelSettingsOpened) showNav();
-    } else if (deltaX > 0) { // Swipe Right -> (Matches Arrow Right)
-      if (bChannelSettingsOpened) hideChannelSettings();
-      else if (bGroupsOpened) hideGroups();
-      else if (bNavOpened && !bGroupsOpened) hideNav();
-      else if (!bNavOpened && !bChannelSettingsOpened) showChannelSettings();
+    if (deltaX > 0) { // Swipe Right -->
+      if (bChannelSettingsOpened) {
+        hideChannelSettings(); // Close right panel
+      } else if (bGroupsOpened) {
+        hideGroups(); // Go back from groups to channels
+      } else if (!bNavOpened) {
+        showNav(); // Open left panel
+      }
+    } else if (deltaX < 0) { // Swipe Left <--
+      if (bNavOpened && !bGroupsOpened) {
+        showGroups(); // Go deeper into groups
+      } else if (bNavOpened) {
+        hideNav(); // Close left panel
+      } else if (!bChannelSettingsOpened) {
+        showChannelSettings(); // Open right panel
+      }
     }
   } else { // Vertical Swipe
     // This logic is for channel changing
@@ -320,7 +326,6 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
-// --- END: NEW UNIFIED SWIPE FUNCTION ---
 
 function handleSingleTapAction() {
   if (!isSessionActive) return;
@@ -1341,7 +1346,7 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
-// =============== THIS IS THE UNIFIED KEYDOWN/REMOTE BLOCK ===============
+
 document.addEventListener('keydown', (e) => {
 
   if (document.activeElement === o.SearchField) {
@@ -1444,8 +1449,9 @@ document.addEventListener('keydown', (e) => {
           hideGroups(); 
       } else if (e.key === 'Escape') {
           hideGroups(); // Also go back
-      } else if (e.key === 'ArrowLeft') { // Close Nav
-          hideNav(); 
+      } else if (e.key === 'ArrowLeft') { 
+          // --- TV REMOTE BUGFIX ---
+          // DO NOTHING. This is the last panel.
       }
       updateSelectedGroupInNav();
 
@@ -1547,8 +1553,6 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
-// =============== END OF UNIFIED BLOCK ===============
-
 
 /**
  * Gets stats from Shaka Player and updates the Stream Info overlay.
