@@ -54,7 +54,8 @@ let channels = {
 
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
-let iCurrentChannel = 0;
+let iChannelListIndex = 0; 
+let iActiveChannelIndex = 0;
 let iGroupListIndex = 1;
 let channelNameTimeout = null;
 let isSessionActive = false;
@@ -360,10 +361,10 @@ function loadInitialChannel() {
       return;
   }
 
-  const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
-  iCurrentChannel = (initialIndex >= 0 ? initialIndex : 0);
+ const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
+  iChannelListIndex = (initialIndex >= 0 ? initialIndex : 0);
+  iActiveChannelIndex = iChannelListIndex; // Lock in the active channel
   updateSelectedChannelInNav();
-}
 
 
 async function loadChannel(index, options = {}) {
@@ -376,9 +377,10 @@ async function loadChannel(index, options = {}) {
     return;
   }
 
-  iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
+  iChannelListIndex = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
+  iActiveChannelIndex = iChannelListIndex; 
 
-  const channelKey = aFilteredChannelKeys[iCurrentChannel];
+  const channelKey = aFilteredChannelKeys[iChannelListIndex];
   if (!channelKey || !channels[channelKey]) {
       console.error(`Invalid channel key or data for index ${iCurrentChannel}: ${channelKey}`);
       showIdleAnimation(!isSessionActive);
@@ -676,8 +678,8 @@ function updateSelectedGroupInNav() {
     Settings & Modals
     ------------------------- */
 function renderChannelSettings() {
-  if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iCurrentChannel >= aFilteredChannelKeys.length) return;
-  const currentChannelKey = aFilteredChannelKeys[iCurrentChannel];
+  if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- USE ACTIVE
+  const currentChannelKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- USE ACTIVE
   const currentChannel = channels[currentChannelKey];
   if (!currentChannel) return;
 
@@ -940,8 +942,8 @@ window.setAudioAndClose = (lang) => {
 
 
 function toggleFavourite() {
-  if (!aFilteredChannelKeys || iCurrentChannel >= aFilteredChannelKeys.length) return;
-  const key = aFilteredChannelKeys[iCurrentChannel];
+  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- USE ACTIVE
+  const key = aFilteredChannelKeys[iActiveChannelIndex]; // <-- USE ACTIVE
   if (!channels[key]) return;
 
   channels[key].favorite = !channels[key].favorite;
@@ -954,12 +956,12 @@ function toggleFavourite() {
   if (bNavOpened && (sSelectedGroup === '__fav' || sSelectedGroup === '__all')) {
       buildNav();
       const newIndex = aFilteredChannelKeys.indexOf(key);
-      if (newIndex !== -1) {
-          iCurrentChannel = newIndex;
+     if (newIndex !== -1) {
+          iChannelListIndex = newIndex; // <-- USE LIST INDEX
       } else if (aFilteredChannelKeys.length > 0) {
-          iCurrentChannel = 0;
+          iChannelListIndex = 0; // <-- USE LIST INDEX
       } else {
-          iCurrentChannel = 0;
+          iChannelListIndex = 0; // <-- USE LIST INDEX
       }
       updateSelectedChannelInNav();
   }
@@ -1118,10 +1120,10 @@ function showEpg() {
   aEpgFilteredChannelKeys = Object.keys(channels)
       .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
 
-  const currentKey = aFilteredChannelKeys[iCurrentChannel];
+  const currentKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- USE ACTIVE
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
   if (iEpgChannelIndex === -1) {
-      const currentChannelData = channels[aFilteredChannelKeys[iCurrentChannel]];
+      const currentChannelData = channels[aFilteredChannelKeys[iActiveChannelIndex]]; // <-- USE ACTIVE
       if (currentChannelData) {
           iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
       }
@@ -1175,8 +1177,8 @@ function generateDummyEpg() {
 function showChannelName() {
   clearTimeout(channelNameTimeout);
   if (!o.ChannelInfo || !o.ChannelInfoName || !o.ChannelInfoEpg || !o.ChannelInfoLogo) return;
-  if (!aFilteredChannelKeys || iCurrentChannel >= aFilteredChannelKeys.length) return;
-  const chKey = aFilteredChannelKeys[iCurrentChannel];
+  if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; // <-- USE ACTIVE
+  const chKey = aFilteredChannelKeys[iActiveChannelIndex]; // <-- USE ACTIVE
   const ch = channels[chKey];
   if (!ch) return;
 
