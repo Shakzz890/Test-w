@@ -291,6 +291,7 @@ function setupControls() {
   });
 }
 
+// --- START: NEW MOBILE SWIPE LOGIC ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
@@ -298,21 +299,21 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
-    if (deltaX > 0) { // Swipe Right -->
+    if (deltaX > 0) { // Swipe Right --> (Left-to-Right)
       if (bChannelSettingsOpened) {
-        hideChannelSettings(); // Close right panel
-      } else if (bGroupsOpened) {
-        hideGroups(); // Go back from groups to channels
+        hideChannelSettings(); // Go back from Settings
+      } else if (bNavOpened && !bGroupsOpened) {
+        showGroups(); // Dig deeper into Groups
       } else if (!bNavOpened) {
-        showNav(); // Open left panel
+        showNav(); // Open Nav
       }
-    } else if (deltaX < 0) { // Swipe Left <--
-      if (bNavOpened && !bGroupsOpened) {
-        showGroups(); // Go deeper into groups
+    } else if (deltaX < 0) { // Swipe Left <-- (Right-to-Left)
+      if (bGroupsOpened) {
+        hideGroups(); // Go back from Groups
       } else if (bNavOpened) {
-        hideNav(); // Close left panel
+        hideNav(); // Go back from Nav
       } else if (!bChannelSettingsOpened) {
-        showChannelSettings(); // Open right panel
+        showChannelSettings(); // Open Settings
       }
     }
   } else { // Vertical Swipe
@@ -326,6 +327,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
+// --- END: NEW MOBILE SWIPE LOGIC ---
 
 function handleSingleTapAction() {
   if (!isSessionActive) return;
@@ -692,6 +694,7 @@ function updateSelectedGroupInNav() {
     Settings & Modals
     ------------------------- */
 function renderChannelSettings() {
+  // BLANK PANEL FIX: Removed reference to o.SettingsVideoInfo
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return; 
   const currentChannelKey = aFilteredChannelKeys[iActiveChannelIndex]; 
   const currentChannel = channels[currentChannelKey];
@@ -1061,10 +1064,8 @@ function hideGroups() {
 function showChannelSettings() {
   if (!o.ChannelSettings) return;
 
-  // MODIFIED HERE
   updateStreamInfo(); // Get the latest info
   if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.remove('HIDDEN');
-  // ---
 
   clearUi('channelSettings');
   hideVideoFormatMenu();
@@ -1077,9 +1078,7 @@ function showChannelSettings() {
 function hideChannelSettings() {
   if (!o.ChannelSettings) return;
 
-  // MODIFIED HERE
   if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.add('HIDDEN');
-  // ---
 
   bChannelSettingsOpened = false;
   o.ChannelSettings.classList.remove('visible');
@@ -1101,6 +1100,7 @@ window.hideGuide = () => {
 
 function renderGuideContent() {
   if (!o.GuideContent) return;
+  // UPDATED RENDERED CONTROLS TO MATCH NEW LOGIC
   o.GuideContent.innerHTML = `
     <h2>Controls</h2>
     <ul style="list-style: none; padding: 0; font-size: clamp(16px, 2.5vw, 22px); line-height: 1.8;">
@@ -1109,7 +1109,7 @@ function renderGuideContent() {
       <li><kbd>H</kbd> - User Manual (Guide)</li>
       <li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li>
       <li><kbd>←</kbd> - Open Channel List</li>
-      <li><kbd>←</kbd><kbd>←</kbd> (when list open) - Open Group List</li>
+      <li><kbd>←</kbd> (when list open) - Open Group List</li>
       <li><kbd>→</kbd> - Open Channel Settings</li>
       <li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show Channel Info / Select Item</li>
       <li><kbd>ESC</kbd> - Go Back / Close Panel</li>
@@ -1129,10 +1129,10 @@ function showEpg() {
   aEpgFilteredChannelKeys = Object.keys(channels)
       .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
 
-  const currentKey = aFilteredChannelKeys[iActiveChannelIndex]; 
+  const currentKey = aEpgFilteredChannelKeys[iActiveChannelIndex]; 
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
   if (iEpgChannelIndex === -1) {
-      const currentChannelData = channels[aFilteredChannelKeys[iActiveChannelIndex]]; 
+      const currentChannelData = channels[aEpgFilteredChannelKeys[iActiveChannelIndex]]; 
       if (currentChannelData) {
           iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
       }
@@ -1346,7 +1346,7 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
-
+// --- START: NEW UNIFIED KEYDOWN/REMOTE LOGIC ---
 document.addEventListener('keydown', (e) => {
 
   if (document.activeElement === o.SearchField) {
@@ -1553,6 +1553,9 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
+// --- END: NEW UNIFIED KEYDOWN/REMOTE LOGIC ---
+
+
 /**
  * Gets stats from Shaka Player and updates the Stream Info overlay.
  */
