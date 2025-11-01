@@ -10,8 +10,6 @@
       - [FIX #4] Corrected clearUi logic to close nav when opening EPG.
       - [FIX #5] Corrected "blank panel" bug with a single rAF and manual DOM update.
       - [FIX #6] Fixed "black flash" on first play and implemented default buffering spinner.
-      - [NEW CHANNELS] Added 3 Widevine channels.
-      - [FIX #7] Updated loadChannel to support Widevine DRM.
 */
 
 /* -------------------------
@@ -77,33 +75,6 @@ let channels = {
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
     mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://example.com/placeholder/live.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
-    
-    /* [NEW CHANNELS] Added Widevine Channels */
-    youtubeShakzz: {
-        name: "Youtube.com/@Shakzz05",
-        type: "widevine",
-        manifestUri: "http://161.49.17.2:6610/001/2/ch00000090990000001286/manifest.mpd?JITPDRMType=Widevine&virtualDomain=001.live_hls.zte.com",
-        licenseServer: "http://143.44.136.74:9443/widevine/?deviceId=02:00:00:00:00:00",
-        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz9ny3q_5Tf_ku22-a3aC9FnM-7uHJIFzvx8na_r0vq_nBfJyagCTfzlQ&s=10",
-        group: ["Shakzz"]
-    },
-    gma7: {
-        name: "GMA 7",
-        type: "widevine",
-        manifestUri: "http://161.49.17.2:6610/001/2/ch00000090990000001093/manifest.mpd?JITPDRMType=Widevine&virtualDomain=001.live_hls.zte.com",
-        licenseServer: "http://143.44.136.74:9443/widevine/?deviceId=02:00:00:00:00:00",
-        logo: "https://i.imgur.com/Cu1tAY8.png",
-        group: ["Shakzz"]
-    },
-    gtv: {
-        name: "GTV",
-        type: "widevine",
-        manifestUri: "http://161.49.17.2:6610/001/2/ch00000090990000001143/manifest.mpd?JITPDRMType=Widevine&virtualDomain=001.live_hls.zte.com",
-        licenseServer: "http://143.44.136.74:9443/widevine/?deviceId=02:00:00:00:00:00",
-        logo: "https://i.imgur.com/geuq18u.png",
-        group: ["Shakzz"]
-    }
-    /* [END NEW CHANNELS] */
 };
 
 /* -------------------------
@@ -588,34 +559,11 @@ async function loadChannel(index, options = {}) {
   updateSelectedChannelInNav();
 
   try {
-    /* [FIX #7] Added Widevine DRM support */
-    // Reset all DRM configurations before loading new channel
-    player.configure({
-      drm: {
-        clearKeys: {},
-        servers: {}
-      }
-    });
-
+    // Reset clearkeys each load to avoid leaks
+    player.configure('drm.clearKeys', {});
     if (channel.type === 'clearkey' && channel.keyId && channel.key) {
-      // Configure for Clearkey
-      player.configure({
-        drm: {
-          clearKeys: { [channel.keyId]: channel.key }
-        }
-      });
-    } else if (channel.type === 'widevine' && channel.licenseServer) {
-      // Configure for Widevine
-      player.configure({
-        drm: {
-          servers: {
-            'com.widevine.alpha': channel.licenseServer
-          }
-        }
-      });
+      player.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } });
     }
-    // If type is 'hls' (or unknown), no DRM config is needed
-    /* [END FIX #7] */
 
     player.getNetworkingEngine()?.clearAllRequestFilters();
     if (channel.userAgent) {
