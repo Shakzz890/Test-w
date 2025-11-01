@@ -6,6 +6,7 @@
     - MODIFIED:
       - [FIX #2] popstate listener corrected to avoid double-pop.
       - [FIX #3] touchend listener updated to allow right-swipe inside #nav.
+      - [FOCUS FIX] Added focus management for TV remote (D-pad) navigation.
 */
 
 /* -------------------------
@@ -118,8 +119,7 @@ function popOverlayState() {
   overlayStack.pop();
 }
 
-/* FIX #2: Removed 'popOverlayState()' from here to prevent double-pop on back button */
-/* When the browser Back button is pressed we pop overlays instead of closing page */
+/* [FIX #2] popstate listener corrected */
 window.addEventListener('popstate', (ev) => {
   // If an overlay exists in our stack, close it
   if (overlayStack.length > 0) {
@@ -136,7 +136,6 @@ window.addEventListener('popstate', (ev) => {
         // fallback: try to clear UI
         clearUi();
     }
-    // popOverlayState(); // <--- REMOVED THIS LINE
     // Replace state to avoid navigation if still overlays remain
     try {
       if (overlayStack.length === 0) history.replaceState({}, '');
@@ -258,6 +257,9 @@ async function initPlayer() {
   setupControls();
   showIdleAnimation(true);
   loadInitialChannel();
+  
+  /* [FOCUS FIX] Force focus to the player container on load for remote control */
+  if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
 /* Loader helpers */
@@ -302,7 +304,7 @@ function setupControls() {
     }
   }, { passive: true });
 
-/* FIX #3: Replaced the 'touchend' listener for improved panel swipe logic */
+/* [FIX #3] 'touchend' listener for improved panel swipe */
   playerContainer.addEventListener('touchend', e => {
     if (e.changedTouches.length !== 1) return;
 
@@ -568,6 +570,9 @@ async function loadChannel(index, options = {}) {
     }
 
     await player.load(channel.manifestUri);
+    
+    /* [FOCUS FIX] Ensure player container has focus after loading a channel */
+    if (o.PlayerContainer) o.PlayerContainer.focus();
 
     // attempt autoplay
     if (isSessionActive) {
@@ -971,6 +976,9 @@ window.hideSettingsModal = () => {
   if (o.SettingsModal) o.SettingsModal.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
   popOverlayState();
+  
+  /* [FOCUS FIX] Return focus to player when modal closes */
+  if (o.PlayerContainer) o.PlayerContainer.focus();
 };
 
 function renderModalContent(type) {
@@ -1158,6 +1166,9 @@ function clearUi(exclude) {
       o.TempMessageOverlay.classList.remove('visible');
       o.TempMessageOverlay.classList.add('HIDDEN');
   }
+  
+  /* [FOCUS FIX] Return focus to player when UI is cleared */
+  if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
 /* NAV / Groups toggles with overlay state push/pop */
@@ -1179,6 +1190,9 @@ function hideNav() {
       hideGroups();
   }
   popOverlayState();
+  
+  /* [FOCUS FIX] Return focus to player when nav closes */
+  if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
 function showGroups() {
@@ -1194,6 +1208,7 @@ function hideGroups() {
   if (o.ListContainer) {
       o.ListContainer.classList.remove('groups-opened');
   }
+  // No focus fix here, as nav is still open
 }
 
 function showChannelSettings() {
@@ -1219,6 +1234,9 @@ function hideChannelSettings() {
   bChannelSettingsOpened = false;
   o.ChannelSettings.classList.remove('visible');
   popOverlayState();
+  
+  /* [FOCUS FIX] Return focus to player when settings closes */
+  if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
 /* Guide */
@@ -1237,6 +1255,9 @@ window.hideGuide = () => {
   if (o.Guide) o.Guide.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
   popOverlayState();
+  
+  /* [FOCUS FIX] Return focus to player when guide closes */
+  if (o.PlayerContainer) o.PlayerContainer.focus();
 };
 
 function renderGuideContent() {
@@ -1293,6 +1314,9 @@ function hideEpg() {
     bEpgOpened = false;
     if (o.EpgOverlay) o.EpgOverlay.classList.add('HIDDEN');
     popOverlayState();
+    
+    /* [FOCUS FIX] Return focus to player when epg closes */
+    if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
 function renderEpg() {
@@ -1619,6 +1643,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   // default player keys
+  // Note: Most TV remotes map "OK" to "Enter" and "Back" to "Escape"
   const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
   if (!PLAYER_KEYS.includes(e.key)) return;
 
