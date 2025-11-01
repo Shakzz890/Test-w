@@ -7,6 +7,7 @@
       - [FIX #2] popstate listener corrected to avoid double-pop.
       - [FIX #3] touchend listener updated to allow right-swipe inside #nav.
       - [FOCUS FIX] Added focus management for TV remote (D-pad) navigation.
+      - [FIX #4] Corrected clearUi logic to close nav when opening EPG.
 */
 
 /* -------------------------
@@ -1154,7 +1155,8 @@ function hideIdleAnimation() {
 }
 
 function clearUi(exclude) {
-  if (exclude !== 'nav' && exclude !== 'epg' && exclude !== 'guide') hideNav();
+  /* [FIX #4] Simplified this line to ensure nav closes when EPG/Guide opens */
+  if (exclude !== 'nav') hideNav();
   if (exclude !== 'channelSettings' && exclude !== 'settingsModal') hideChannelSettings();
   if (exclude !== 'guide') hideGuide();
   if (exclude !== 'channelName') hideChannelName();
