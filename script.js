@@ -8,6 +8,7 @@
       - [FIX #3] touchend listener updated to allow right-swipe inside #nav.
       - [FOCUS FIX] Added focus management for TV remote (D-pad) navigation.
       - [FIX #4] Corrected clearUi logic to close nav when opening EPG.
+      - [FIX #1 REVISED] Corrected "blank panel" bug with a single rAF for showVideoFormatMenu.
 */
 
 /* -------------------------
@@ -860,18 +861,27 @@ function renderChannelSettings() {
   } else { console.error("SettingsMainMenu element not found"); }
 }
 
+/* [FIX #1 REVISED] This function now generates the HTML string and the
+   showVideoFormatMenu function handles the DOM update inside a single rAF. */
 function showVideoFormatMenu() {
   if (preventRapidToggle(220)) return;
-  if (o.SettingsContainer) {
-    // use requestAnimationFrame before toggling to avoid blank UI on mobile
+  if (o.SettingsContainer && o.SettingsVideoFormatMenu) { // Check both elements
+    
+    // Get HTML string first
+    const submenuHtml = renderVideoFormatMenu(); 
+    if (submenuHtml === "") return; // Abort if render failed
+
+    // Use requestAnimationFrame before toggling to avoid blank UI on mobile
     requestAnimationFrame(() => {
-      o.SettingsContainer.classList.add('submenu-visible');
+      o.SettingsVideoFormatMenu.innerHTML = submenuHtml; // Set innerHTML
+      o.SettingsContainer.classList.add('submenu-visible'); // Add class
       iVideoSettingsIndex = 0;
-      renderVideoFormatMenu();
+      updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex); // Update selection
+      
       // push overlay state so back button closes settings submenu
       pushOverlayState('channelSettings');
     });
-  } else { console.error("SettingsContainer element not found."); }
+  } else { console.error("SettingsContainer or SettingsVideoFormatMenu element not found."); }
 }
 
 function hideVideoFormatMenu() {
@@ -886,26 +896,26 @@ function hideVideoFormatMenu() {
   } else { console.error("SettingsContainer element not found."); }
 }
 
+/* [FIX #1 REVISED] This function now returns an HTML string */
 function renderVideoFormatMenu() {
-  if (o.SettingsVideoFormatMenu) {
-      const currentFormat = getAspectRatio();
-      const html = `
-        <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
-        <div class="settings-item-header">Video Settings</div>
-        <div class="settings-item" onclick="showSettingsModal('format')">
-          <span>Video format</span>
-          <span style="color: var(--text-medium);">${currentFormat} &gt;</span>
-        </div>
-        <div class="settings-item" onclick="showSettingsModal('quality')">
-          <span>Video track</span>
-          <span style="color: var(--text-medium);">&gt;</span>
-        </div>
-      `;
-      requestAnimationFrame(() => {
-        o.SettingsVideoFormatMenu.innerHTML = html;
-        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-      });
-  } else { console.error("SettingsVideoFormatMenu element not found."); }
+  if (!o.SettingsVideoFormatMenu) {
+      console.error("SettingsVideoFormatMenu element not found.");
+      return ""; // Return empty string on error
+  }
+  const currentFormat = getAspectRatio();
+  const html = `
+    <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
+    <div class="settings-item-header">Video Settings</div>
+    <div class="settings-item" onclick="showSettingsModal('format')">
+      <span>Video format</span>
+      <span style="color: var(--text-medium);">${currentFormat} &gt;</span>
+    </div>
+    <div class="settings-item" onclick="showSettingsModal('quality')">
+      <span>Video track</span>
+      <span style="color: var(--text-medium);">&gt;</span>
+    </div>
+  `;
+  return html; // Return the string
 }
 
 /* Aspect ratio helpers — unchanged */
@@ -944,7 +954,7 @@ function setAspectRatio(format) {
       formatName = 'Original';
   }
   localStorage.setItem('iptvAspectRatio', formatName);
-  renderVideoFormatMenu();
+  renderVideoFormatMenu(); // This is fine, it just re-generates the string for next time
 }
 
 function showSettingsModal(type) {
