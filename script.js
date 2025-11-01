@@ -8,7 +8,8 @@
       - [FIX #3] touchend listener updated to allow right-swipe inside #nav.
       - [FOCUS FIX] Added focus management for TV remote (D-pad) navigation.
       - [FIX #4] Corrected clearUi logic to close nav when opening EPG.
-      - [FIX #1 REVISED] Corrected "blank panel" bug with a single rAF for showVideoFormatMenu.
+      - [FIX #5] Corrected "blank panel" bug with a single rAF and manual DOM update.
+      - [FIX #6] Fixed "black flash" on first play and implemented default buffering spinner.
 */
 
 /* -------------------------
@@ -101,6 +102,7 @@ let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
 let loaderFadeTimeout = null;
 let tempMessageTimeout = null;
+let bHasPlayedOnce = false; /* [FIX #6] For buffering logic */
 
 /* Debounce / throttle helpers to avoid duplicate UI toggles */
 let lastToggleAt = 0;
@@ -203,7 +205,7 @@ async function initPlayer() {
     controlPanelElements: [],
     addSeekBar: false,
     addBigPlayButton: false,
-    showBuffering: true,
+    showBuffering: true, // [FIX #6] This enables the default Shaka spinner
     clickToPlay: false
   });
 
@@ -237,19 +239,25 @@ async function initPlayer() {
   });
 
   player.addEventListener('trackschanged', renderChannelSettings);
+
+  /* [FIX #6] Updated buffering logic */
   player.addEventListener('buffering', (event) => {
-    // show loader when buffering true, hide when false
     if (event.buffering) {
-      if (o.ChannelLoader) {
-        o.ChannelLoader.classList.remove('HIDDEN');
-        o.ChannelLoader.classList.remove('fade-out');
-        o.ChannelLoader.style.opacity = '1';
+      // If it's buffering AND we haven't played the first frame yet (initial load)
+      if (!bHasPlayedOnce) {
+        if (o.ChannelLoader) {
+          o.ChannelLoader.classList.remove('HIDDEN');
+          o.ChannelLoader.classList.remove('fade-out');
+          o.ChannelLoader.style.opacity = '1';
+        }
       }
+      // If bHasPlayedOnce is true, we do nothing, letting Shaka's default spinner show.
     } else {
-      // slight delay to allow smooth fade
+      // Always hide our custom loader when buffering stops
       hideLoaderAndShowVideo();
     }
   });
+  
   player.addEventListener('playing', handlePlaying);
 
   // keep stream info updated
@@ -266,6 +274,8 @@ async function initPlayer() {
 
 /* Loader helpers */
 function handlePlaying() {
+  /* [FIX #6] Set flag that initial load is complete */
+  bHasPlayedOnce = true;
   hideLoaderAndShowVideo();
 }
 function hideLoaderAndShowVideo() {
@@ -534,8 +544,10 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', channelKey);
 
-  // Hide video element to avoid black flash during load
-  if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
+  /* [FIX #6] Only hide video on channel switch, not first play */
+  if (!options.isFirstPlay && o.AvPlayer) {
+    o.AvPlayer.style.opacity = '0';
+  }
 
   if (o.ChannelLoader) {
     o.ChannelLoader.classList.remove('fade-out');
@@ -570,7 +582,9 @@ async function loadChannel(index, options = {}) {
       // ensure the anime background we want (user-provided link)
       o.ChannelLoader.style.backgroundImage = "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg')";
     }
-
+    
+    /* [FIX #6] Reset play flag before loading */
+    bHasPlayedOnce = false;
     await player.load(channel.manifestUri);
     
     /* [FOCUS FIX] Ensure player container has focus after loading a channel */
@@ -861,24 +875,20 @@ function renderChannelSettings() {
   } else { console.error("SettingsMainMenu element not found"); }
 }
 
-/* [FIX #1 REVISED] This function now generates the HTML string and the
-   showVideoFormatMenu function handles the DOM update inside a single rAF. */
+/* [FIX #5] Revised logic for blank panel */
 function showVideoFormatMenu() {
   if (preventRapidToggle(220)) return;
-  if (o.SettingsContainer && o.SettingsVideoFormatMenu) { // Check both elements
+  if (o.SettingsContainer && o.SettingsVideoFormatMenu) {
     
-    // Get HTML string first
-    const submenuHtml = renderVideoFormatMenu(); 
-    if (submenuHtml === "") return; // Abort if render failed
-
-    // Use requestAnimationFrame before toggling to avoid blank UI on mobile
+    const submenuHtml = renderVideoFormatMenu(); // Get the HTML string
+ 
+    // Use requestAnimationFrame before toggling to avoid blank UI
     requestAnimationFrame(() => {
-      o.SettingsVideoFormatMenu.innerHTML = submenuHtml; // Set innerHTML
-      o.SettingsContainer.classList.add('submenu-visible'); // Add class
+      o.SettingsVideoFormatMenu.innerHTML = submenuHtml; // 1. Set HTML
+      o.SettingsContainer.classList.add('submenu-visible'); // 2. Show panel
       iVideoSettingsIndex = 0;
-      updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex); // Update selection
+      updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex); // 3. Set focus
       
-      // push overlay state so back button closes settings submenu
       pushOverlayState('channelSettings');
     });
   } else { console.error("SettingsContainer or SettingsVideoFormatMenu element not found."); }
@@ -896,12 +906,8 @@ function hideVideoFormatMenu() {
   } else { console.error("SettingsContainer element not found."); }
 }
 
-/* [FIX #1 REVISED] This function now returns an HTML string */
+/* [FIX #5] This function now ONLY returns an HTML string */
 function renderVideoFormatMenu() {
-  if (!o.SettingsVideoFormatMenu) {
-      console.error("SettingsVideoFormatMenu element not found.");
-      return ""; // Return empty string on error
-  }
   const currentFormat = getAspectRatio();
   const html = `
     <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
@@ -915,7 +921,7 @@ function renderVideoFormatMenu() {
       <span style="color: var(--text-medium);">&gt;</span>
     </div>
   `;
-  return html; // Return the string
+  return html;
 }
 
 /* Aspect ratio helpers — unchanged */
@@ -954,7 +960,15 @@ function setAspectRatio(format) {
       formatName = 'Original';
   }
   localStorage.setItem('iptvAspectRatio', formatName);
-  renderVideoFormatMenu(); // This is fine, it just re-generates the string for next time
+  
+  /* [FIX #5] Manually re-render the menu if it's open */
+  if (bChannelSettingsOpened && o.SettingsContainer?.classList.contains('submenu-visible')) {
+      const submenuHtml = renderVideoFormatMenu(); // Get new HTML
+      if (o.SettingsVideoFormatMenu) {
+          o.SettingsVideoFormatMenu.innerHTML = submenuHtml; // Apply it
+          updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+      }
+  }
 }
 
 function showSettingsModal(type) {
@@ -1417,7 +1431,8 @@ function handleFirstPlay() {
   hideIdleAnimation();
 
   if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){
-      loadChannel(iChannelListIndex);
+      /* [FIX #6] Pass isFirstPlay option to prevent black flash */
+      loadChannel(iChannelListIndex, { isFirstPlay: true });
   } else {
       console.error("No valid channel selected on first play.");
       showIdleAnimation(true);
