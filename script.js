@@ -1,9 +1,8 @@
 /* script.js — User's preferred logic restored with critical bug fixes.
-    - [FIX #1] "Stuck on Background" race condition fixed by restoring original ChannelLoader logic.
-    - [FIX #2] "Blank Panel" animation bug fixed in showVideoFormatMenu with multi-step rAF.
-    - [FIX #3] Restored user's original keyboard logic for Left Panel (ArrowLeft opens Groups).
-    - [KEPT] User's loading preference: ChannelLoader for channel switch, Shaka circle for mid-stream buffers.
-    - [REVERTED] Removed the logic that hides the Shaka spinner when menus are open.
+    - [FIX #1] "Can't control 2nd panel": Keydown handler for Groups now correctly queries [data-group].
+    - [FIX #2] "Blank Panel" animation bug fixed in showVideoFormatMenu with a stable, multi-step rAF.
+    - [FIX #3] "Mid-stream buffer": Removed my spinner-hiding logic from push/popOverlayState.
+    - [KEPT] All of the user's original logic for panel switching (ArrowLeft) and loading (ChannelLoader).
 */
 
 /* -------------------------
@@ -112,16 +111,16 @@ function preventRapidToggle(ms = 300) {
    ------------------------- */
 const overlayStack = [];
 
-/* [REVERTED] Kept user's original logic (no spinner hiding) */
+/* [FIX #3] REVERTED to your original preference.
+   No spinner-hiding logic. */
 function pushOverlayState(name) {
   overlayStack.push(name);
   try { history.pushState({ overlay: name }, ''); } catch(e) { /* noop for older browsers */ }
 }
-
 function popOverlayState() {
   overlayStack.pop();
 }
-/* --- END --- */
+/* --- END REVERT --- */
 
 window.addEventListener('popstate', (ev) => {
   if (overlayStack.length > 0) {
@@ -1713,3 +1712,4 @@ function updateStreamInfo() {
     Init on DOMContentLoaded
     ------------------------- */
 document.addEventListener('DOMContentLoaded', initPlayer);
+
