@@ -1713,5 +1713,3 @@ function updateStreamInfo() {
     Init on DOMContentLoaded
     ------------------------- */
 document.addEventListener('DOMContentLoaded', initPlayer);
-"
-
