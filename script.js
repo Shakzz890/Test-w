@@ -1,9 +1,12 @@
-/* script.js — Restored old logic and applied bugfixes
+/* script.js — Rebuilt with old logic and all bugfixes
     - Restores iCurrentChannel and old init/load/play logic.
     - Restores old settings panel logic (select dropdown, CodecInfo).
     - Restores old keydown/touch logic.
-    - Fixes: Play button, stuck loader background, channel info on up/down.
-    - MODIFIED: Enabled click-to-pause, fixed ArrowLeft from search bar, AND fixed modal key controls.
+    - Fixes: Play button, stuck loader, channel info on up/down.
+    - Fixes: Left panel opening to wrong list.
+    - Fixes: ArrowLeft from search bar.
+    - Fixes: Modal keyboard control.
+    - Fixes: Click-to-pause enabled and tap-info-panel disabled.
 */
 
 /* -------------------------
@@ -28,7 +31,7 @@ const o = {
   SettingsVideoFormatMenu: document.getElementById('SettingsVideoFormatMenu'),
   SettingsContainer: document.getElementById('settings_container'),
   ChannelSettings: document.getElementById('ChannelSettings'),
-  StreamInfoOverlay: document.getElementById('StreamInfoOverlay'), // Using this from new 'o'
+  CodecInfo: document.getElementById('CodecInfo'),
   Guide: document.getElementById('Guide'),
   GuideContent: document.getElementById('GuideContent'),
   EpgOverlay: document.getElementById('EpgOverlay'),
@@ -40,8 +43,8 @@ const o = {
   ChannelInfoName: document.getElementById('channel_name'),
   ChannelInfoEpg: document.getElementById('channel_epg'),
   ChannelInfoLogo: document.getElementById('ch_logo'),
-  TempMessageOverlay: document.getElementById('TempMessageOverlay'), // Added from new 'o'
-  CodecInfo: document.getElementById('CodecInfo') // From old 'o'
+  // ADDED: Temp Message Overlay
+  TempMessageOverlay: document.getElementById('TempMessageOverlay')
 };
 
 // Restored full channel list
@@ -101,7 +104,6 @@ let bHasPlayedOnce = false; // For buffering logic
     ------------------------- */
 function getEl(id) { return document.getElementById(id); }
 
-// ADDED: showTempMessage from new code
 function showTempMessage(message) {
     if (!o.TempMessageOverlay) return;
     clearTimeout(tempMessageTimeout);
@@ -1009,6 +1011,13 @@ function clearUi(exclude) {
 function showNav() {
   if (!o.Nav) return; 
   // clearUi('nav'); // Old code did not have this
+  
+  // *** BUG FIX: Always reset to channel list view when opening nav ***
+  if (bGroupsOpened) {
+    hideGroups();
+  }
+  // *** END BUG FIX ***
+
   bNavOpened = true;
   o.Nav.classList.add('visible');
   updateSelectedChannelInNav();
