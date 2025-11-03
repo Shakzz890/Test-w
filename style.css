@@ -37,6 +37,8 @@ html, body {
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   user-select: none;
+  -webkit-user-select: none; /* Added for broader compatibility */
+  -moz-user-select: none;
 }
 
 #playerContainer {
@@ -244,6 +246,7 @@ html, body {
   padding: 15px;
   height: 64px;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0; /* Prevent header from shrinking */
 }
 #brand-header svg {
   width: 24px;
@@ -257,6 +260,7 @@ html, body {
 #search_item_wrapper {
   padding: 15px;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0; /* Prevent search from shrinking */
 }
 #SearchField {
   width: 100%;
@@ -276,6 +280,8 @@ html, body {
 /* Panel slide container (Groups / Channels) */
 #list_container_scrollarea {
   flex-grow: 1;
+  /* [REFACTOR] Moved from inline style */
+  height: calc(100vh - 159px);
   overflow: hidden; /* This hides the other panel */
 }
 #list_container {
@@ -355,6 +361,13 @@ html, body {
   color: var(--text-secondary);
   padding: 10px 20px;
   text-transform: uppercase;
+}
+
+/* [REFACTOR] Added rule for inline styled HR */
+.HR {
+  margin: 16px 6px;
+  height: 1px;
+  background: var(--primary-gradient);
 }
 
 .channel-item {
@@ -449,6 +462,9 @@ html, body {
 .channel-item.playing {
   border-left: 3px solid var(--text-primary);
   padding-left: 7px;
+  /* A slightly stronger style for the playing channel */
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 /* -------------------------
@@ -535,6 +551,12 @@ html, body {
   color: var(--text-primary);
 }
 
+/* [REFACTOR] Specific override for Guide popup */
+#Guide .fullscreen-popup {
+  max-width: 800px;
+  padding: 30px;
+}
+
 /* EPG */
 #EpgOverlay {
   display: grid;
@@ -604,6 +626,7 @@ html, body {
   border-radius: 5px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 .popup-content-list li:hover {
   background: var(--bg-hover);
@@ -614,6 +637,8 @@ html, body {
 .popup-content-list li input[type="radio"] {
   transform: scale(1.2);
   accent-color: var(--text-primary);
+  /* Make radio buttons non-interactive for touch */
+  pointer-events: none;
 }
 .popup-buttons {
   padding: 15px;
