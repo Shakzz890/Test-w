@@ -2,17 +2,6 @@
 let player = null;
 let ui = null;
 
-/* script.js - Final corrected version
-   - Keeps your channels object unchanged
-   - Restores settings content (Subtitle/Audio, Video/Format, Add to Favorites)
-   - Fixes left panel nav state machine: 0=closed,1=channels,2=groups
-   - Right panel toggles: open with →, close with → or ←
-   - Shaka initialization & controls preserved
-*/
-
-/* -------------------------
-   Short helpers & DOM map
-   ------------------------- */
 const qs = (sel, root = document) => (root || document).querySelector(sel);
 const qsa = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
 
