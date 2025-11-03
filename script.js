@@ -907,32 +907,39 @@ function renderChannelSettings() {
   } else { console.error("SettingsMainMenu element not found"); }
 }
 
-/* --- FIX: REVISED BLANK PANEL LOGIC --- */
+/* [FIX #5 - REVISED] This new version forces the HTML to paint *before*
+   the animation starts, fixing the "blank panel" bug. */
 function showVideoFormatMenu() {
   if (preventRapidToggle(220)) return;
   if (o.SettingsContainer && o.SettingsVideoFormatMenu) {
     
-    const submenuHtml = renderVideoFormatMenu(); // Get the HTML string
+    const submenuHtml = renderVideoFormatMenu(); // 1. Get the HTML string
  
-    // Use a NESTED requestAnimationFrame to prevent a "blank" transition
+    // Use a multi-step frame update to prevent a "blank" transition
     requestAnimationFrame(() => {
       
-      // 1. Set the HTML first
+      // 2. Set the HTML
       o.SettingsVideoFormatMenu.innerHTML = submenuHtml; 
       
-      // 2. Wait one more frame for the browser to "paint" the new HTML
+      // 3. Wait another frame
       requestAnimationFrame(() => {
-        // 3. NOW add the class to start the animation
-        o.SettingsContainer.classList.add('submenu-visible'); 
+        // 4. Apply the selection. This FORCES the browser to paint the new HTML
+        //    because it has to find the .settings-item elements.
         iVideoSettingsIndex = 0;
-        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex); // 4. Set focus
-        
-        // (We don't push state here, hideVideoFormatMenu handles the pop)
+        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+
+        // 5. Wait one MORE frame (using a 0ms timeout) to let the paint
+        //    register *before* starting the CSS animation.
+        setTimeout(() => {
+          // 6. NOW, and only now, start the transition
+          o.SettingsContainer.classList.add('submenu-visible'); 
+          
+          // We don't push state here; hideVideoFormatMenu handles the pop
+        }, 0); 
       });
     });
   } else { console.error("SettingsContainer or SettingsVideoFormatMenu element not found."); }
 }
-/* --- END FIX --- */
 
 function hideVideoFormatMenu() {
   if (o.SettingsContainer) {
