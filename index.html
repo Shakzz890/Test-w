@@ -36,6 +36,7 @@
   <div id="BlurOverlay" class="fullscreen"></div>
 
   <!-- Temporary Message -->
+  <!-- [FIX] Changed 'class_' to 'class' -->
   <div id="TempMessageOverlay" class="HIDDEN"></div>
 
   <!-- UI Elements -->
@@ -69,8 +70,8 @@
         <input id="SearchField" type="search" placeholder="Search" aria-label="Search Channels" />
       </div>
 
-      <!-- This inner container is for the group/channel slide animation -->
-      <div id="list_container_scrollarea" style="height: calc(100vh - 159px); overflow:hidden;">
+      <!-- [REFACTOR] Removed inline style -->
+      <div id="list_container_scrollarea">
         <div id="list_container">
           <div id="GroupList" class="custom-scrollbar">
             <ul id="main_nav">
@@ -78,7 +79,8 @@
               <li id="epg_button">EPG</li>
             </ul>
 
-            <div class="HR" style="margin:16px 6px; height:1px; background: var(--primary-gradient);"></div>
+            <!-- [REFACTOR] Removed inline style -->
+            <div class="HR"></div>
 
             <h2 class="list_headline">CATEGORIES</h2>
             <ul id="DynamicGroupsList"></ul>
@@ -108,7 +110,8 @@
 
     <!-- GUIDE Modal -->
     <div id="Guide" class="fullscreen HIDDEN" aria-hidden="true">
-      <div class="fullscreen-popup" style="max-width:800px; padding: 30px;">
+      <!-- [REFACTOR] Removed inline style -->
+      <div class="fullscreen-popup">
         <button class="close-button" onclick="hideGuide()" aria-label="Close Guide"></button>
         <div id="GuideContent"></div>
       </div>
@@ -133,4 +136,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
