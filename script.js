@@ -1,19 +1,13 @@
 /* script.js — Cleaned, merged & fixed
-    - Keeps original structure & channels
-    - Fixes: double-click blank panel, mobile back button (history/popstate),
-      play button touch, double-tap fullscreen, buffering spinner, consistent animations,
-      and optimized DOM access / debounced toggles.
-    - MODIFIED:
-      - [FIX #2] popstate listener corrected to avoid double-pop.
-      - [FIX #3] touchend listener updated to allow right-swipe inside #nav.
-      - [FOCUS FIX] Added focus management for TV remote (D-pad) navigation.
-      - [FIX #4] Corrected clearUi logic to close nav when opening EPG.
-      - [FIX #5] Corrected "blank panel" bug with a nested rAF.
-      - [FIX #6] Fixed "black flash" on first play and implemented default buffering spinner.
-      - [FIX #7] (This file) Added spinner-hiding to popstate.
-      - [FIX #8] (This file) EPG now uses filtered channel list.
-      - [FIX #9] (This file) Re-implemented SearchField listener.
-      - [FIX #10] (This file) Added 'Enter' key support to SearchField.
+    - This is the final, definitive script combining all fixes.
+    - [FIX #1] popstate listener corrected to avoid double-pop.
+    - [FIX #2] 'touchend' listener updated for panel swiping.
+    - [FIX #3] Added spinner hiding/showing to push/pop overlay state.
+    - [FIX #4] "Blank Panel" bug fixed with multi-stage rAF function.
+    - [FIX #5] EPG now correctly uses the filtered channel list.
+    - [FIX #6] SearchField 'input' listener is now active.
+    - [FIX #7] SearchField 'Enter' key support added.
+    - [FIX #8] 'playing' listener and bHasPlayedOnce flag fix "black flash"
 */
 
 /* -------------------------
@@ -59,7 +53,7 @@ const o = {
 };
 
 /* -------------------------
-    Channel list (unchanged content kept)
+    Channel list
     ------------------------- */
 let channels = {
     KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
@@ -106,7 +100,7 @@ let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
 let loaderFadeTimeout = null;
 let tempMessageTimeout = null;
-let bHasPlayedOnce = false; /* [FIX #6] For buffering logic */
+let bHasPlayedOnce = false; /* [FIX #8] For buffering logic */
 
 /* Debounce / throttle helpers to avoid duplicate UI toggles */
 let lastToggleAt = 0;
@@ -117,10 +111,12 @@ function preventRapidToggle(ms = 300) {
   return false;
 }
 
-/* Overlay history stack (for popstate back handling) */
+/* -------------------------
+    STATE & HISTORY MGMT
+   ------------------------- */
 const overlayStack = [];
 
-/* --- FIX: ADDED SPINNER HIDING --- */
+/* [FIX #3] Added spinner hiding to push/pop */
 function pushOverlayState(name) {
   // If stack was empty, we are opening the first UI. Hide spinner.
   if (overlayStack.length === 0 && ui) {
@@ -130,6 +126,7 @@ function pushOverlayState(name) {
   overlayStack.push(name);
   try { history.pushState({ overlay: name }, ''); } catch(e) { /* noop for older browsers */ }
 }
+
 function popOverlayState() {
   overlayStack.pop();
 
@@ -138,15 +135,15 @@ function popOverlayState() {
     ui.configure({ showBuffering: true });
   }
 }
-/* --- END FIX --- */
 
-/* [FIX #2] popstate listener corrected */
+/* [FIX #1] popstate listener corrected */
 window.addEventListener('popstate', (ev) => {
   // If an overlay exists in our stack, close it
   if (overlayStack.length > 0) {
     ev.preventDefault?.();
-    const top = overlayStack[overlayStack.length - 1];
-    // close top overlay
+    const top = overlayStack[overlayStack.length - 1]; // Check the top
+    
+    // Call the *correct* hide function, which will trigger popOverlayState()
     switch (top) {
       case 'epg': hideEpg(); break;
       case 'guide': hideGuide(); break;
@@ -222,7 +219,7 @@ async function initPlayer() {
     controlPanelElements: [],
     addSeekBar: false,
     addBigPlayButton: false,
-    showBuffering: true, // [FIX #6] This enables the default Shaka spinner
+    showBuffering: true, // This enables the default Shaka spinner
     clickToPlay: false
   });
 
@@ -257,7 +254,6 @@ async function initPlayer() {
 
   player.addEventListener('trackschanged', renderChannelSettings);
 
-  /* [FIX #6] Updated buffering logic */
   player.addEventListener('buffering', (event) => {
     if (event.buffering) {
       // If it's buffering AND we haven't played the first frame yet (initial load)
@@ -291,7 +287,7 @@ async function initPlayer() {
 
 /* Loader helpers */
 function handlePlaying() {
-  /* [FIX #6] Set flag that initial load is complete */
+  /* [FIX #8] Set flag that initial load is complete */
   bHasPlayedOnce = true;
   hideLoaderAndShowVideo();
 }
@@ -333,7 +329,7 @@ function setupControls() {
     }
   }, { passive: true });
 
-/* [FIX #3] 'touchend' listener for improved panel swipe */
+/* [FIX #2] 'touchend' listener for improved panel swipe */
   playerContainer.addEventListener('touchend', e => {
     if (e.changedTouches.length !== 1) return;
 
@@ -433,7 +429,7 @@ function setupControls() {
     });
   }
 
-  /* --- FIX: ADDED SEARCHFIELD LISTENER --- */
+  /* [FIX #6] ADDED SEARCHFIELD LISTENER */
   if (o.SearchField) {
     o.SearchField.addEventListener('input', () => {
       buildNav(); 
@@ -510,7 +506,7 @@ function handleDoubleTapAction() {
     ------------------------- */
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
-  let initialChannelKey = 'SonictheHedgehog';
+  let initialChannelKey = 'SonictheHedgehog'; // Default
   if (!channels[initialChannelKey]) {
     initialChannelKey = Object.keys(channels)[0];
     if (!initialChannelKey) {
@@ -574,7 +570,7 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', channelKey);
 
-  /* [FIX #6] Only hide video on channel switch, not first play */
+  /* [FIX #8] Only hide video on channel switch, not first play */
   if (!options.isFirstPlay && o.AvPlayer) {
     o.AvPlayer.style.opacity = '0';
   }
@@ -613,7 +609,7 @@ async function loadChannel(index, options = {}) {
       o.ChannelLoader.style.backgroundImage = "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg')";
     }
     
-    /* [FIX #6] Reset play flag before loading */
+    /* [FIX #8] Reset play flag before loading */
     bHasPlayedOnce = false;
     await player.load(channel.manifestUri);
     
@@ -641,7 +637,7 @@ async function loadChannel(index, options = {}) {
 }
 
 /* -------------------------
-    Navigation & UI (keeping original logic but cleaner)
+    Navigation & UI
     ------------------------- */
 function setupMainMenuControls() {
   const guideBtn = getEl('guide_button');
@@ -806,6 +802,7 @@ function buildNav() {
         loadChannel(index);
       } else {
         iChannelListIndex = index;
+        iActiveChannelIndex = index; // Sync active index
         updateSelectedChannelInNav();
       }
       setTimeout(hideNav, 50);
@@ -823,10 +820,15 @@ function buildNav() {
   });
 
   o.ChannelList.appendChild(frag);
+  
+  // Sync selection with active channel
+  const activeKey = aFilteredChannelKeys[iActiveChannelIndex];
+  iChannelListIndex = aFilteredChannelKeys.indexOf(activeKey);
+  if(iChannelListIndex === -1) iChannelListIndex = 0;
+  
   updateSelectedChannelInNav();
 }
 
-/* updateSelectedChannelInNav with extra guards */
 function updateSelectedChannelInNav() {
   if (!o.ChannelList) return;
   try {
@@ -834,15 +836,21 @@ function updateSelectedChannelInNav() {
       if (currentSelected) currentSelected.classList.remove('selected');
 
       const channelItems = qsa('li.channel-item', o.ChannelList);
+      
+      // Remove all playing highlights
+      qsa('li.playing', o.ChannelList).forEach(li => li.classList.remove('playing'));
+      
+      // Add 'playing' class to the active channel
+      if(iActiveChannelIndex >= 0 && iActiveChannelIndex < aFilteredChannelKeys.length) {
+          const activeItem = channelItems[iActiveChannelIndex];
+          if(activeItem) activeItem.classList.add('playing');
+      }
 
+      // Add 'selected' class to the navigated channel
       if (iChannelListIndex >= 0 && iChannelListIndex < channelItems.length) {
           const newItem = channelItems[iChannelListIndex];
           if (newItem) {
             newItem.classList.add('selected');
-            // highlight the currently-playing item with a class for styling
-            channelItems.forEach((li, idx) => {
-              li.classList.toggle('playing', idx === iActiveChannelIndex);
-            });
             if (bNavOpened && typeof newItem.scrollIntoView === 'function') {
                 newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -853,7 +861,7 @@ function updateSelectedChannelInNav() {
           if (firstItem) firstItem.classList.add('selected');
           console.warn("iChannelListIndex was out of bounds, selecting first channel.");
       } else {
-        iChannelListIndex = -1; // Set to -1 to indicate no channel is selected (e.g., search focused)
+        iChannelListIndex = -1; // No items
       }
 
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
@@ -881,7 +889,7 @@ function updateSelectedGroupInNav() {
 }
 
 /* -------------------------
-    Settings & Modals (fixed blank panel / double clicks)
+    Settings & Modals
     ------------------------- */
 function renderChannelSettings() {
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return;
@@ -899,16 +907,15 @@ function renderChannelSettings() {
       `;
       // requestAnimationFrame to avoid innerHTML glitches on mobile when toggling quickly
       requestAnimationFrame(() => {
-        if(o.SettingsMainMenu) { // Double-check element exists in rAF
-           o.SettingsMainMenu.innerHTML = html;
-           updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+        if (o.SettingsMainMenu) { // Check again in rAF
+            o.SettingsMainMenu.innerHTML = html;
+            updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
         }
       });
   } else { console.error("SettingsMainMenu element not found"); }
 }
 
-/* [FIX #5 - REVISED] This new version forces the HTML to paint *before*
-   the animation starts, fixing the "blank panel" bug. */
+/* [FIX #4] This is the new, robust "blank panel" fix */
 function showVideoFormatMenu() {
   if (preventRapidToggle(220)) return;
   if (o.SettingsContainer && o.SettingsVideoFormatMenu) {
@@ -933,8 +940,6 @@ function showVideoFormatMenu() {
         setTimeout(() => {
           // 6. NOW, and only now, start the transition
           o.SettingsContainer.classList.add('submenu-visible'); 
-          
-          // We don't push state here; hideVideoFormatMenu handles the pop
         }, 0); 
       });
     });
@@ -951,7 +956,6 @@ function hideVideoFormatMenu() {
   } else { console.error("SettingsContainer element not found."); }
 }
 
-/* [FIX #5] This function now ONLY returns an HTML string */
 function renderVideoFormatMenu() {
   const currentFormat = getAspectRatio();
   const html = `
@@ -969,7 +973,6 @@ function renderVideoFormatMenu() {
   return html;
 }
 
-/* Aspect ratio helpers — unchanged */
 function getAspectRatio() {
     if (!o.AvPlayer) return 'Original';
     const style = o.AvPlayer.style;
@@ -981,6 +984,7 @@ function getAspectRatio() {
     if (storedFormat) return storedFormat;
     return 'Original';
 }
+
 function setAspectRatio(format) {
   if (!o.AvPlayer) return;
   o.AvPlayer.style.transform = 'scale(1)';
@@ -1009,7 +1013,7 @@ function setAspectRatio(format) {
   }
   localStorage.setItem('iptvAspectRatio', formatName);
   
-  /* [FIX #5] Manually re-render the menu if it's open */
+  // Manually re-render the menu if it's open
   if (bChannelSettingsOpened && o.SettingsContainer?.classList.contains('submenu-visible')) {
       const submenuHtml = renderVideoFormatMenu(); // Get new HTML
       if (o.SettingsVideoFormatMenu) {
@@ -1045,6 +1049,7 @@ function showSettingsModal(type) {
 }
 
 window.hideSettingsModal = () => {
+  if (!bSettingsModalOpened) return; // Prevent double-pop
   bSettingsModalOpened = false;
   if (o.SettingsModal) o.SettingsModal.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
@@ -1227,7 +1232,6 @@ function hideIdleAnimation() {
 }
 
 function clearUi(exclude) {
-  /* [FIX #4] Simplified this line to ensure nav closes when EPG/Guide opens */
   if (exclude !== 'nav') hideNav();
   if (exclude !== 'channelSettings' && exclude !== 'settingsModal') hideChannelSettings();
   if (exclude !== 'guide') hideGuide();
@@ -1242,7 +1246,9 @@ function clearUi(exclude) {
   }
   
   /* [FOCUS FIX] Return focus to player when UI is cleared */
-  if (o.PlayerContainer) o.PlayerContainer.focus();
+  if (o.PlayerContainer && document.activeElement === document.body) {
+    o.PlayerContainer.focus();
+  }
 }
 
 /* NAV / Groups toggles with overlay state push/pop */
@@ -1263,12 +1269,13 @@ function showNav() {
 }
 
 function hideNav() {
+  if (!bNavOpened) return; // Prevent double-pop
   if (!o.Nav) return;
   bNavOpened = false;
   bGroupsOpened = false;
   o.Nav.classList.remove('visible');
   if (o.ListContainer?.classList.contains('groups-opened')) {
-      hideGroups();
+      hideGroups(); // This just resets the class, doesn't pop state
   }
   popOverlayState();
   
@@ -1300,7 +1307,7 @@ function showChannelSettings() {
   if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.remove('HIDDEN');
 
   clearUi('channelSettings');
-  hideVideoFormatMenu();
+  hideVideoFormatMenu(); // Ensure submenu is reset
   iChannelSettingsIndex = 0;
   renderChannelSettings();
   bChannelSettingsOpened = true;
@@ -1310,6 +1317,7 @@ function showChannelSettings() {
 }
 
 function hideChannelSettings() {
+  if (!bChannelSettingsOpened) return; // Prevent double-pop
   if (!o.ChannelSettings) return;
   if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.add('HIDDEN');
   bChannelSettingsOpened = false;
@@ -1332,6 +1340,7 @@ window.showGuide = () => {
   pushOverlayState('guide');
 };
 window.hideGuide = () => {
+  if (!bGuideOpened) return; // Prevent double-pop
   bGuideOpened = false;
   if (o.Guide) o.Guide.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
@@ -1371,7 +1380,7 @@ function showEpg() {
   if (preventRapidToggle()) return;
   clearUi('epg');
 
-  /* --- FIX: Use currently filtered list for EPG --- */
+  /* [FIX #5] EPG now uses the *currently* filtered channel list */
   aEpgFilteredChannelKeys = [...aFilteredChannelKeys];
   
   // Fallback: If current filter is empty (e.g., empty search), show all channels
@@ -1403,6 +1412,7 @@ function showEpg() {
   pushOverlayState('epg');
 }
 function hideEpg() {
+    if (!bEpgOpened) return; // Prevent double-pop
     bEpgOpened = false;
     if (o.EpgOverlay) o.EpgOverlay.classList.add('HIDDEN');
     popOverlayState();
@@ -1497,7 +1507,7 @@ function handleFirstPlay() {
   hideIdleAnimation();
 
   if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){
-      /* [FIX #6] Pass isFirstPlay option to prevent black flash */
+      /* [FIX #8] Pass isFirstPlay option to prevent black flash */
       iActiveChannelIndex = iChannelListIndex; // Sync active index on first play
       loadChannel(iActiveChannelIndex, { isFirstPlay: true });
   } else {
@@ -1553,7 +1563,7 @@ function updateSettingsModalSelection() {
     }
 }
 
-/* Fullscreen toggle (keeps original multi-browser support) */
+/* Fullscreen toggle */
 function toggleFullScreen() {
     const elem = document.documentElement;
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
@@ -1586,7 +1596,7 @@ function toggleFullScreen() {
     ------------------------- */
 document.addEventListener('keydown', (e) => {
   // If search field focused — handle special keys
-  /* --- FIX: ADDED 'Enter' KEY SUPPORT --- */
+  /* [FIX #7] ADDED 'Enter' KEY SUPPORT */
   if (document.activeElement === o.SearchField) {
       if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) {
           e.preventDefault();
