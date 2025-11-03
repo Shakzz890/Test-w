@@ -1,26 +1,29 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Shakzz TV Player</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shakzz TV Player</title>
 
-  <!-- Shaka Player -->
-  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/shaka-player.ui.js" defer></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/controls.css" />
+  <!-- ✅ JW Player -->
+  <script src="https://ssl.p.jwpcdn.com/player/v/8.36.6/jwplayer.js"></script>
+  <script>
+    jwplayer.key = "ITWMv7t88JGzI0xPwW8I0+LveiXX9SWbfdmt0ArUSyc=";
+  </script>
 
-  <!-- App Styles -->
-  <link rel="stylesheet" href="style.css" />
+  <!-- App Styles -->
+  <link rel="stylesheet" href="style.css" />
 
-  <!-- Meta -->
-  <meta name="theme-color" content="#000000" />
+  <!-- Meta -->
+  <meta name="theme-color" content="#000000" />
 </head>
 <body>
-  <!-- Player Container [FIX: Added tabindex='-1' to allow keyboard focus] -->
-  <div id="playerContainer" tabindex="-1">
-    <video id="avplayer" autoplay muted playsinline></video>
+  <!-- Player Container -->
+  <div id="playerContainer" tabindex="-1">
+    <!-- ✅ JW Player Container -->
+    <div id="player"></div>
 
-    <!-- Stream Info -->
+    <!-- Stream Info -->
     <div id="StreamInfoOverlay" class="HIDDEN"></div>
 
     <!-- Loader -->
@@ -36,7 +39,7 @@
   <div id="BlurOverlay" class="fullscreen"></div>
 
   <!-- Temporary Message -->
-  <div id="TempMessageOverlay" class_="HIDDEN"></div>
+  <div id="TempMessageOverlay" class="HIDDEN"></div>
 
   <!-- UI Elements -->
   <div id="ui_elements">
@@ -69,7 +72,7 @@
         <input id="SearchField" type="search" placeholder="Search" aria-label="Search Channels" />
       </div>
 
-      <!-- This inner container is for the group/channel slide animation -->
+      <!-- Scroll area for groups and channels -->
       <div id="list_container_scrollarea" style="height: calc(100vh - 159px); overflow:hidden;">
         <div id="list_container">
           <div id="GroupList" class="custom-scrollbar">
@@ -90,7 +93,6 @@
 
     <!-- Right Settings Panel -->
     <aside id="ChannelSettings" aria-label="Channel Settings">
-      <!-- This inner container is for the settings/video slide animation -->
       <div id="settings_container">
         <div id="SettingsMainMenu" class="custom-scrollbar"></div>
         <div id="SettingsVideoFormatMenu" class="custom-scrollbar"></div>
@@ -126,11 +128,9 @@
         <div id="SettingsModalContent"></div>
       </div>
     </div>
-
   </div>
 
   <!-- Main Script -->
   <script src="script.js"></script>
 </body>
 </html>
-
