@@ -3,7 +3,7 @@
     - Restores old settings panel logic (select dropdown, CodecInfo).
     - Restores old keydown/touch logic.
     - Fixes: Play button, stuck loader background, channel info on up/down.
-    - MODIFIED: Enabled click-to-pause and fixed ArrowLeft from search bar.
+    - MODIFIED: Enabled click-to-pause, fixed ArrowLeft from search bar, AND fixed modal key controls.
 */
 
 /* -------------------------
@@ -640,8 +640,10 @@ function updateSelectedChannelInNav() {
            const firstItem = channelItems[0];
            if (firstItem) firstItem.classList.add('selected');
            console.warn("iCurrentChannel was out of bounds, selecting first channel.");
-       } 
-       // If list is empty (channelItems.length === 0), do nothing
+       } else {
+           // List is empty, reset index
+           iCurrentChannel = -1;
+       }
       
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
 }
@@ -1354,8 +1356,6 @@ if (o.SearchField) {
 
 document.addEventListener('keydown', (e) => {
   // MODIFIED: Handle search bar focus differently
-  if (bSettingsModalOpened) return; // Modals still block everything
-
   if (document.activeElement === o.SearchField) {
       if (e.key === 'ArrowLeft') {
           o.SearchField.blur();
@@ -1390,6 +1390,42 @@ document.addEventListener('keydown', (e) => {
       // Let other keys (typing) pass through
       return;
   }
+  
+  // *** ADDED: Correct block for modal controls ***
+  if (bSettingsModalOpened) {
+      e.preventDefault();
+      const items = o.SettingsModalContent.querySelectorAll('.modal-selectable');
+      if (!items || items.length === 0) {
+          if (e.key === 'Escape') window.hideSettingsModal();
+          return;
+      }
+
+      if (e.key === 'ArrowUp') {
+          iSettingsModalIndex = Math.max(0, iSettingsModalIndex - 1);
+          updateSettingsModalSelection();
+      } else if (e.key === 'ArrowDown') {
+          iSettingsModalIndex = Math.min(items.length - 1, iSettingsModalIndex + 1);
+          updateSettingsModalSelection();
+      } else if (e.key === 'Enter') {
+          const selectedItem = items[iSettingsModalIndex];
+          if (selectedItem) {
+               if (typeof selectedItem.click === 'function') {
+                 // Universal click handler for buttons or list items
+                 selectedItem.click();
+               }
+          }
+      } else if (e.key === 'Escape') {
+          // Find a "CANCEL" or "CLOSE" button to click, otherwise just hide
+          const closeButton = Array.from(items).find(btn => btn.tagName === 'BUTTON' && (btn.textContent.toUpperCase() === 'CANCEL' || btn.textContent.toUpperCase() === 'CLOSE'));
+          if (closeButton) {
+              closeButton.click();
+          } else {
+              window.hideSettingsModal();
+          }
+      }
+      return;
+  }
+  // *** END: Correct block for modal controls ***
 
   // EPG open
   if (bEpgOpened) {
@@ -1457,9 +1493,8 @@ document.addEventListener('keydown', (e) => {
       }
       else if (e.key === 'ArrowRight' || e.key === 'Escape') hideNav(); 
       else if (e.key === 'ArrowLeft') {
-          if (iCurrentChannel !== -1) { // Only show groups if not on search
-            showGroups(); 
-          }
+          // MODIFIED: Removed faulty check
+          showGroups(); 
       }
     }
     return; 
@@ -1596,5 +1631,4 @@ document.addEventListener('touchend', (e) => {
     ------------------------- */
 // Use DOMContentLoaded for standard initialization
 document.addEventListener('DOMContentLoaded', initPlayer);
-
 
