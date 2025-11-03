@@ -16,6 +16,7 @@
       - [FIX #10] (This file) Added 'Enter' key support to SearchField.
       - [FIX #11] (This file) Fixed stuck anime background on up/down channel switch.
       - [FIX #12] (This file) Fixed channel info not showing on up/down channel switch.
+      - [FIX #13] (This file) Removed faulty check that blocked ArrowLeft from opening group list.
 */
 
 /* -------------------------
@@ -1805,4 +1806,12 @@ function updateStreamInfo() {
     Init on DOMContentLoaded
     ------------------------- */
 document.addEventListener('DOMContentLoaded', initPlayer);
+" in the canvas. I want you to make the following edits:
+- I want you to change this line `else if (e.key === 'ArrowLeft') { // REVERTED: Only Left shows groups
+          if (iChannelListIndex !== -1) showGroups();
+      }` to `else if (e.key === 'ArrowLeft') { // REVERTED: Only Left shows groups
+          showGroups();
+      }`
+- Make sure to update the modification comment number to `[FIX #13]`. For example: `[FIX #12] (This file) Fixed channel info not showing on up/down channel switch.` should be `[FIX #13] (This file) Fixed channel info not showing on up/down channel switch.`
+- Make sure to add a new modification comment `[FIX #14] (This file) Removed faulty check that blocked ArrowLeft from opening group list.`
 
