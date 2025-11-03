@@ -116,11 +116,21 @@ function preventRapidToggle(ms = 300) {
 /* Overlay history stack (for popstate back handling) */
 const overlayStack = [];
 function pushOverlayState(name) {
+  // If stack was empty, we are opening the first UI. Hide spinner.
+  if (overlayStack.length === 0 && ui) {
+    ui.configure({ showBuffering: false });
+  }
+
   overlayStack.push(name);
   try { history.pushState({ overlay: name }, ''); } catch(e) { /* noop for older browsers */ }
 }
 function popOverlayState() {
   overlayStack.pop();
+
+  // If stack is now empty, we closed the last UI. Show spinner.
+  if (overlayStack.length === 0 && ui) {
+    ui.configure({ showBuffering: true });
+  }
 }
 
 /* [FIX #2] popstate listener corrected */
@@ -415,6 +425,19 @@ function setupControls() {
       handleFirstPlay();
     });
   }
+
+  /* --- ADDED SEARCHFIELD LISTENER --- */
+  if (o.SearchField) {
+    o.SearchField.addEventListener('input', () => {
+      buildNav(); 
+      if (aFilteredChannelKeys.length > 0) {
+        // Reset index but don't auto-load, just highlight
+        iChannelListIndex = 0; 
+        updateSelectedChannelInNav(); 
+      }
+    });
+  } else { console.error("SearchField element not found."); }
+  /* --- END --- */
 }
 
 /* Swipe logic (mobile) */
@@ -811,7 +834,7 @@ function updateSelectedChannelInNav() {
             newItem.classList.add('selected');
             // highlight the currently-playing item with a class for styling
             channelItems.forEach((li, idx) => {
-              li.classList.toggle('playing', idx === iChannelListIndex);
+              li.classList.toggle('playing', idx === iActiveChannelIndex);
             });
             if (bNavOpened && typeof newItem.scrollIntoView === 'function') {
                 newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -823,7 +846,7 @@ function updateSelectedChannelInNav() {
           if (firstItem) firstItem.classList.add('selected');
           console.warn("iChannelListIndex was out of bounds, selecting first channel.");
       } else {
-        iChannelListIndex = 0;
+        iChannelListIndex = -1; // Set to -1 to indicate no channel is selected (e.g., search focused)
       }
 
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
@@ -869,8 +892,10 @@ function renderChannelSettings() {
       `;
       // requestAnimationFrame to avoid innerHTML glitches on mobile when toggling quickly
       requestAnimationFrame(() => {
-        o.SettingsMainMenu.innerHTML = html;
-        updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+        if (o.SettingsMainMenu) { // Double-check element exists in rAF
+           o.SettingsMainMenu.innerHTML = html;
+           updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+        }
       });
   } else { console.error("SettingsMainMenu element not found"); }
 }
@@ -885,11 +910,17 @@ function showVideoFormatMenu() {
     // Use requestAnimationFrame before toggling to avoid blank UI
     requestAnimationFrame(() => {
       o.SettingsVideoFormatMenu.innerHTML = submenuHtml; // 1. Set HTML
+      
+      // We must force the browser to paint the new HTML *before*
+      // we apply the class that starts the animation.
+      // Reading a layout property like offsetHeight forces this.
+      void o.SettingsVideoFormatMenu.offsetHeight; 
+      
       o.SettingsContainer.classList.add('submenu-visible'); // 2. Show panel
       iVideoSettingsIndex = 0;
       updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex); // 3. Set focus
       
-      pushOverlayState('channelSettings');
+      // We don't push state here; hideVideoFormatMenu handles the pop
     });
   } else { console.error("SettingsContainer or SettingsVideoFormatMenu element not found."); }
 }
@@ -901,8 +932,6 @@ function hideVideoFormatMenu() {
       if (o.SettingsMainMenu) {
           updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
       } else { console.error("SettingsMainMenu element not found for focus update."); }
-      // pop overlay state if we pushed it earlier
-      popOverlayState();
   } else { console.error("SettingsContainer element not found."); }
 }
 
@@ -931,7 +960,10 @@ function getAspectRatio() {
     if (style.objectFit === 'fill') return 'Stretch';
     if (style.objectFit === 'cover' && style.transform === 'scale(1.15)') return 'Zoom';
     if (style.objectFit === 'cover') return 'Fill';
-    return localStorage.getItem('iptvAspectRatio') || 'Original';
+    // Fallback to localStorage or 'Original'
+    const storedFormat = localStorage.getItem('iptvAspectRatio');
+    if (storedFormat) return storedFormat;
+    return 'Original';
 }
 function setAspectRatio(format) {
   if (!o.AvPlayer) return;
@@ -1151,7 +1183,7 @@ function toggleFavourite() {
       } else if (aFilteredChannelKeys.length > 0) {
           iChannelListIndex = 0;
       } else {
-          iChannelListIndex = 0;
+          iChannelListIndex = -1; // No channels left, e.g. in favs
       }
       updateSelectedChannelInNav();
   }
@@ -1201,8 +1233,15 @@ function clearUi(exclude) {
 function showNav() {
   if (!o.Nav) return;
   if (preventRapidToggle()) return;
+  clearUi('nav'); // Clear other UIs when nav opens
   bNavOpened = true;
   o.Nav.classList.add('visible');
+  
+  // Refresh highlight
+  const currentKey = aFilteredChannelKeys[iActiveChannelIndex];
+  iChannelListIndex = aFilteredChannelKeys.indexOf(currentKey);
+  if (iChannelListIndex === -1) iChannelListIndex = iActiveChannelIndex;
+  
   updateSelectedChannelInNav();
   pushOverlayState('nav');
 }
@@ -1316,17 +1355,28 @@ function showEpg() {
   if (preventRapidToggle()) return;
   clearUi('epg');
 
-  aEpgFilteredChannelKeys = Object.keys(channels)
-      .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
+  /* --- Use currently filtered list for EPG --- */
+  aEpgFilteredChannelKeys = [...aFilteredChannelKeys];
+  
+  // Fallback: If current filter is empty (e.g., empty search), show all channels
+  if (aEpgFilteredChannelKeys.length === 0) {
+      aEpgFilteredChannelKeys = Object.keys(channels)
+          .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
+  }
+  /* --- END --- */
 
   const currentKey = aFilteredChannelKeys[iActiveChannelIndex];
+  // Find index in the (potentially different) EPG list
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
+  
   if (iEpgChannelIndex === -1) {
-      const currentChannelData = channels[aEpgFilteredChannelKeys[iActiveChannelIndex]];
-      if (currentChannelData) {
-          iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
-      }
-      if (iEpgChannelIndex === -1) iEpgChannelIndex = 0;
+    // If not found (e.g., was in 'all' but EPG is in 'cartoons'), try to find by number
+    const currentChannelData = channels[currentKey];
+    if (currentChannelData) {
+        iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
+    }
+    // If still not found, default to first item
+    if (iEpgChannelIndex === -1) iEpgChannelIndex = 0;
   }
 
   renderEpg();
@@ -1414,8 +1464,8 @@ function loadFavoritesFromStorage() {
 function saveFavoritesToStorage() {
   try {
     const favs = Object.entries(channels)
-                        .filter(([,ch]) => ch && ch.favorite)
-                        .map(([key]) => key);
+                         .filter(([,ch]) => ch && ch.favorite)
+                         .map(([key]) => key);
     localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs));
     console.log("Saved Favorites:", favs);
   } catch(e) { console.error("Error saving favorites:", e); }
@@ -1432,7 +1482,8 @@ function handleFirstPlay() {
 
   if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){
       /* [FIX #6] Pass isFirstPlay option to prevent black flash */
-      loadChannel(iChannelListIndex, { isFirstPlay: true });
+      iActiveChannelIndex = iChannelListIndex; // Sync active index on first play
+      loadChannel(iActiveChannelIndex, { isFirstPlay: true });
   } else {
       console.error("No valid channel selected on first play.");
       showIdleAnimation(true);
@@ -1528,11 +1579,17 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'Escape') {
           e.preventDefault();
           o.SearchField.blur();
-          iChannelListIndex = 0;
+          iChannelListIndex = iActiveChannelIndex; // Revert to active channel
+          updateSelectedChannelInNav();
+      } else if (e.key === 'Enter') { // Added 'Enter' key support
+          e.preventDefault();
+          o.SearchField.blur();
+          iChannelListIndex = (aFilteredChannelKeys.length > 0) ? 0 : -1;
           updateSelectedChannelInNav();
       }
       return;
   }
+  /* --- END --- */
 
   if (bGuideOpened) {
       e.preventDefault();
@@ -1558,7 +1615,7 @@ document.addEventListener('keydown', (e) => {
           const selectedItem = items[iSettingsModalIndex];
           if (selectedItem) {
               if (selectedItem.tagName === 'LI' && selectedItem.hasAttribute('data-value')) {
-                  const type = o.SettingsModalContent.querySelector('input[name="quality"]') ? 'quality' : 'format';
+                  const type = o.SettingsModalContent.querySelector('input[name="quality"]') ? 'quality' : (o.SettingsModalContent.querySelector('input[name="format"]') ? 'format' : 'other');
                   if (type === 'quality') {
                       window.applyQualityAndClose(selectedItem.dataset.value);
                   } else if (type === 'format') {
@@ -1571,7 +1628,7 @@ document.addEventListener('keydown', (e) => {
               }
           }
       } else if (e.key === 'Escape') {
-          const closeButton = Array.from(items).find(btn => btn.tagName === 'BUTTON' && (btn.textContent === 'CANCEL' || btn.textContent === 'CLOSE'));
+          const closeButton = Array.from(items).find(btn => btn.tagName === 'BUTTON' && (btn.textContent.toUpperCase() === 'CANCEL' || btn.textContent.toUpperCase() === 'CLOSE'));
           if (closeButton) closeButton.click();
           else window.hideSettingsModal();
       }
@@ -1651,7 +1708,7 @@ document.addEventListener('keydown', (e) => {
         else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
         else if (e.key === 'Enter') submenuItems[iVideoSettingsIndex]?.click();
         else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
-            if (iVideoSettingsIndex === 0 && e.key === 'ArrowLeft') submenuItems[0]?.click();
+            if (iVideoSettingsIndex === 0 && (e.key === 'ArrowLeft' || e.key === 'Escape')) submenuItems[0]?.click(); // Back button
             else hideVideoFormatMenu();
         }
         updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
@@ -1662,7 +1719,7 @@ document.addEventListener('keydown', (e) => {
         else if (e.key === 'Enter') mainItems[iChannelSettingsIndex]?.click();
         else if (e.key === 'ArrowRight') {
             const selectedItem = mainItems[iChannelSettingsIndex];
-            if (selectedItem && iChannelSettingsIndex === 1) selectedItem.click();
+            if (selectedItem && iChannelSettingsIndex === 1) selectedItem.click(); // Open submenu on right
         } else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideChannelSettings();
         updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
     }
@@ -1705,7 +1762,7 @@ function updateStreamInfo() {
     const codecs = variant.codecs || 'N/A';
     const resolution = `${variant.width}x${variant.height}`;
     const bandwidth = (variant.bandwidth / 1000000).toFixed(2);
-    infoOverlay.innerHTML = `Codecs:      ${codecs}\nResolution: ${resolution}\nBandwidth:  ${bandwidth} Mbit/s`;
+    infoOverlay.innerHTML = `Codecs:     ${codecs}\nResolution: ${resolution}\nBandwidth:  ${bandwidth} Mbit/s`;
   } catch (error) {
     console.warn("Could not get stream info:", error);
     infoOverlay.innerHTML = 'Stream Info: Error';
