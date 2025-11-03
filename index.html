@@ -17,7 +17,7 @@
 </head>
 <body>
   <!-- Player Container -->
-  <div id="playerContainer">
+  <div id="playerContainer" tabindex="-1">
     <video id="avplayer" autoplay muted playsinline></video>
 
     <!-- Stream Info -->
@@ -36,7 +36,7 @@
   <div id="BlurOverlay" class="fullscreen"></div>
 
   <!-- Temporary Message -->
-  <div id="TempMessageOverlay" class="HIDDEN"></div>
+  <div id="TempMessageOverlay" class_="HIDDEN"></div>
 
   <!-- UI Elements -->
   <div id="ui_elements">
@@ -59,8 +59,8 @@
       <div id="brand-header">
         <svg viewBox="0 0 24 24" fill="white">
           <path d="M21,3H3C1.89,3,1,3.89,1,5V17C1,18.11,1.89,19,3,19H8V21H16V19H21
-                   C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17
-                   M16,11L11,15V7L16,11Z"></path>
+                       C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17
+                       M16,11L11,15V7L16,11Z"></path>
         </svg>
         <span>Shakzz TV</span>
       </div>
@@ -69,7 +69,8 @@
         <input id="SearchField" type="search" placeholder="Search" aria-label="Search Channels" />
       </div>
 
-      <div id="list_container_scrollarea" style="height: calc(100vh - 159px);">
+      <!-- This inner container is for the group/channel slide animation -->
+      <div id="list_container_scrollarea" style="height: calc(100vh - 159px); overflow:hidden;">
         <div id="list_container">
           <div id="GroupList" class="custom-scrollbar">
             <ul id="main_nav">
@@ -89,6 +90,7 @@
 
     <!-- Right Settings Panel -->
     <aside id="ChannelSettings" aria-label="Channel Settings">
+      <!-- This inner container is for the settings/video slide animation -->
       <div id="settings_container">
         <div id="SettingsMainMenu" class="custom-scrollbar"></div>
         <div id="SettingsVideoFormatMenu" class="custom-scrollbar"></div>
