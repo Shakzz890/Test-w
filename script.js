@@ -1,7 +1,9 @@
-/* script.js — User's preferred logic restored with critical bug fixes.
-    - [FIX #1] "Left Panel Bug": Added `bGroupsOpened = false;` to `hideNav()` to ensure it always resets.
-    - [FIX #2] "Stuck Background Bug": `loadChannel` now cancels any old fade-out animations.
-    - [KEPT] All of the user's original logic (Blank Panel fix, mid-stream buffer, etc.).
+/* script.js — User's PREFERRED logic restored, with critical bug fixes.
+    - [FIX #1] "Stuck Background Bug": `loadChannel` now cancels any old fade-out animations.
+    - [FIX #2] "Blank Panel" animation bug fixed in showVideoFormatMenu with multi-step rAF.
+    - [FIX #3] "Left Panel State" bug fixed. `hideNav()` now resets `bGroupsOpened`.
+    - [KEPT] User's original keydown logic for Left Panel (ArrowLeft opens Groups).
+    - [KEPT] User's original loading logic (ChannelLoader) and buffering (Shaka circle).
 */
 
 /* -------------------------
@@ -1199,7 +1201,8 @@ function hideNav() {
   if (!bNavOpened) return; 
   if (!o.Nav) return;
   bNavOpened = false;
-  bGroupsOpened = false; // [FIX #1] Reset group state when nav closes
+  /* [FIX #1] Reset group state when nav closes */
+  bGroupsOpened = false; 
   o.Nav.classList.remove('visible');
   if (o.ListContainer?.classList.contains('groups-opened')) {
       hideGroups(); 
