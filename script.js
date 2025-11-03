@@ -1,8 +1,9 @@
 /* script.js — Reverted to user's panel logic and updated loading screen.
     - [REVERT #1] Restored user's original showVideoFormatMenu function (single rAF).
     - [REVERT #2] Removed spinner-hiding from push/popOverlayState.
-    - [NEW #1] Channel loading now shows IdleAnimation (anime background) instead of ChannelLoader.
-    - [FIX #1] Player no longer gets "stuck" on the IdleAnimation screen; it now hides on play.
+    - [NEW #1] Channel loading now shows IdleAnimation (anime background).
+    - [FIX #1] Player no longer gets "stuck" on the IdleAnimation screen (fixed race condition).
+    - [FIX #2] Fixed "can't control 2nd panel" bug. Key handler now correctly queries for [data-group].
 */
 
 /* -------------------------
@@ -77,7 +78,7 @@ let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
 let iChannelListIndex = 0;
 let iActiveChannelIndex = 0;
-let iGroupListIndex = 1;
+let iGroupListIndex = 1; // Default to 'ALL CHANNELS'
 let channelNameTimeout = null;
 let isSessionActive = false;
 let bNavOpened = false;
@@ -93,11 +94,11 @@ let aEpgFilteredChannelKeys = [];
 let iSettingsModalIndex = 0;
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
-let loaderFadeTimeout = null; // This is now for the IdleAnimation
+let loaderFadeTimeout = null; // This is for the IdleAnimation
 let tempMessageTimeout = null;
 let bHasPlayedOnce = false;
 
-/* Debounce / throttle helpers to avoid duplicate UI toggles */
+/* Debounce / throttle helpers */
 let lastToggleAt = 0;
 function preventRapidToggle(ms = 300) {
   const now = Date.now();
@@ -139,7 +140,7 @@ window.addEventListener('popstate', (ev) => {
       if (overlayStack.length === 0) history.replaceState({}, '');
     } catch(e){}
   } else {
-    // No overlayStack: let default behaviour happen (exit page)
+    // No overlayStack: let default behaviour happen
   }
 });
 
@@ -172,17 +173,20 @@ async function initPlayer() {
 
   loadFavoritesFromStorage();
   setupMainMenuControls();
-  buildDynamicGroupNav();
-  sSelectedGroup = '__all';
+  buildDynamicGroupNav(); // Build groups first
+  sSelectedGroup = '__all'; // Set default group
 
-  if (o.GroupList) {
-      const allGroupLiItems = qsa('li', o.GroupList);
+  // [FIX #2] Find the *correct* index for 'ALL CHANNELS'
+  if (o.DynamicGroupsList) {
+      const allGroupLiItems = qsa('li[data-group]', o.DynamicGroupsList);
       const initialGroupItem = allGroupLiItems.find(li => li.dataset.group === '__all');
-      iGroupListIndex = initialGroupItem ? allGroupLiItems.indexOf(initialGroupItem) : (allGroupLiItems.findIndex(li => li.textContent.trim() === 'ALL CHANNELS') || 1);
+      iGroupListIndex = initialGroupItem ? allGroupLiItems.indexOf(initialGroupItem) : 0;
+  } else {
+      iGroupListIndex = 1; // Fallback
   }
 
   buildNav();
-  updateSelectedGroupInNav();
+  updateSelectedGroupInNav(); // Update visual selection
 
   await shaka.polyfill.installAll();
   if (!shaka.Player.isBrowserSupported()) {
@@ -474,6 +478,13 @@ function loadInitialChannel() {
 async function loadChannel(index, options = {}) {
   clearTimeout(loaderFadeTimeout);
 
+  /* [FIX #1] Reset fade-out state before loading */
+  if (o.IdleAnimation) {
+      o.IdleAnimation.classList.remove('fade-out');
+      o.IdleAnimation.style.opacity = '1';
+  }
+  /* --- END FIX --- */
+
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0) {
     console.warn("loadChannel called with no filtered channels available.");
     try { await player?.unload(); } catch {}
@@ -612,33 +623,21 @@ function buildDynamicGroupNav() {
 
   allListItems.forEach(li => o.DynamicGroupsList.appendChild(li));
 
-  const fullGroupListItems = qsa('li', o.GroupList);
-  fullGroupListItems.forEach((li, index) => {
-      li.onclick = null;
-      if (li.hasAttribute('data-group')) {
-          li.onclick = () => selectGroup(index);
-      }
-      else if (li.id === 'guide_button') {
-          li.onclick = showGuide;
-      } else if (li.id === 'epg_button') {
-          li.onclick = showEpg;
-      }
+  /* [FIX #2] Attach clicks only to data-group items and pass correct index */
+  const groupListItems = qsa('li[data-group]', o.DynamicGroupsList);
+  groupListItems.forEach((li, index) => {
+      li.onclick = () => selectGroup(li, index); // Pass element and relative index
   });
+
+  // Re-attach clicks for main nav buttons
+  if(getEl('guide_button')) getEl('guide_button').onclick = showGuide;
+  if(getEl('epg_button')) getEl('epg_button').onclick = showEpg;
 }
 
-function selectGroup(index) {
-  if (!o.GroupList || !o.ListContainer) {
+/* [FIX #2] Updated function signature */
+function selectGroup(item, index) { 
+  if (!o.GroupList || !o.ListContainer || !item) {
       console.error("GroupList or ListContainer not found.");
-      return;
-  }
-
-  const groupItems = qsa('li', o.GroupList);
-  if (index < 0 || index >= groupItems.length) {
-      console.warn("Invalid index passed to selectGroup:", index);
-      return;
-  }
-  const item = groupItems[index];
-  if (!item || !item.hasAttribute('data-group')) {
       return;
   }
 
@@ -652,7 +651,7 @@ function selectGroup(index) {
   }
 
   sSelectedGroup = item.dataset.group;
-  iGroupListIndex = index;
+  iGroupListIndex = index; // This is now the correct index (relative to data-group items)
   updateSelectedGroupInNav();
 
   buildNav();
@@ -780,13 +779,14 @@ function updateSelectedChannelInNav() {
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
 }
 
+/* [FIX #2] Updated function to query correctly */
 function updateSelectedGroupInNav() {
-    if (!o.GroupList) return;
+    if (!o.DynamicGroupsList) return; // Target the correct container
     try {
-        const currentSelected = o.GroupList.querySelector('.selected');
+        const currentSelected = o.DynamicGroupsList.querySelector('.selected');
         if (currentSelected) currentSelected.classList.remove('selected');
 
-        const allLis = qsa('li', o.GroupList);
+        const allLis = qsa('li[data-group]', o.DynamicGroupsList); // Query for data-group items
         if (iGroupListIndex >= 0 && iGroupListIndex < allLis.length) {
             const newItem = allLis[iGroupListIndex];
             if (newItem) {
@@ -1552,13 +1552,14 @@ document.addEventListener('keydown', (e) => {
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
-      const groupItems = o.GroupList ? qsa('li', o.GroupList) : [];
+      /* [FIX #2] Query for [data-group] items only */
+      const groupItems = o.DynamicGroupsList ? qsa('li[data-group]', o.DynamicGroupsList) : [];
       const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
 
       if (e.key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       else if (e.key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click();
+      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click(); // This will now click the correct item
       else if (e.key === 'ArrowRight') hideGroups();
       else if (e.key === 'Escape') hideGroups();
       else if (e.key === 'ArrowLeft') { /* intentionally do nothing - last panel */ }
