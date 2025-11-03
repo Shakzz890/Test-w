@@ -610,16 +610,22 @@ async function loadChannel(index, options = {}) {
     bHasPlayedOnce = false;
     await player.load(channel.manifestUri);
     
+    /* [FIX] A successful load means the session is now active. */
+    if (!isSessionActive) {
+        isSessionActive = true;
+        hideIdleAnimation(); // Hide play button if it was visible
+    }
+
     /* [FOCUS FIX] Ensure player container has focus after loading a channel */
     if (o.PlayerContainer) o.PlayerContainer.focus();
 
-    // attempt autoplay
-    if (isSessionActive) {
-      if (o.AvPlayer) {
-        o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e));
-      }
-      showChannelName();
+    // attempt autoplay (always try if session is active, which it now is)
+    if (o.AvPlayer) {
+      o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e));
     }
+    /* [FIX] Show channel name regardless of session state, since load was successful */
+    showChannelName();
+
   } catch (error) {
     console.error(`Error loading channel "${channel?.name}":`, error);
     showIdleAnimation(!isSessionActive);
@@ -1476,9 +1482,8 @@ function saveFavoritesToStorage() {
     ------------------------- */
 function handleFirstPlay() {
   if (isSessionActive) return;
-  isSessionActive = true;
-
-  hideIdleAnimation();
+  // isSessionActive = true; // [FIX] Let loadChannel handle this
+  // hideIdleAnimation(); // [FIX] Let loadChannel handle this
 
   if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){
       /* [FIX #6] Pass isFirstPlay option to prevent black flash */
@@ -1487,7 +1492,7 @@ function handleFirstPlay() {
   } else {
       console.error("No valid channel selected on first play.");
       showIdleAnimation(true);
-      isSessionActive = false;
+      // isSessionActive = false; // [FIX] Not needed
       return;
   }
 }
@@ -1586,6 +1591,14 @@ document.addEventListener('keydown', (e) => {
           o.SearchField.blur();
           iChannelListIndex = (aFilteredChannelKeys.length > 0) ? 0 : -1;
           updateSelectedChannelInNav();
+      } else if (e.key === 'ArrowLeft' && bNavOpened && !bGroupsOpened) { // ADDED THIS
+          e.preventDefault();
+          o.SearchField.blur();
+          showGroups();
+      } else if (e.key === 'ArrowRight' && bNavOpened && !bGroupsOpened) { // ADDED THIS
+          e.preventDefault();
+          o.SearchField.blur();
+          hideNav();
       }
       return;
   }
@@ -1773,3 +1786,5 @@ function updateStreamInfo() {
     Init on DOMContentLoaded
     ------------------------- */
 document.addEventListener('DOMContentLoaded', initPlayer);
+
+
