@@ -1,8 +1,19 @@
-/* script.js — User's preferred logic restored with critical bug fixes.
-    - [FIX #1] "Stuck on Background" race condition fixed in loadChannel.
-    - [FIX #2] "Blank Panel" animation bug fixed in showVideoFormatMenu with multi-step rAF.
-    - [FIX #3] Restored user's original keyboard logic for Left Panel (ArrowLeft opens Groups).
-    - [KEPT] User's loading preference: IdleAnimation for first load, Shaka circle for mid-stream buffers.
+/* script.js — Cleaned, merged & fixed
+    - Keeps original structure & channels
+    - Fixes: double-click blank panel, mobile back button (history/popstate),
+      play button touch, double-tap fullscreen, buffering spinner, consistent animations,
+      and optimized DOM access / debounced toggles.
+    - MODIFIED:
+      - [FIX #2] popstate listener corrected to avoid double-pop.
+      - [FIX #3] touchend listener updated to allow right-swipe inside #nav.
+      - [FOCUS FIX] Added focus management for TV remote (D-pad) navigation.
+      - [FIX #4] Corrected clearUi logic to close nav when opening EPG.
+      - [FIX #5] Corrected "blank panel" bug with a nested rAF.
+      - [FIX #6] Fixed "black flash" on first play and implemented default buffering spinner.
+      - [FIX #7] (This file) Added spinner-hiding to popstate.
+      - [FIX #8] (This file) EPG now uses filtered channel list.
+      - [FIX #9] (This file) Re-implemented SearchField listener.
+      - [FIX #10] (This file) Added 'Enter' key support to SearchField.
 */
 
 /* -------------------------
@@ -22,7 +33,7 @@ const o = {
   DynamicGroupsList: qs('#DynamicGroupsList'),
   ListContainer: qs('#list_container'),
   ChannelList: qs('#ChannelList'),
-  ChannelLoader: qs('#ChannelLoader'), // Kept for safety, but IdleAnimation is used
+  ChannelLoader: qs('#ChannelLoader'),
   IdleAnimation: qs('#IdleAnimation'),
   PlayButton: qs('#PlayButton'),
   BlurOverlay: qs('#BlurOverlay'),
@@ -48,7 +59,7 @@ const o = {
 };
 
 /* -------------------------
-    Channel list
+    Channel list (unchanged content kept)
     ------------------------- */
 let channels = {
     KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
@@ -77,7 +88,7 @@ let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
 let iChannelListIndex = 0;
 let iActiveChannelIndex = 0;
-let iGroupListIndex = 1; // Default to 'ALL CHANNELS'
+let iGroupListIndex = 1;
 let channelNameTimeout = null;
 let isSessionActive = false;
 let bNavOpened = false;
@@ -93,11 +104,11 @@ let aEpgFilteredChannelKeys = [];
 let iSettingsModalIndex = 0;
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
-let loaderFadeTimeout = null; // This is for the IdleAnimation
+let loaderFadeTimeout = null;
 let tempMessageTimeout = null;
-let bHasPlayedOnce = false;
+let bHasPlayedOnce = false; /* [FIX #6] For buffering logic */
 
-/* Debounce / throttle helpers */
+/* Debounce / throttle helpers to avoid duplicate UI toggles */
 let lastToggleAt = 0;
 function preventRapidToggle(ms = 300) {
   const now = Date.now();
@@ -106,26 +117,36 @@ function preventRapidToggle(ms = 300) {
   return false;
 }
 
-/* -------------------------
-    STATE & HISTORY MGMT
-   ------------------------- */
+/* Overlay history stack (for popstate back handling) */
 const overlayStack = [];
 
-/* [REVERT #2] Removed spinner-hiding logic */
+/* --- FIX: ADDED SPINNER HIDING --- */
 function pushOverlayState(name) {
+  // If stack was empty, we are opening the first UI. Hide spinner.
+  if (overlayStack.length === 0 && ui) {
+    ui.configure({ showBuffering: false });
+  }
+  
   overlayStack.push(name);
   try { history.pushState({ overlay: name }, ''); } catch(e) { /* noop for older browsers */ }
 }
-
 function popOverlayState() {
   overlayStack.pop();
-}
-/* --- END REVERT --- */
 
+  // If stack is now empty, we closed the last UI. Show spinner.
+  if (overlayStack.length === 0 && ui) {
+    ui.configure({ showBuffering: true });
+  }
+}
+/* --- END FIX --- */
+
+/* [FIX #2] popstate listener corrected */
 window.addEventListener('popstate', (ev) => {
+  // If an overlay exists in our stack, close it
   if (overlayStack.length > 0) {
     ev.preventDefault?.();
-    const top = overlayStack[overlayStack.length - 1]; 
+    const top = overlayStack[overlayStack.length - 1];
+    // close top overlay
     switch (top) {
       case 'epg': hideEpg(); break;
       case 'guide': hideGuide(); break;
@@ -133,13 +154,15 @@ window.addEventListener('popstate', (ev) => {
       case 'channelSettings': hideChannelSettings(); break;
       case 'nav': hideNav(); break;
       default:
+        // fallback: try to clear UI
         clearUi();
     }
+    // Replace state to avoid navigation if still overlays remain
     try {
       if (overlayStack.length === 0) history.replaceState({}, '');
     } catch(e){}
   } else {
-    // No overlayStack: let default behaviour happen
+    // No overlayStack: let default behaviour happen (exit page)
   }
 });
 
@@ -157,7 +180,7 @@ function showTempMessage(message) {
 
     tempMessageTimeout = setTimeout(() => {
         o.TempMessageOverlay.classList.remove('visible');
-        setTimeout(() => o.TempMessageOverlay.classList.add('HIDDEN'), 3000);
+        setTimeout(() => o.TempMessageOverlay.classList.add('HIDDEN'), 300);
     }, 3000);
 }
 
@@ -165,6 +188,7 @@ function showTempMessage(message) {
     Shaka + Player init
     ------------------------- */
 async function initPlayer() {
+  // assign numbers/keys to channels
   Object.keys(channels).forEach((key, i) => {
     channels[key].number = i + 1;
     channels[key].key = key;
@@ -172,27 +196,18 @@ async function initPlayer() {
 
   loadFavoritesFromStorage();
   setupMainMenuControls();
-  buildDynamicGroupNav(); // Build groups first
-  sSelectedGroup = '__all'; // Set default group
+  buildDynamicGroupNav();
+  sSelectedGroup = '__all';
 
-  // Find the index for 'ALL CHANNELS' based on *all* li items
+  // choose initial group index if possible
   if (o.GroupList) {
-      const allGroupLiItems = qsa('li', o.GroupList); // Get all li items
+      const allGroupLiItems = qsa('li', o.GroupList);
       const initialGroupItem = allGroupLiItems.find(li => li.dataset.group === '__all');
-      
-      if (initialGroupItem) {
-          iGroupListIndex = allGroupLiItems.indexOf(initialGroupItem); 
-      } else {
-           // Fallback if '__all' isn't found 
-          iGroupListIndex = allGroupLiItems.findIndex(li => li.textContent.trim() === 'ALL CHANNELS');
-          if (iGroupListIndex === -1) iGroupListIndex = 1; // Absolute fallback
-      }
-  } else {
-      iGroupListIndex = 1; // Fallback
+      iGroupListIndex = initialGroupItem ? allGroupLiItems.indexOf(initialGroupItem) : (allGroupLiItems.findIndex(li => li.textContent.trim() === 'ALL CHANNELS') || 1);
   }
 
   buildNav();
-  updateSelectedGroupInNav(); // Update visual selection
+  updateSelectedGroupInNav();
 
   await shaka.polyfill.installAll();
   if (!shaka.Player.isBrowserSupported()) {
@@ -207,7 +222,7 @@ async function initPlayer() {
     controlPanelElements: [],
     addSeekBar: false,
     addBigPlayButton: false,
-    showBuffering: true, // Keep Shaka's default spinner
+    showBuffering: true, // [FIX #6] This enables the default Shaka spinner
     clickToPlay: false
   });
 
@@ -222,29 +237,41 @@ async function initPlayer() {
   // events
   player.addEventListener('error', e => {
     console.error('Shaka Error:', e.detail);
-    
-    if (o.IdleAnimation) {
+    const isNetworkOrMediaError =
+      e.detail.category === shaka.util.Error.Category.NETWORK ||
+      e.detail.category === shaka.util.Error.Category.MEDIA ||
+      e.detail.category === shaka.util.Error.Category.STREAMING;
+
+    if (!isNetworkOrMediaError) {
+      showIdleAnimation(true);
+    }
+    // show/hide loader safely
+    if (o.ChannelLoader) {
       clearTimeout(loaderFadeTimeout);
-      o.IdleAnimation.classList.add('HIDDEN');
-      o.IdleAnimation.style.opacity = '1';
-      o.IdleAnimation.classList.remove('fade-out');
+      o.ChannelLoader.classList.add('HIDDEN');
+      o.ChannelLoader.style.opacity = '1';
+      o.ChannelLoader.classList.remove('fade-out');
     }
     if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
-    
-    showIdleAnimation(true);
   });
 
   player.addEventListener('trackschanged', renderChannelSettings);
 
+  /* [FIX #6] Updated buffering logic */
   player.addEventListener('buffering', (event) => {
     if (event.buffering) {
+      // If it's buffering AND we haven't played the first frame yet (initial load)
       if (!bHasPlayedOnce) {
-        showIdleAnimation(false); // Show Idle screen, but hide Play button
+        if (o.ChannelLoader) {
+          o.ChannelLoader.classList.remove('HIDDEN');
+          o.ChannelLoader.classList.remove('fade-out');
+          o.ChannelLoader.style.opacity = '1';
+        }
       }
-      // If bHasPlayedOnce is true, Shaka's default spinner will show (as requested)
+      // If bHasPlayedOnce is true, we do nothing, letting Shaka's default spinner show.
     } else {
-      // Always hide our custom idle screen when buffering stops
-      hideIdleAndShowVideo();
+      // Always hide our custom loader when buffering stops
+      hideLoaderAndShowVideo();
     }
   });
   
@@ -255,32 +282,31 @@ async function initPlayer() {
   player.addEventListener('streaming', updateStreamInfo);
 
   setupControls(); // This now includes the search listener
-  showIdleAnimation(true); // Show idle screen with Play button on start
+  showIdleAnimation(true);
   loadInitialChannel();
   
+  /* [FOCUS FIX] Force focus to the player container on load for remote control */
   if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
-/* [FIX #1] Renamed and updated function */
+/* Loader helpers */
 function handlePlaying() {
+  /* [FIX #6] Set flag that initial load is complete */
   bHasPlayedOnce = true;
-  hideIdleAndShowVideo();
+  hideLoaderAndShowVideo();
 }
-/* [FIX #1] Renamed and updated function */
-function hideIdleAndShowVideo() {
+function hideLoaderAndShowVideo() {
   clearTimeout(loaderFadeTimeout);
   if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
-  
-  // Hide the IdleAnimation instead of ChannelLoader
-  if (o.IdleAnimation && !o.IdleAnimation.classList.contains('HIDDEN')) {
-    o.IdleAnimation.classList.add('fade-out');
+  if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
+    o.ChannelLoader.classList.add('fade-out');
     loaderFadeTimeout = setTimeout(() => {
-      if (o.IdleAnimation) {
-        o.IdleAnimation.classList.add('HIDDEN');
-        o.IdleAnimation.style.opacity = '1';
-        o.IdleAnimation.classList.remove('fade-out');
+      if (o.ChannelLoader) {
+        o.ChannelLoader.classList.add('HIDDEN');
+        o.ChannelLoader.style.opacity = '1';
+        o.ChannelLoader.classList.remove('fade-out');
       }
-    }, 500); // 500ms fade
+    }, 500);
   }
 }
 
@@ -290,7 +316,7 @@ function hideIdleAndShowVideo() {
 function setupControls() {
   const playerContainer = o.PlayerContainer || document.body;
 
-  // touch handlers
+  // touch handlers for swipe and taps
   playerContainer.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
       touchStartX = e.touches[0].clientX;
@@ -307,6 +333,7 @@ function setupControls() {
     }
   }, { passive: true });
 
+/* [FIX #3] 'touchend' listener for improved panel swipe */
   playerContainer.addEventListener('touchend', e => {
     if (e.changedTouches.length !== 1) return;
 
@@ -317,33 +344,48 @@ function setupControls() {
     const SWIPE_THRESHOLD = 50;
     const TAP_THRESHOLD = 15;
 
+    // detect if the start point was inside a panel
     const targetElement = document.elementFromPoint(touchStartX, touchStartY);
     const startedInNav = targetElement?.closest('#nav');
     const startedInOtherModal = targetElement && (targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay'));
 
+
     // Check for swipe gesture
     if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
+        
+        // If swipe started in Nav...
         if (startedInNav) {
+            // ...only allow horizontal right-swipes (to open groups)
             const isHorizontal = absDeltaX > absDeltaY;
             if (isHorizontal && deltaX > 0) { 
                 handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
             }
+            // ... and ignore all other swipes (like vertical scrolling or left-swipe)
+        
+        // If swipe started in another modal, ignore it completely
         } else if (startedInOtherModal) {
             // ignore
+        
+        // Otherwise, it's a swipe on the main player, handle it
         } else {
             handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
         }
-        lastTapTime = 0; 
+
+        lastTapTime = 0; // Reset tap time on any swipe
         touchStartX = touchStartY = touchEndX = touchEndY = 0;
         return;
     }
 
-    // Tap Detection
+    // --- Tap Detection Logic ---
+
+    // If it wasn't a swipe, check if it was a tap that started in *any* panel.
+    // If so, ignore it. We don't want taps in panels to trigger player actions.
     if (startedInNav || startedInOtherModal) {
         touchStartX = touchStartY = touchEndX = touchEndY = 0;
         return;
     }
 
+    // Tap detection (only runs if tap was on the main player area)
     if (absDeltaX < TAP_THRESHOLD && absDeltaY < TAP_THRESHOLD) {
       const currentTime = Date.now();
       if (currentTime - lastTapTime < 300) { // double-tap
@@ -351,18 +393,22 @@ function setupControls() {
         handleDoubleTapAction();
       } else {
         lastTapTime = currentTime;
+        // on mobile single tap -> show channel name (if session active) after short delay
         setTimeout(() => {
+          // if no second tap happened
           if (Date.now() - lastTapTime >= 300) {
             handleSingleTapAction();
           }
         }, 320);
       }
     }
+
     touchStartX = touchStartY = touchEndX = touchEndY = 0;
   }, { passive: false });
 
-  // clicks
+  // clicks / double clicks for mouse
   playerContainer.addEventListener('click', (e) => {
+    // ignore if click is on UI control
     if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay') || e.target.closest('#PlayButton'))) {
       return;
     }
@@ -374,10 +420,12 @@ function setupControls() {
     handleDoubleTapAction();
   });
 
-  // Play button
+  // Play button should work for mouse and touch
   if (o.PlayButton) {
+    // remove duplicates
     o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
+    // touch friendly
     o.PlayButton.removeEventListener('touchend', handleFirstPlay);
     o.PlayButton.addEventListener('touchend', (ev) => {
       ev.preventDefault();
@@ -385,38 +433,58 @@ function setupControls() {
     });
   }
 
-  // Search field
+  /* --- FIX: ADDED SEARCHFIELD LISTENER --- */
   if (o.SearchField) {
     o.SearchField.addEventListener('input', () => {
       buildNav(); 
       if (aFilteredChannelKeys.length > 0) {
+        // Reset index but don't auto-load, just highlight
         iChannelListIndex = 0; 
         updateSelectedChannelInNav(); 
       }
     });
   } else { console.error("SearchField element not found."); }
+  /* --- END FIX --- */
 }
 
 /* Swipe logic (mobile) */
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
 
-  if (bGuideOpened) { hideGuide(); return; }
-  if (bEpgOpened) { hideEpg(); return; }
-  if (bSettingsModalOpened) { window.hideSettingsModal(); return; }
+  // If modals open, horizontal swipe closes them
+  if (bGuideOpened) {
+    hideGuide();
+    return;
+  }
+  if (bEpgOpened) {
+    hideEpg();
+    return;
+  }
+  if (bSettingsModalOpened) {
+    window.hideSettingsModal();
+    return;
+  }
 
   if (isHorizontal) {
     if (deltaX > 0) { // swipe right
-      if (bChannelSettingsOpened) { hideChannelSettings(); }
-      else if (bNavOpened && !bGroupsOpened) { showGroups(); }
-      else if (!bNavOpened) { showNav(); }
+      if (bChannelSettingsOpened) {
+        hideChannelSettings();
+      } else if (bNavOpened && !bGroupsOpened) {
+        showGroups();
+      } else if (!bNavOpened) {
+        showNav();
+      }
     } else { // swipe left
-      if (bGroupsOpened) { hideGroups(); }
-      else if (bNavOpened) { hideNav(); }
-      else if (!bChannelSettingsOpened) { showChannelSettings(); }
+      if (bGroupsOpened) {
+        hideGroups();
+      } else if (bNavOpened) {
+        hideNav();
+      } else if (!bChannelSettingsOpened) {
+        showChannelSettings();
+      }
     }
   } else {
-    // vertical
+    // vertical: change channel (if no modal open)
     if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
       if (deltaY > 0) loadChannel(iActiveChannelIndex + 1);
       else loadChannel(iActiveChannelIndex - 1);
@@ -442,7 +510,7 @@ function handleDoubleTapAction() {
     ------------------------- */
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
-  let initialChannelKey = 'SonictheHedgehog'; 
+  let initialChannelKey = 'SonictheHedgehog';
   if (!channels[initialChannelKey]) {
     initialChannelKey = Object.keys(channels)[0];
     if (!initialChannelKey) {
@@ -480,13 +548,6 @@ function loadInitialChannel() {
 async function loadChannel(index, options = {}) {
   clearTimeout(loaderFadeTimeout);
 
-  /* [FIX #1] Reset fade-out state before loading */
-  if (o.IdleAnimation) {
-      o.IdleAnimation.classList.remove('fade-out');
-      o.IdleAnimation.style.opacity = '1';
-  }
-  /* --- END FIX --- */
-
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0) {
     console.warn("loadChannel called with no filtered channels available.");
     try { await player?.unload(); } catch {}
@@ -494,6 +555,7 @@ async function loadChannel(index, options = {}) {
     return;
   }
 
+  // wrap index with modulo: support negative
   iChannelListIndex = (index < 0) ? (aFilteredChannelKeys.length - 1) : (index % aFilteredChannelKeys.length);
   iActiveChannelIndex = iChannelListIndex;
 
@@ -512,17 +574,22 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', channelKey);
 
+  /* [FIX #6] Only hide video on channel switch, not first play */
   if (!options.isFirstPlay && o.AvPlayer) {
     o.AvPlayer.style.opacity = '0';
   }
 
-  /* [NEW #1] Show IdleAnimation instead of ChannelLoader */
-  showIdleAnimation(false); // Show Idle screen, hide Play button
+  if (o.ChannelLoader) {
+    o.ChannelLoader.classList.remove('fade-out');
+    o.ChannelLoader.style.opacity = '1';
+    o.ChannelLoader.classList.remove('HIDDEN');
+  }
 
   hideChannelName();
   updateSelectedChannelInNav();
 
   try {
+    // Reset clearkeys each load to avoid leaks
     player.configure('drm.clearKeys', {});
     if (channel.type === 'clearkey' && channel.keyId && channel.key) {
       player.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } });
@@ -535,20 +602,25 @@ async function loadChannel(index, options = {}) {
       });
     }
 
+    // autoplay fix: unmute before load in session play
     if (isSessionActive && o.AvPlayer) {
         o.AvPlayer.muted = false;
     }
 
-    // apply anime background
-    if (o.IdleAnimation) {
-      o.IdleAnimation.style.backgroundImage = "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg')";
+    // apply anime background on channel switch (animation)
+    if (o.ChannelLoader) {
+      // ensure the anime background we want (user-provided link)
+      o.ChannelLoader.style.backgroundImage = "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg')";
     }
     
+    /* [FIX #6] Reset play flag before loading */
     bHasPlayedOnce = false;
     await player.load(channel.manifestUri);
     
+    /* [FOCUS FIX] Ensure player container has focus after loading a channel */
     if (o.PlayerContainer) o.PlayerContainer.focus();
 
+    // attempt autoplay
     if (isSessionActive) {
       if (o.AvPlayer) {
         o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e));
@@ -557,21 +629,19 @@ async function loadChannel(index, options = {}) {
     }
   } catch (error) {
     console.error(`Error loading channel "${channel?.name}":`, error);
-    /* [NEW #1] Hide IdleAnimation on error */
-    if (o.IdleAnimation) {
+    showIdleAnimation(!isSessionActive);
+    if (o.ChannelLoader) {
       clearTimeout(loaderFadeTimeout);
-      o.IdleAnimation.classList.add('HIDDEN');
-      o.IdleAnimation.style.opacity = '1';
-      o.IdleAnimation.classList.remove('fade-out');
+      o.ChannelLoader.classList.add('HIDDEN');
+      o.ChannelLoader.style.opacity = '1';
+      o.ChannelLoader.classList.remove('fade-out');
     }
     if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
-    
-    showIdleAnimation(!isSessionActive); // Show idle screen with play button
   }
 }
 
 /* -------------------------
-    Navigation & UI
+    Navigation & UI (keeping original logic but cleaner)
     ------------------------- */
 function setupMainMenuControls() {
   const guideBtn = getEl('guide_button');
@@ -625,13 +695,12 @@ function buildDynamicGroupNav() {
 
   allListItems.forEach(li => o.DynamicGroupsList.appendChild(li));
 
-  // [FIX #3] Re-bind clicks to *all* li elements in GroupList
+  // bind clicks to group list (we use on-the-fly index mapping)
   const fullGroupListItems = qsa('li', o.GroupList);
   fullGroupListItems.forEach((li, index) => {
       li.onclick = null;
       if (li.hasAttribute('data-group')) {
-          // Find the index *relative to the full list*
-          li.onclick = () => selectGroup(li, index); 
+          li.onclick = () => selectGroup(index);
       }
       else if (li.id === 'guide_button') {
           li.onclick = showGuide;
@@ -641,13 +710,21 @@ function buildDynamicGroupNav() {
   });
 }
 
-/* [FIX #3] Updated function signature to use the element and full index */
-function selectGroup(item, index) { 
-  if (!o.GroupList || !o.ListContainer || !item) {
+function selectGroup(index) {
+  if (!o.GroupList || !o.ListContainer) {
       console.error("GroupList or ListContainer not found.");
       return;
   }
-   // No need to check item, it's guaranteed to be a data-group item
+
+  const groupItems = qsa('li', o.GroupList);
+  if (index < 0 || index >= groupItems.length) {
+      console.warn("Invalid index passed to selectGroup:", index);
+      return;
+  }
+  const item = groupItems[index];
+  if (!item || !item.hasAttribute('data-group')) {
+      return;
+  }
 
   if (item.dataset.group === '__fav') {
       const hasFavorites = Object.values(channels).some(ch => ch.favorite === true);
@@ -659,7 +736,7 @@ function selectGroup(item, index) {
   }
 
   sSelectedGroup = item.dataset.group;
-  iGroupListIndex = index; // This is now the correct index (relative to all li's)
+  iGroupListIndex = index;
   updateSelectedGroupInNav();
 
   buildNav();
@@ -701,6 +778,7 @@ function buildNav() {
 
   console.log(`Building Nav for group: "${sSelectedGroup}", Found channels: ${aFilteredChannelKeys.length}`);
 
+  // keep a reference to scroll top if needed
   if (o.ChannelList) {
     o.ChannelList.innerHTML = '';
     o.ChannelList.scrollTop = 0;
@@ -722,12 +800,12 @@ function buildNav() {
     const item = document.createElement('li');
     item.className = 'channel-item';
     item.onclick = () => {
+      // debounce double clicks
       if (preventRapidToggle(220)) return;
       if (isSessionActive) {
         loadChannel(index);
       } else {
         iChannelListIndex = index;
-        iActiveChannelIndex = index; // Sync active index
         updateSelectedChannelInNav();
       }
       setTimeout(hideNav, 50);
@@ -745,32 +823,26 @@ function buildNav() {
   });
 
   o.ChannelList.appendChild(frag);
-  
-  const activeKey = aFilteredChannelKeys[iActiveChannelIndex];
-  iChannelListIndex = aFilteredChannelKeys.indexOf(activeKey);
-  if(iChannelListIndex === -1) iChannelListIndex = 0;
-  
   updateSelectedChannelInNav();
 }
 
+/* updateSelectedChannelInNav with extra guards */
 function updateSelectedChannelInNav() {
   if (!o.ChannelList) return;
   try {
       const currentSelected = o.ChannelList.querySelector('.selected');
       if (currentSelected) currentSelected.classList.remove('selected');
-      qsa('li.playing', o.ChannelList).forEach(li => li.classList.remove('playing'));
 
       const channelItems = qsa('li.channel-item', o.ChannelList);
-      
-      if(iActiveChannelIndex >= 0 && iActiveChannelIndex < channelItems.length) {
-          const activeItem = channelItems[iActiveChannelIndex];
-          if(activeItem) activeItem.classList.add('playing');
-      }
 
       if (iChannelListIndex >= 0 && iChannelListIndex < channelItems.length) {
           const newItem = channelItems[iChannelListIndex];
           if (newItem) {
             newItem.classList.add('selected');
+            // highlight the currently-playing item with a class for styling
+            channelItems.forEach((li, idx) => {
+              li.classList.toggle('playing', idx === iActiveChannelIndex);
+            });
             if (bNavOpened && typeof newItem.scrollIntoView === 'function') {
                 newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -781,20 +853,19 @@ function updateSelectedChannelInNav() {
           if (firstItem) firstItem.classList.add('selected');
           console.warn("iChannelListIndex was out of bounds, selecting first channel.");
       } else {
-        iChannelListIndex = -1;
+        iChannelListIndex = -1; // Set to -1 to indicate no channel is selected (e.g., search focused)
       }
 
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
 }
 
-/* [FIX #3] Updated function to query all li's */
 function updateSelectedGroupInNav() {
-    if (!o.GroupList) return; // Target the top-level container
+    if (!o.GroupList) return;
     try {
         const currentSelected = o.GroupList.querySelector('.selected');
         if (currentSelected) currentSelected.classList.remove('selected');
 
-        const allLis = qsa('li', o.GroupList); // Query for ALL li elements
+        const allLis = qsa('li', o.GroupList);
         if (iGroupListIndex >= 0 && iGroupListIndex < allLis.length) {
             const newItem = allLis[iGroupListIndex];
             if (newItem) {
@@ -810,7 +881,7 @@ function updateSelectedGroupInNav() {
 }
 
 /* -------------------------
-    Settings & Modals
+    Settings & Modals (fixed blank panel / double clicks)
     ------------------------- */
 function renderChannelSettings() {
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iActiveChannelIndex >= aFilteredChannelKeys.length) return;
@@ -820,21 +891,24 @@ function renderChannelSettings() {
 
   if (o.SettingsMainMenu) {
       const currentFormat = getAspectRatio();
+      // Build HTML once and set it atomically
       const html = `
         <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
         <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
       `;
+      // requestAnimationFrame to avoid innerHTML glitches on mobile when toggling quickly
       requestAnimationFrame(() => {
-        if (o.SettingsMainMenu) { 
-            o.SettingsMainMenu.innerHTML = html;
-            updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+        if(o.SettingsMainMenu) { // Double-check element exists in rAF
+           o.SettingsMainMenu.innerHTML = html;
+           updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
         }
       });
   } else { console.error("SettingsMainMenu element not found"); }
 }
 
-/* [FIX #2] This is the new, robust "blank panel" fix */
+/* [FIX #5 - REVISED] This new version forces the HTML to paint *before*
+   the animation starts, fixing the "blank panel" bug. */
 function showVideoFormatMenu() {
   if (preventRapidToggle(220)) return;
   if (o.SettingsContainer && o.SettingsVideoFormatMenu) {
@@ -859,12 +933,13 @@ function showVideoFormatMenu() {
         setTimeout(() => {
           // 6. NOW, and only now, start the transition
           o.SettingsContainer.classList.add('submenu-visible'); 
+          
+          // We don't push state here; hideVideoFormatMenu handles the pop
         }, 0); 
       });
     });
   } else { console.error("SettingsContainer or SettingsVideoFormatMenu element not found."); }
 }
-
 
 function hideVideoFormatMenu() {
   if (o.SettingsContainer) {
@@ -876,6 +951,7 @@ function hideVideoFormatMenu() {
   } else { console.error("SettingsContainer element not found."); }
 }
 
+/* [FIX #5] This function now ONLY returns an HTML string */
 function renderVideoFormatMenu() {
   const currentFormat = getAspectRatio();
   const html = `
@@ -893,17 +969,18 @@ function renderVideoFormatMenu() {
   return html;
 }
 
+/* Aspect ratio helpers — unchanged */
 function getAspectRatio() {
     if (!o.AvPlayer) return 'Original';
     const style = o.AvPlayer.style;
     if (style.objectFit === 'fill') return 'Stretch';
     if (style.objectFit === 'cover' && style.transform === 'scale(1.15)') return 'Zoom';
     if (style.objectFit === 'cover') return 'Fill';
+    // Fallback to localStorage or 'Original'
     const storedFormat = localStorage.getItem('iptvAspectRatio');
     if (storedFormat) return storedFormat;
     return 'Original';
 }
-
 function setAspectRatio(format) {
   if (!o.AvPlayer) return;
   o.AvPlayer.style.transform = 'scale(1)';
@@ -932,10 +1009,11 @@ function setAspectRatio(format) {
   }
   localStorage.setItem('iptvAspectRatio', formatName);
   
+  /* [FIX #5] Manually re-render the menu if it's open */
   if (bChannelSettingsOpened && o.SettingsContainer?.classList.contains('submenu-visible')) {
-      const submenuHtml = renderVideoFormatMenu(); 
+      const submenuHtml = renderVideoFormatMenu(); // Get new HTML
       if (o.SettingsVideoFormatMenu) {
-          o.SettingsVideoFormatMenu.innerHTML = submenuHtml; 
+          o.SettingsVideoFormatMenu.innerHTML = submenuHtml; // Apply it
           updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
       }
   }
@@ -951,6 +1029,7 @@ function showSettingsModal(type) {
   o.BlurOverlay.classList.add('visible');
   bSettingsModalOpened = true;
   iSettingsModalIndex = 0;
+  // Render modal content atomically (avoid repeated innerHTML resets)
   try {
       const content = renderModalContent(type);
       requestAnimationFrame(() => {
@@ -966,12 +1045,12 @@ function showSettingsModal(type) {
 }
 
 window.hideSettingsModal = () => {
-  if (!bSettingsModalOpened) return; 
   bSettingsModalOpened = false;
   if (o.SettingsModal) o.SettingsModal.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
   popOverlayState();
   
+  /* [FOCUS FIX] Return focus to player when modal closes */
   if (o.PlayerContainer) o.PlayerContainer.focus();
 };
 
@@ -1120,7 +1199,7 @@ function toggleFavourite() {
       } else if (aFilteredChannelKeys.length > 0) {
           iChannelListIndex = 0;
       } else {
-          iChannelListIndex = -1;
+          iChannelListIndex = -1; // No channels left, e.g. in favs
       }
       updateSelectedChannelInNav();
   }
@@ -1129,9 +1208,9 @@ function toggleFavourite() {
 /* -------------------------
     UI State & Helpers
     ------------------------- */
-/* [NEW #1] This function now shows the Idle screen */
 function showIdleAnimation(showPlayButton = false) {
   if (o.IdleAnimation) {
+    // ensure the anime background is applied consistently for idle too
     o.IdleAnimation.style.backgroundImage = "linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0) 100%), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop')";
     o.IdleAnimation.classList.remove('HIDDEN');
   }
@@ -1148,6 +1227,7 @@ function hideIdleAnimation() {
 }
 
 function clearUi(exclude) {
+  /* [FIX #4] Simplified this line to ensure nav closes when EPG/Guide opens */
   if (exclude !== 'nav') hideNav();
   if (exclude !== 'channelSettings' && exclude !== 'settingsModal') hideChannelSettings();
   if (exclude !== 'guide') hideGuide();
@@ -1161,19 +1241,19 @@ function clearUi(exclude) {
       o.TempMessageOverlay.classList.add('HIDDEN');
   }
   
-  if (o.PlayerContainer && document.activeElement === document.body) {
-    o.PlayerContainer.focus();
-  }
+  /* [FOCUS FIX] Return focus to player when UI is cleared */
+  if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
 /* NAV / Groups toggles with overlay state push/pop */
 function showNav() {
   if (!o.Nav) return;
   if (preventRapidToggle()) return;
-  clearUi('nav'); 
+  clearUi('nav'); // Clear other UIs when nav opens
   bNavOpened = true;
   o.Nav.classList.add('visible');
   
+  // Refresh highlight
   const currentKey = aFilteredChannelKeys[iActiveChannelIndex];
   iChannelListIndex = aFilteredChannelKeys.indexOf(currentKey);
   if (iChannelListIndex === -1) iChannelListIndex = iActiveChannelIndex;
@@ -1183,16 +1263,16 @@ function showNav() {
 }
 
 function hideNav() {
-  if (!bNavOpened) return; 
   if (!o.Nav) return;
   bNavOpened = false;
   bGroupsOpened = false;
   o.Nav.classList.remove('visible');
   if (o.ListContainer?.classList.contains('groups-opened')) {
-      hideGroups(); 
+      hideGroups();
   }
   popOverlayState();
   
+  /* [FOCUS FIX] Return focus to player when nav closes */
   if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
@@ -1209,6 +1289,7 @@ function hideGroups() {
   if (o.ListContainer) {
       o.ListContainer.classList.remove('groups-opened');
   }
+  // No focus fix here, as nav is still open
 }
 
 function showChannelSettings() {
@@ -1219,7 +1300,7 @@ function showChannelSettings() {
   if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.remove('HIDDEN');
 
   clearUi('channelSettings');
-  hideVideoFormatMenu(); 
+  hideVideoFormatMenu();
   iChannelSettingsIndex = 0;
   renderChannelSettings();
   bChannelSettingsOpened = true;
@@ -1229,13 +1310,13 @@ function showChannelSettings() {
 }
 
 function hideChannelSettings() {
-  if (!bChannelSettingsOpened) return; 
   if (!o.ChannelSettings) return;
   if (o.StreamInfoOverlay) o.StreamInfoOverlay.classList.add('HIDDEN');
   bChannelSettingsOpened = false;
   o.ChannelSettings.classList.remove('visible');
   popOverlayState();
   
+  /* [FOCUS FIX] Return focus to player when settings closes */
   if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
@@ -1251,12 +1332,12 @@ window.showGuide = () => {
   pushOverlayState('guide');
 };
 window.hideGuide = () => {
-  if (!bGuideOpened) return; 
   bGuideOpened = false;
   if (o.Guide) o.Guide.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
   popOverlayState();
   
+  /* [FOCUS FIX] Return focus to player when guide closes */
   if (o.PlayerContainer) o.PlayerContainer.focus();
 };
 
@@ -1290,35 +1371,43 @@ function showEpg() {
   if (preventRapidToggle()) return;
   clearUi('epg');
 
+  /* --- FIX: Use currently filtered list for EPG --- */
   aEpgFilteredChannelKeys = [...aFilteredChannelKeys];
   
+  // Fallback: If current filter is empty (e.g., empty search), show all channels
   if (aEpgFilteredChannelKeys.length === 0) {
       aEpgFilteredChannelKeys = Object.keys(channels)
           .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
   }
+  /* --- END FIX --- */
 
   const currentKey = aFilteredChannelKeys[iActiveChannelIndex];
+  // Find index in the (potentially different) EPG list
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
   
   if (iEpgChannelIndex === -1) {
+    // If not found (e.g., was in 'all' but EPG is in 'cartoons'), try to find by number
     const currentChannelData = channels[currentKey];
     if (currentChannelData) {
         iEpgChannelIndex = aEpgFilteredChannelKeys.findIndex(key => channels[key]?.number === currentChannelData.number);
     }
+    // If still not found, default to first item
     if (iEpgChannelIndex === -1) iEpgChannelIndex = 0;
   }
 
   renderEpg();
   bEpgOpened = true;
   o.EpgOverlay.classList.remove('HIDDEN');
+
+  // push state so back button closes EPG instead of leaving page
   pushOverlayState('epg');
 }
 function hideEpg() {
-    if (!bEpgOpened) return; 
     bEpgOpened = false;
     if (o.EpgOverlay) o.EpgOverlay.classList.add('HIDDEN');
     popOverlayState();
     
+    /* [FOCUS FIX] Return focus to player when epg closes */
     if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
@@ -1405,10 +1494,11 @@ function handleFirstPlay() {
   if (isSessionActive) return;
   isSessionActive = true;
 
-  hideIdleAnimation(); // This just hides the parent container
+  hideIdleAnimation();
 
   if(aFilteredChannelKeys.length > 0 && iChannelListIndex >= 0 && iChannelListIndex < aFilteredChannelKeys.length){
-      iActiveChannelIndex = iChannelListIndex; 
+      /* [FIX #6] Pass isFirstPlay option to prevent black flash */
+      iActiveChannelIndex = iChannelListIndex; // Sync active index on first play
       loadChannel(iActiveChannelIndex, { isFirstPlay: true });
   } else {
       console.error("No valid channel selected on first play.");
@@ -1463,7 +1553,7 @@ function updateSettingsModalSelection() {
     }
 }
 
-/* Fullscreen toggle */
+/* Fullscreen toggle (keeps original multi-browser support) */
 function toggleFullScreen() {
     const elem = document.documentElement;
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
@@ -1495,6 +1585,8 @@ function toggleFullScreen() {
     Key handling for remotes / keyboard
     ------------------------- */
 document.addEventListener('keydown', (e) => {
+  // If search field focused — handle special keys
+  /* --- FIX: ADDED 'Enter' KEY SUPPORT --- */
   if (document.activeElement === o.SearchField) {
       if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) {
           e.preventDefault();
@@ -1504,7 +1596,7 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'Escape') {
           e.preventDefault();
           o.SearchField.blur();
-          iChannelListIndex = iActiveChannelIndex; 
+          iChannelListIndex = iActiveChannelIndex; // Revert to active channel
           updateSelectedChannelInNav();
       } else if (e.key === 'Enter') {
           e.preventDefault();
@@ -1514,6 +1606,7 @@ document.addEventListener('keydown', (e) => {
       }
       return;
   }
+  /* --- END FIX --- */
 
   if (bGuideOpened) {
       e.preventDefault();
@@ -1570,21 +1663,23 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  /* [FIX #3] RESTORED USER'S ORIGINAL KEYBOARD LOGIC */
   if (bNavOpened) {
     e.preventDefault();
-    if (bGroupsOpened) { // Group List
-      const groupItems = o.GroupList ? qsa('li', o.GroupList) : []; // Use original query
-      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape'];
+    if (bGroupsOpened) {
+      const groupItems = o.GroupList ? qsa('li', o.GroupList) : [];
+      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
+
       if (e.key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       else if (e.key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click(); 
-      else if (e.key === 'ArrowRight' || e.key === 'Escape') hideGroups(); 
+      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click();
+      else if (e.key === 'ArrowRight') hideGroups();
+      else if (e.key === 'Escape') hideGroups();
+      else if (e.key === 'ArrowLeft') { /* intentionally do nothing - last panel */ }
       updateSelectedGroupInNav();
-    } else { // Channel List
+    } else {
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
-       if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
+      if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
       if (e.key === 'ArrowUp') {
           if (iChannelListIndex === 0 && o.SearchField) {
               o.SearchField.focus();
@@ -1604,28 +1699,20 @@ document.addEventListener('keydown', (e) => {
               iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length;
               updateSelectedChannelInNav();
           }
-      }
-      else if (e.key === 'Enter') { 
+      } else if (e.key === 'Enter') {
           if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) {
-              loadChannel(iChannelListIndex); 
-              hideNav(); 
+              loadChannel(iChannelListIndex);
+              hideNav();
           }
-      }
-      else if (e.key === 'ArrowRight' || e.key === 'Escape') {
-          hideNav(); 
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
+          hideNav();
           if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur();
-      }
-      else if (e.key === 'ArrowLeft') { // User's preferred logic
-          if (iChannelListIndex !== -1) showGroups(); 
-      }
-      // Only update nav selection if we didn't just focus the search bar
-      if (iChannelListIndex !== -1) {
-          updateSelectedChannelInNav();
+      } else if (e.key === 'ArrowLeft') {
+          if (iChannelListIndex !== -1) showGroups();
       }
     }
-    return; 
+    return;
   }
-  /* --- END RESTORE --- */
 
   if (bChannelSettingsOpened) {
     e.preventDefault();
@@ -1657,6 +1744,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   // default player keys
+  // Note: Most TV remotes map "OK" to "Enter" and "Back" to "Escape"
   const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
   if (!PLAYER_KEYS.includes(e.key)) return;
 
@@ -1702,4 +1790,3 @@ function updateStreamInfo() {
     Init on DOMContentLoaded
     ------------------------- */
 document.addEventListener('DOMContentLoaded', initPlayer);
-
