@@ -3,6 +3,7 @@
     - Restores old settings panel logic (select dropdown, CodecInfo).
     - Restores old keydown/touch logic.
     - Fixes: Play button, stuck loader background, channel info on up/down.
+    - MODIFIED: Enabled click-to-pause and fixed ArrowLeft from search bar.
 */
 
 /* -------------------------
@@ -160,13 +161,13 @@ async function initPlayer() {
   player = new shaka.Player();
   ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
   
-  // Configure UI (from new code, but old code's ui.getControls() is not needed)
+  // Configure UI
   ui.configure({
     controlPanelElements: [],
     addSeekBar: false,
     addBigPlayButton: false,
     showBuffering: true, // Use Shaka's default spinner
-    clickToPlay: false
+    clickToPlay: true // MODIFIED: Set to true for click-to-pause
   });
 
   player.attach(o.AvPlayer);
@@ -1352,8 +1353,43 @@ if (o.SearchField) {
 } else { console.error("SearchField element not found."); }
 
 document.addEventListener('keydown', (e) => {
-  // MODIFIED: Use bSettingsModalOpened from old code
-  if (document.activeElement === o.SearchField || bSettingsModalOpened) return;
+  // MODIFIED: Handle search bar focus differently
+  if (bSettingsModalOpened) return; // Modals still block everything
+
+  if (document.activeElement === o.SearchField) {
+      if (e.key === 'ArrowLeft') {
+          o.SearchField.blur();
+          if (bNavOpened && !bGroupsOpened) {
+              showGroups();
+          }
+          e.preventDefault();
+          return; // Handled
+      }
+      if (e.key === 'ArrowRight' || e.key === 'Escape') {
+          o.SearchField.blur();
+          if (bNavOpened) {
+              hideNav();
+          }
+          e.preventDefault();
+          return; // Handled
+      }
+      if (e.key === 'ArrowDown') {
+          o.SearchField.blur();
+          if (bNavOpened && !bGroupsOpened && aFilteredChannelKeys.length > 0) {
+              iCurrentChannel = 0;
+              updateSelectedChannelInNav();
+          }
+          e.preventDefault();
+          return; // Handled
+      }
+      if (e.key === 'Enter') {
+           o.SearchField.blur();
+           e.preventDefault();
+           return; // Handled
+      }
+      // Let other keys (typing) pass through
+      return;
+  }
 
   // EPG open
   if (bEpgOpened) {
@@ -1393,12 +1429,38 @@ document.addEventListener('keydown', (e) => {
     } else { // Channel List
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
        if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
-      if (e.key === 'ArrowUp') iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
-      else if (e.key === 'ArrowDown') iCurrentChannel = (iCurrentChannel + 1) % aFilteredChannelKeys.length;
-      else if (e.key === 'Enter') { loadChannel(iCurrentChannel); hideNav(); }
+      if (e.key === 'ArrowUp') {
+          if (iCurrentChannel === 0 && o.SearchField) { // Check for search field
+              o.SearchField.focus(); // Focus search field
+              iCurrentChannel = -1; // Set index to -1 to indicate search focus
+              updateSelectedChannelInNav(); // Deselect item
+          } else if (iCurrentChannel > 0) {
+              iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
+              updateSelectedChannelInNav();
+          }
+      }
+      else if (e.key === 'ArrowDown') {
+          if (iCurrentChannel === -1) { // If search is focused
+              iCurrentChannel = 0; // Move to first item
+              o.SearchField.blur();
+              updateSelectedChannelInNav();
+          } else {
+             iCurrentChannel = (iCurrentChannel + 1) % aFilteredChannelKeys.length;
+             updateSelectedChannelInNav();
+          }
+      }
+      else if (e.key === 'Enter') { 
+          if (iCurrentChannel !== -1) { // Only load if not on search
+            loadChannel(iCurrentChannel); 
+            hideNav(); 
+          }
+      }
       else if (e.key === 'ArrowRight' || e.key === 'Escape') hideNav(); 
-      else if (e.key === 'ArrowLeft') showGroups(); 
-      updateSelectedChannelInNav();
+      else if (e.key === 'ArrowLeft') {
+          if (iCurrentChannel !== -1) { // Only show groups if not on search
+            showGroups(); 
+          }
+      }
     }
     return; 
   }
@@ -1492,12 +1554,13 @@ document.addEventListener('touchend', (e) => {
           toggleFullScreen();
           lastTapTime = 0;
       } else {
-          // Single Tap
-          if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
-              if (isSessionActive) showChannelName(); 
-          } else {
+          // MODIFIED: Single Tap
+          // Shaka 'clickToPlay=true' will handle pause/play.
+          // We only handle closing UI if a panel is open.
+          if (bNavOpened || bChannelSettingsOpened || bGuideOpened || bEpgOpened || bSettingsModalOpened) {
               clearUi(); // Close any open UI
           }
+          // REMOVED: showChannelName()
           lastTapTime = currentTime;
       }
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
@@ -1533,4 +1596,5 @@ document.addEventListener('touchend', (e) => {
     ------------------------- */
 // Use DOMContentLoaded for standard initialization
 document.addEventListener('DOMContentLoaded', initPlayer);
+
 
