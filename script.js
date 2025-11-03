@@ -1,7 +1,3 @@
-
-let player = null;
-let ui = null;
-
 const qs = (sel, root = document) => (root || document).querySelector(sel);
 const qsa = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
 
