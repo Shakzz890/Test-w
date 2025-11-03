@@ -1,342 +1,673 @@
+/* -------------------------
+    ROOT & VARIABLES
+   ------------------------- */
 :root {
-  --primary-color: royalblue;
-  --primary-gradient: linear-gradient(to right, rgba(65, 105, 225, 0.75), rgba(0, 0, 0, 0));
-  --panel-bg-left: linear-gradient(to right, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.4));
-  --panel-bg-right: linear-gradient(to left, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.4));
-  --text-light: #fff;
-  --text-medium: #ccc;
-  --text-dark: #000;
+  --bg-primary: #000;
+  --bg-secondary: #111;
+  --bg-overlay: rgba(0, 0, 0, 0.85);
+  --bg-panel: rgba(18, 18, 18, 0.95);
+  --bg-panel-solid: #121212;
+  --bg-hover: rgba(255, 255, 255, 0.1);
+  --bg-selected: #505050;
+  --bg-focus: #0078d4;
+  --text-primary: #f1f1f1;
+  --text-secondary: #aaa;
+  --text-medium: #888;
   --border-color: #444;
-  --settings-item-bg: rgba(255, 255, 255, 0.1);
-  --settings-item-hover-bg: rgba(255, 255, 255, 0.2);
-  --nav-width: clamp(320px, 25vw, 400px); /* Define nav width as variable */
+  --primary-gradient: linear-gradient(90deg, #ff007b, #ff7b00);
+
+  /* Animation Timings */
+  --anim-time-fast: 0.3s;
 }
-* { font-family: Lucida Sans, Arial, Helvetica, sans-serif; outline: none; box-sizing: border-box; }
+
+/* -------------------------
+    BASE & PLAYER
+   ------------------------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 html, body {
-  overscroll-behavior: none; margin: 0; padding: 0; background-color: #000;
-  font-size: 28px; -moz-user-select: none; -webkit-user-select: none;
-  user-select: none; touch-action: none; overflow: hidden; height: 100%;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  user-select: none;
 }
+
 #playerContainer {
-  z-index: 1; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  position: relative;
-}
-/* --- START: Added opacity transition for black flash fix --- */
-#avplayer {
-    width: 100%; height: 100%; border: 0; background: transparent;
-    transition: transform 0.3s ease, object-fit 0.3s ease, opacity 0.3s ease;
-    opacity: 1; /* Default to visible */
-}
-/* --- END: Added opacity transition --- */
-.fullscreen { width: 100%; height: 100%; position: fixed; top: 0; left: 0; }
-.HIDDEN { display: none !important; }
-
-/* Hide Shaka controls */
-.shaka-controls-container {
-    display: none !important;
-}
-#avplayer::-webkit-media-controls {
-    display: none !important;
-}
-#avplayer::-moz-media-controls {
-    display: none !important;
-}
-#avplayer::media-controls {
-    display: none !important;
-}
-
-
-#BlurOverlay { z-index: 25; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); transition: opacity 0.3s ease; opacity: 0; pointer-events: none; }
-#BlurOverlay.visible { opacity: 1; }
-
-/* --- START: Updated ChannelLoader Styles for Anime BG + Spinner --- */
-#ChannelLoader {
-  z-index: 60; display: flex;
-  flex-direction: column; /* Stack spinner and text */
-  justify-content: center; /* Center vertically */
-  align-items: center; /* Center horizontally */
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  /* Use anime background for loading */
-  background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg');
-  background-color: #111; /* Fallback color */
+  top: 0;
+  left: 0;
+  background: var(--bg-primary);
+  outline: none; /* For TV remote focus */
+}
+
+#avplayer {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Default aspect ratio */
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* -------------------------
+    UTILITY CLASSES
+   ------------------------- */
+.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+}
+.HIDDEN {
+  display: none !important;
+  visibility: hidden;
+  opacity: 0;
+}
+.custom-scrollbar {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+/* -------------------------
+    OVERLAYS (LOADERS, INFO)
+   ------------------------- */
+#BlurOverlay {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+#BlurOverlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+#ChannelLoader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-primary);
   background-size: cover;
   background-position: center;
+  z-index: 8;
   opacity: 1;
   transition: opacity 0.5s ease-out;
 }
-  #ChannelLoader.fade-out {
-     opacity: 0;
-  }
+#ChannelLoader.fade-out {
+  opacity: 0;
+}
 .loader-content {
-    text-align: center;
-    color: var(--text-light);
-    pointer-events: auto;
-    padding-bottom: 0; /* Removed bottom padding */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 20px;
+  border-radius: 10px;
 }
 .loading-spinner {
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top: 4px solid var(--primary-color);
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 20px; /* Space between spinner and text */
-    margin-left: auto; /* <-- ADDED */
-    margin-right: auto; /* <-- ADDED */
+  width: 50px;
+  height: 50px;
+  border: 4px solid #444;
+  border-top: 4px solid var(--text-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 .loading-text {
-    /* --- START: Increased Font Size --- */
-    font-size: clamp(24px, 4vw, 36px); /* Increased max size */
-    /* --- END: Increased Font Size --- */
-    font-weight: bold;
-    text-shadow: 2px 2px 5px #000;
-    display: block;
-    margin: 0;
+  font-size: 1.1em;
+  font-weight: 500;
 }
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-/* --- END: Updated ChannelLoader Styles --- */
 
-.close-button { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M13.41,12l6.3-6.29a1,1,0,1,0-1.42-1.42L12,10.59,5.71,4.29A1,1,0,0,0,4.29,5.71L10.59,12l-6.3,6.29a1,1,0,0,0,0,1.42,1,1,0,0,0,1.42,0L12,13.41l6.29,6.3a1,1,0,0,0,1.42,0,1,1,0,0,0,0-1.42Z'/%3E%3C/svg%3E"); background-size: cover; cursor: pointer; position: absolute; z-index: 11; top: 10px; right: 10px; height: 40px; width: 40px; }
-
-#nav, #ChannelSettings, #ChannelInfo, #Guide, #SettingsModal, #BlurOverlay, #TempMessageOverlay { /* Removed EpgOverlay */
-    z-index: 100;
-}
-
-/* --- START: Added TempMessageOverlay Style --- */
-#TempMessageOverlay {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.8);
-    color: var(--text-light);
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-size: clamp(16px, 2vw, 20px);
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-    pointer-events: none; /* Don't interfere with clicks */
-    z-index: 110; /* Above other UI but below modals maybe? */
-}
-#TempMessageOverlay.visible {
-    opacity: 1;
-}
-/* --- END: Added TempMessageOverlay Style --- */
-
-#nav {
-  position: fixed;
-  top: 0;
-  width: var(--nav-width);
-  max-width: 90%;
-  overflow: hidden;
-  height: 100%;
-  transition: transform 0.5s;
-  font-size: clamp(18px, 2.5vw, 22px);
-  left: 0;
-  transform: translateX(-100%);
-  background-image: var(--panel-bg-left);
-}
-#nav.visible { transform: translateX(0); }
-#list_container { display: flex; width: 200%; height: 100%; color: var(--text-light); transition: transform 0.5s; transform: translateX(-50%); }
-#list_container.groups-opened { transform: translateX(0); }
-#GroupList, #ChannelList { height: 100%; width: 50%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-h2.list_headline { margin: 20px 30px; font-size: clamp(24px, 3vw, 28px); color: var(--text-medium); }
-ul { list-style: none; margin: 0; padding: 0; }
-li { padding: 4px 20px; margin: 2px 0; white-space: nowrap; cursor: pointer; height: 50px; line-height: 50px; display: flex; align-items: center; }
-li:hover { color: var(--text-light); }
-.selected { background: var(--primary-gradient) !important; font-weight: bold; }
-
-/* --- START ADDED RULE --- */
-.modal-selectable.selected {
-    background: var(--primary-gradient) !important;
-    font-weight: bold;
-}
-/* --- END ADDED RULE --- */
-
-.list-ch { min-width: 50px; font-weight: bold; }
-#ChannelList .nav_logo { width: 50px; margin: auto 0 auto auto; text-align: center; display: flex; justify-content: center; align-items: center; height: 35px; }
-#ChannelList .nav_logo img { max-height: 100%; max-width: 100%; object-fit: contain; }
-#ChannelList .list-title { overflow: hidden; text-overflow: ellipsis; }
-.fav-star { margin-right: 10px; font-size: 16px; }
-
-#search_item_wrapper { padding: 8px 20px; }
-#SearchField { width: 100% !important; background: rgba(255,255,255,0.9); display: block; font-size: 18px; padding: 8px; border-radius: 4px; border: 2px solid #333; color: #000; }
-#SearchField:focus { border-color: var(--primary-color); background-color: var(--text-light); }
-
-#ChannelInfo {
-  position: fixed; right: 0; top: 50%; transform: translate(110%, -50%);
-  transition: opacity 0.3s, transform 0.4s; width: 80%; max-width: 450px;
-  opacity: 0; color: var(--text-light); border-radius: 16px 0 0 16px; box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5); text-shadow: 2px 2px 3px #000; background-image: linear-gradient(to right, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)); padding: 15px; display: flex; align-items: center;
-}
-#ChannelInfo.visible { transform: translate(0, -50%); opacity: 1; }
-#ch_logo { flex-shrink: 0; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; margin-right: 15px; }
-#ch_logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
-#channel_name { font-size: clamp(22px, 3.5vw, 32px); font-weight: bold; line-height: 1.2; margin-bottom: 8px; }
-#channel_epg { font-size: clamp(16px, 2.5vw, 22px); color: var(--text-medium); }
-
-.custom-scrollbar::-webkit-scrollbar { width: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--primary-color); border-radius: 20px; border: 2px solid darkblue; }
-.custom-scrollbar::-webkit-scrollbar-track { background: #333; }
-#brand-header { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-color); }
-#brand-header svg { width: 35px; height: 35px; margin-right: 15px; }
-#brand-header span { font-size: clamp(22px, 3vw, 28px); font-weight: bold; color: var(--text-light); }
-
-/* --- START: UPDATED .fullscreen-popup --- */
-.fullscreen-popup {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 90%; max-width: 500px;
-    background-image: var(--panel-bg-right);
-    color: var(--text-light); border-radius: 8px;
-    box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5);
-    text-shadow: 1px 1px 2px #000;
-    max-height: 90vh; /* <-- ADDED: Max height for short screens */
-    display: flex; /* <-- ADDED */
-    flex-direction: column; /* <-- ADDED */
-}
-/* --- END: UPDATED .fullscreen-popup --- */
-
-#Guide, #SettingsModal {
-  /* z-index adjusted above */
-}
-
-/* --- START: ADDED #GuideContent --- */
-#GuideContent {
-    overflow-y: auto;
-    padding: 0 25px 25px 25px;
-}
-/* --- END: ADDED #GuideContent --- */
-
-.fullscreen-popup h2 { margin: 0; font-size: clamp(22px, 4vw, 28px); padding: 20px 25px; color: var(--text-light); }
-.popup-content-list { padding: 0 0 10px 0; max-height: 60vh; overflow-y: auto; }
-.popup-content-list li { padding: 15px 25px; height: auto; white-space: normal; line-height: 1.4; font-size: clamp(18px, 2.5vw, 22px); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.popup-content-list li:last-child { border-bottom: none; }
-.popup-buttons { display: flex; justify-content: flex-end; padding: 15px 25px; background: rgba(0,0,0,0.2); }
-.popup-buttons button { background: none; border: none; color: var(--primary-color); font-weight: bold; font-size: 18px; padding: 8px 15px; cursor: pointer; border-radius: 4px; transition: background-color 0.2s; }
-.popup-buttons button:hover { background-color: rgba(255,255,255,0.1); }
-input[type="radio"] { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; border: 2px solid var(--text-medium); border-radius: 50%; outline: none; cursor: pointer; transition: border-color 0.2s; margin-left: 15px; }
-input[type="radio"]:checked { border-color: var(--primary-color); background-color: var(--primary-color); box-shadow: inset 0 0 0 3px #000; }
-.edit-modal-field { width:100%; background: #333; border: 1px solid #555; color: #fff; padding: 10px; margin-bottom: 15px; font-size: 18px; }
-
-/* --- START: UPDATED IDLEANIMATION STYLES --- */
 #IdleAnimation {
-  z-index: 28;
-  display: flex; justify-content: flex-end; align-items: center;
-  /* This creates a shade on the left, fading to transparent on the right */
-  background-image: linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0) 100%), url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg?w=1600&h=900&fit=crop');
-  background-color: #111;
-  background-size: cover; background-position: center;
-  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  background-size: cover;
+  background-position: center;
+  z-index: 7;
 }
-.idle-branding { position: relative; padding-right: 40px; text-align: right; color: white; text-shadow: 3px 3px 8px rgba(0,0,0,0.9); }
-
+.idle-branding {
+  text-align: center;
+  margin-bottom: 40px;
+}
 .idle-branding h1 {
-  font-size: clamp(60px, 10vw, 150px); /* Larger, responsive font size */
-  margin: 0;
-  font-weight: 900; /* Bolder font */
-  letter-spacing: 5px; /* Spacing like the reference */
-  text-transform: uppercase;
-  /* animation: pulseText 3s infinite ease-in-out; */ /* Removed pulse to match reference */
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 1px;
 }
 .idle-branding p {
-  font-size: clamp(24px, 4vw, 50px); /* Smaller, but still large and responsive */
-  margin: 10px 0 0 0; /* Added top margin for spacing */
-  color: #fff; /* Changed from green to white */
-  font-weight: 700;
-  letter-spacing: 10px; /* More spacing like reference */
-  text-transform: uppercase;
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
 }
-/* @keyframes pulseText { 0%, 100% { transform: scale(0.98); opacity: 0.9; } 50% { transform: scale(1); opacity: 1; } } */ /* Animation removed */
-/* --- END: UPDATED IDLEANIMATION STYLES --- */
-
-
 #PlayButton {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 120px; height: 120px; background: rgba(0, 0, 0, 0.5);
-  border-radius: 50%; display: flex; justify-content: center;
-  align-items: center; cursor: pointer; transition: background 0.3s ease;
-  pointer-events: auto;
-}
-#PlayButton:hover { background: rgba(65, 105, 225, 0.8); }
-#PlayButton svg { width: 60px; height: 60px; fill: white; margin-left: 10px; }
-
-#ChannelSettings {
-  right: 0; transform: translateX(100%); background-image: var(--panel-bg-right); position: fixed; top: 0; width: clamp(320px, 25vw, 400px); max-width: 90%; overflow: hidden; height: 100%; transition: transform 0.5s; font-size: clamp(18px, 2.5vw, 22px); color: var(--text-light); }
-#ChannelSettings.visible { transform: translateX(0); }
-
-/* --- START: DELETED #SettingsVideoInfo --- */
-/* This rule is no longer needed and was causing the blank panel bug */
-/*
-#SettingsVideoInfo {
-    ...
-}
-*/
-/* --- END: DELETED #SettingsVideoInfo --- */
-
-
-/* --- START: UPDATED #settings_container --- */
-/* Fixed height: calc() by removing the 58px */
-#settings_container { position: relative; width: 200%; height: 100%; display: flex; transition: transform 0.4s ease-in-out; }
-/* --- END: UPDATED #settings_container --- */
-
-#settings_container.submenu-visible { transform: translateX(-50%); }
-#SettingsMainMenu, #SettingsVideoFormatMenu { width: 50%; height: 100%; padding: 20px 0; overflow-y: auto; }
-.settings-item { padding: 15px 25px; cursor: pointer; transition: background-color 0.2s; }
-.settings-item.selected { background-color: var(--settings-item-hover-bg); }
-.settings-item-header { font-size: clamp(24px, 3vw, 28px); color: var(--text-medium); margin: 20px 25px; }
-#SettingsVideoFormatMenu .settings-item { display: flex; justify-content: space-between; align-items: center; }
-.settings-item select { background: var(--settings-item-bg); color: var(--text-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; font-size: 16px; }
-
-/* --- START: UPDATED #EpgOverlay --- */
-#EpgOverlay {
-  background: rgba(0,0,0,0.85);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid white;
   display: flex;
-  font-size: clamp(16px, 2vw, 20px);
-  color: var(--text-light);
-  transition: width 0.5s, left 0.5s;
-  left: 0;
-  position: fixed; top:0; width: 100%; height: 100%;
-  z-index: 101; /* <-- ADDED: Raise EPG above other panels */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
 }
-/* --- END: UPDATED #EpgOverlay --- */
-
-#EpgChannels { width: clamp(280px, 22vw, 350px); height: 100%; overflow-y: auto; }
-#EpgTimeline { flex-grow: 1; height: 100%; overflow-y: auto; border-left: 1px solid var(--border-color); }
-.epg-ch-item { padding: 12px 20px; white-space: normal; line-height: 1.3; height: auto; }
-#EpgTimeline .epg-pr-item { padding: 20px; border-bottom: 1px solid var(--border-color); }
-.epg-pr-time { color: var(--text-light); font-size: 0.9em; margin-bottom: 5px; }
-.epg-pr-title { font-weight: bold; }
-
-/* --- START: DELETED #nav.visible ~ #EpgOverlay --- */
-/* This rule was causing layout bugs on mobile/TV */
-/*
-#nav.visible ~ #EpgOverlay {
-    left: var(--nav-width);
-    width: calc(100% - var(--nav-width));
+#PlayButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
 }
-*/
-/* --- END: DELETED #nav.visible ~ #EpgOverlay --- */
+#PlayButton svg {
+  width: 50px;
+  height: 50px;
+  fill: white;
+  margin-left: 8px;
+}
 
 #StreamInfoOverlay {
   position: absolute;
   top: 20px;
   left: 20px;
-  z-index: 10;
-  background-color: rgba(0, 0, 0, 0.6);
-  color: white;
-  padding: 10px 15px;
+  z-index: 9;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
   border-radius: 5px;
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-  white-space: pre; 
+  font-family: monospace;
+  white-space: pre;
+  font-size: 0.9em;
 }
 
-/* You should already have this, but it's important */
-.HIDDEN {
-  display: none !important;
+/* -------------------------
+    PANELS (NAV & SETTINGS)
+   ------------------------- */
+#nav, #ChannelSettings {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  width: 320px;
+  max-width: 80%;
+  background: var(--bg-panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 10;
+  transition: transform var(--anim-time-fast) ease-out;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Left Nav Panel --- */
+#nav {
+  left: 0;
+  transform: translateX(-100%);
+}
+#nav.visible {
+  transform: translateX(0);
+}
+#brand-header {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  height: 64px;
+  border-bottom: 1px solid var(--border-color);
+}
+#brand-header svg {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+#brand-header span {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+#search_item_wrapper {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+#SearchField {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 5px;
+  font-size: 1rem;
+}
+#SearchField:focus {
+  outline: none;
+  border-color: var(--bg-focus);
+  box-shadow: 0 0 5px var(--bg-focus);
+}
+
+/* Panel slide container (Groups / Channels) */
+#list_container_scrollarea {
+  flex-grow: 1;
+  overflow: hidden; /* This hides the other panel */
+}
+#list_container {
+  display: flex;
+  width: 200%; /* 2x the width for 2 panels */
+  height: 100%;
+  transform: translateX(0);
+  transition: transform var(--anim-time-fast) ease-out;
+}
+#list_container.groups-opened {
+  transform: translateX(-50%); /* Slides the container left */
+}
+#GroupList, #ChannelList {
+  width: 50%; /* Each panel takes half of the 200% width */
+  height: 100%;
+  padding: 10px 0;
+}
+
+/* --- Right Settings Panel --- */
+#ChannelSettings {
+  right: 0;
+  transform: translateX(100%);
+}
+#ChannelSettings.visible {
+  transform: translateX(0);
+}
+
+/* Panel slide container (Main / Video) */
+#settings_container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Hides the other panel */
+}
+#SettingsMainMenu, #SettingsVideoFormatMenu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  transition: transform var(--anim-time-fast) ease-out;
+}
+#SettingsMainMenu {
+  transform: translateX(0);
+  padding-top: 60px; /* Space for stream info */
+}
+#SettingsVideoFormatMenu {
+  transform: translateX(100%); /* Start off-screen to the right */
+}
+/* When submenu is visible, slide both panels */
+#settings_container.submenu-visible #SettingsMainMenu {
+  transform: translateX(-100%);
+}
+#settings_container.submenu-visible #SettingsVideoFormatMenu {
+  transform: translateX(0);
+}
+
+/* -------------------------
+    LISTS & ITEMS
+   ------------------------- */
+#main_nav, #DynamicGroupsList {
+  list-style: none;
+  padding: 0;
+}
+#main_nav li, #DynamicGroupsList li {
+  padding: 15px 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 5px;
+  margin: 2px 5px;
+}
+.list_headline {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  padding: 10px 20px;
+  text-transform: uppercase;
+}
+
+.channel-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  height: 60px;
+  border-radius: 5px;
+  margin: 2px 5px;
+}
+.fav-star {
+  width: 20px;
+  color: #ffc107;
+  font-size: 0.8em;
+}
+.list-ch {
+  width: 40px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: right;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+.list-title {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav_logo {
+  width: 50px;
+  height: 40px;
+  margin-left: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav_logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Settings Items */
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 15px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  margin: 2px 5px;
+}
+.settings-item-header {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 10px;
+}
+
+/* Hover/Selected states for all list items */
+#main_nav li:hover,
+#DynamicGroupsList li:hover,
+.channel-item:hover,
+.settings-item:hover {
+  background: var(--bg-hover);
+}
+#main_nav li.selected,
+#DynamicGroupsList li.selected,
+.channel-item.selected,
+.settings-item.selected {
+  background: var(--bg-selected);
+  font-weight: 600;
+}
+/* TV Remote Focus */
+#SearchField:focus,
+#main_nav li:focus-visible,
+#DynamicGroupsList li:focus-visible,
+.channel-item:focus-visible,
+.settings-item:focus-visible,
+.modal-selectable:focus-visible,
+.close-button:focus-visible,
+#PlayButton:focus-visible {
+  outline: 2px solid var(--bg-focus);
+  outline-offset: -2px;
+  box-shadow: 0 0 10px var(--bg-focus);
+}
+.channel-item.playing {
+  border-left: 3px solid var(--text-primary);
+  padding-left: 7px;
+}
+
+/* -------------------------
+    CHANNEL INFO
+   ------------------------- */
+#ChannelInfo {
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%) translateY(200px);
+  background: var(--bg-panel);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  z-index: 9;
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.3s, opacity 0.3s, visibility 0.3s;
+}
+#ChannelInfo.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+#ch_logo {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 15px;
+}
+#ch_logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+#channel_name {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+#channel_epg {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+/* -------------------------
+    MODALS (GUIDE, EPG, SETTINGS)
+   ------------------------- */
+.fullscreen-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 30px;
+  text-align: center;
+}
+.close-button::before {
+  content: '×';
+}
+.close-button:hover {
+  color: var(--text-primary);
+}
+
+/* EPG */
+#EpgOverlay {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: 100%;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 25;
+  padding: 5vh 5vw;
+  gap: 10px;
+}
+#EpgChannels {
+  background: var(--bg-panel);
+  border-radius: 5px;
+  height: 100%;
+}
+#EpgTimeline {
+  background: var(--bg-panel);
+  border-radius: 5px;
+  height: 100%;
+}
+.epg-ch-item {
+  padding: 15px;
+  font-size: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  cursor: default;
+}
+.epg-ch-item.selected {
+  background: var(--bg-selected);
+  font-weight: 600;
+}
+.epg-pr-item {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.epg-pr-time {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+.epg-pr-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Settings Modal */
+#SettingsModal {
+  background: transparent; /* Blur overlay handles background */
+  z-index: 30;
+}
+#SettingsModal h2 {
+  padding: 20px 25px;
+  font-size: 1.3rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.popup-content-list {
+  list-style: none;
+  padding: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.popup-content-list li {
+  padding: 18px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+}
+.popup-content-list li:hover {
+  background: var(--bg-hover);
+}
+.popup-content-list li.selected {
+  background: var(--bg-selected);
+}
+.popup-content-list li input[type="radio"] {
+  transform: scale(1.2);
+  accent-color: var(--text-primary);
+}
+.popup-buttons {
+  padding: 15px;
+  text-align: right;
+  border-top: 1px solid var(--border-color);
+}
+.popup-buttons button {
+  padding: 10px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+.popup-buttons button:hover {
+  background: var(--bg-hover);
+}
+.popup-buttons button.selected {
+  background: var(--bg-selected);
+}
+.edit-modal-field {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 5px;
+  font-size: 1rem;
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+.edit-modal-field:focus {
+  outline: none;
+  border-color: var(--bg-focus);
+}
+
+/* Temp Message */
+#TempMessageOverlay {
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--border-color);
+  padding: 15px 25px;
+  border-radius: 8px;
+  z-index: 40;
+  font-size: 1.1rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+#TempMessageOverlay.visible {
+  opacity: 1;
+  visibility: visible;
 }
