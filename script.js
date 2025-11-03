@@ -1,9 +1,8 @@
-/* script.js — Reverted to user's panel logic and updated loading screen.
-    - [REVERT #1] Restored user's original showVideoFormatMenu function (single rAF).
-    - [REVERT #2] Removed spinner-hiding from push/popOverlayState.
-    - [NEW #1] Channel loading now shows IdleAnimation (anime background).
-    - [FIX #1] Player no longer gets "stuck" on the IdleAnimation screen (fixed race condition).
-    - [FIX #2] Fixed "can't control 2nd panel" bug. Key handler now correctly queries for [data-group].
+/* script.js — User's preferred logic restored with critical bug fixes.
+    - [FIX #1] "Stuck on Background" race condition fixed in loadChannel.
+    - [FIX #2] "Blank Panel" animation bug fixed in showVideoFormatMenu with multi-step rAF.
+    - [FIX #3] Restored user's original keyboard logic for Left Panel (ArrowLeft opens Groups).
+    - [KEPT] User's loading preference: IdleAnimation for first load, Shaka circle for mid-stream buffers.
 */
 
 /* -------------------------
@@ -158,7 +157,7 @@ function showTempMessage(message) {
 
     tempMessageTimeout = setTimeout(() => {
         o.TempMessageOverlay.classList.remove('visible');
-        setTimeout(() => o.TempMessageOverlay.classList.add('HIDDEN'), 300);
+        setTimeout(() => o.TempMessageOverlay.classList.add('HIDDEN'), 3000);
     }, 3000);
 }
 
@@ -176,11 +175,18 @@ async function initPlayer() {
   buildDynamicGroupNav(); // Build groups first
   sSelectedGroup = '__all'; // Set default group
 
-  // [FIX #2] Find the *correct* index for 'ALL CHANNELS'
-  if (o.DynamicGroupsList) {
-      const allGroupLiItems = qsa('li[data-group]', o.DynamicGroupsList);
+  // Find the index for 'ALL CHANNELS' based on *all* li items
+  if (o.GroupList) {
+      const allGroupLiItems = qsa('li', o.GroupList); // Get all li items
       const initialGroupItem = allGroupLiItems.find(li => li.dataset.group === '__all');
-      iGroupListIndex = initialGroupItem ? allGroupLiItems.indexOf(initialGroupItem) : 0;
+      
+      if (initialGroupItem) {
+          iGroupListIndex = allGroupLiItems.indexOf(initialGroupItem); 
+      } else {
+           // Fallback if '__all' isn't found 
+          iGroupListIndex = allGroupLiItems.findIndex(li => li.textContent.trim() === 'ALL CHANNELS');
+          if (iGroupListIndex === -1) iGroupListIndex = 1; // Absolute fallback
+      }
   } else {
       iGroupListIndex = 1; // Fallback
   }
@@ -217,7 +223,6 @@ async function initPlayer() {
   player.addEventListener('error', e => {
     console.error('Shaka Error:', e.detail);
     
-    /* [NEW #1] Hide IdleAnimation on error */
     if (o.IdleAnimation) {
       clearTimeout(loaderFadeTimeout);
       o.IdleAnimation.classList.add('HIDDEN');
@@ -226,20 +231,17 @@ async function initPlayer() {
     }
     if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
     
-    // Show play button on error
     showIdleAnimation(true);
   });
 
   player.addEventListener('trackschanged', renderChannelSettings);
 
-  /* [NEW #1] Updated buffering logic to use IdleAnimation */
   player.addEventListener('buffering', (event) => {
     if (event.buffering) {
-      // If it's buffering AND we haven't played the first frame yet (initial load)
       if (!bHasPlayedOnce) {
         showIdleAnimation(false); // Show Idle screen, but hide Play button
       }
-      // If bHasPlayedOnce is true, Shaka's default spinner will show
+      // If bHasPlayedOnce is true, Shaka's default spinner will show (as requested)
     } else {
       // Always hide our custom idle screen when buffering stops
       hideIdleAndShowVideo();
@@ -259,12 +261,12 @@ async function initPlayer() {
   if (o.PlayerContainer) o.PlayerContainer.focus();
 }
 
-/* [NEW #1] Renamed and updated function */
+/* [FIX #1] Renamed and updated function */
 function handlePlaying() {
   bHasPlayedOnce = true;
   hideIdleAndShowVideo();
 }
-/* [NEW #1] Renamed and updated function */
+/* [FIX #1] Renamed and updated function */
 function hideIdleAndShowVideo() {
   clearTimeout(loaderFadeTimeout);
   if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
@@ -623,23 +625,29 @@ function buildDynamicGroupNav() {
 
   allListItems.forEach(li => o.DynamicGroupsList.appendChild(li));
 
-  /* [FIX #2] Attach clicks only to data-group items and pass correct index */
-  const groupListItems = qsa('li[data-group]', o.DynamicGroupsList);
-  groupListItems.forEach((li, index) => {
-      li.onclick = () => selectGroup(li, index); // Pass element and relative index
+  // [FIX #3] Re-bind clicks to *all* li elements in GroupList
+  const fullGroupListItems = qsa('li', o.GroupList);
+  fullGroupListItems.forEach((li, index) => {
+      li.onclick = null;
+      if (li.hasAttribute('data-group')) {
+          // Find the index *relative to the full list*
+          li.onclick = () => selectGroup(li, index); 
+      }
+      else if (li.id === 'guide_button') {
+          li.onclick = showGuide;
+      } else if (li.id === 'epg_button') {
+          li.onclick = showEpg;
+      }
   });
-
-  // Re-attach clicks for main nav buttons
-  if(getEl('guide_button')) getEl('guide_button').onclick = showGuide;
-  if(getEl('epg_button')) getEl('epg_button').onclick = showEpg;
 }
 
-/* [FIX #2] Updated function signature */
+/* [FIX #3] Updated function signature to use the element and full index */
 function selectGroup(item, index) { 
   if (!o.GroupList || !o.ListContainer || !item) {
       console.error("GroupList or ListContainer not found.");
       return;
   }
+   // No need to check item, it's guaranteed to be a data-group item
 
   if (item.dataset.group === '__fav') {
       const hasFavorites = Object.values(channels).some(ch => ch.favorite === true);
@@ -651,7 +659,7 @@ function selectGroup(item, index) {
   }
 
   sSelectedGroup = item.dataset.group;
-  iGroupListIndex = index; // This is now the correct index (relative to data-group items)
+  iGroupListIndex = index; // This is now the correct index (relative to all li's)
   updateSelectedGroupInNav();
 
   buildNav();
@@ -779,14 +787,14 @@ function updateSelectedChannelInNav() {
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
 }
 
-/* [FIX #2] Updated function to query correctly */
+/* [FIX #3] Updated function to query all li's */
 function updateSelectedGroupInNav() {
-    if (!o.DynamicGroupsList) return; // Target the correct container
+    if (!o.GroupList) return; // Target the top-level container
     try {
-        const currentSelected = o.DynamicGroupsList.querySelector('.selected');
+        const currentSelected = o.GroupList.querySelector('.selected');
         if (currentSelected) currentSelected.classList.remove('selected');
 
-        const allLis = qsa('li[data-group]', o.DynamicGroupsList); // Query for data-group items
+        const allLis = qsa('li', o.GroupList); // Query for ALL li elements
         if (iGroupListIndex >= 0 && iGroupListIndex < allLis.length) {
             const newItem = allLis[iGroupListIndex];
             if (newItem) {
@@ -826,23 +834,36 @@ function renderChannelSettings() {
   } else { console.error("SettingsMainMenu element not found"); }
 }
 
-/* [REVERT #1] This is your original, single-rAF function */
+/* [FIX #2] This is the new, robust "blank panel" fix */
 function showVideoFormatMenu() {
   if (preventRapidToggle(220)) return;
   if (o.SettingsContainer && o.SettingsVideoFormatMenu) {
     
-    const submenuHtml = renderVideoFormatMenu(); // Get the HTML string
+    const submenuHtml = renderVideoFormatMenu(); // 1. Get the HTML string
  
-    // Use requestAnimationFrame before toggling to avoid blank UI
+    // Use a multi-step frame update to prevent a "blank" transition
     requestAnimationFrame(() => {
-      o.SettingsVideoFormatMenu.innerHTML = submenuHtml; // 1. Set HTML
-      o.SettingsContainer.classList.add('submenu-visible'); // 2. Show panel
-      iVideoSettingsIndex = 0;
-      updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex); // 3. Set focus
+      
+      // 2. Set the HTML
+      o.SettingsVideoFormatMenu.innerHTML = submenuHtml; 
+      
+      // 3. Wait another frame
+      requestAnimationFrame(() => {
+        // 4. Apply the selection. This FORCES the browser to paint the new HTML
+        //    because it has to find the .settings-item elements.
+        iVideoSettingsIndex = 0;
+        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+
+        // 5. Wait one MORE frame (using a 0ms timeout) to let the paint
+        //    register *before* starting the CSS animation.
+        setTimeout(() => {
+          // 6. NOW, and only now, start the transition
+          o.SettingsContainer.classList.add('submenu-visible'); 
+        }, 0); 
+      });
     });
   } else { console.error("SettingsContainer or SettingsVideoFormatMenu element not found."); }
 }
-/* --- END REVERT --- */
 
 
 function hideVideoFormatMenu() {
@@ -1549,24 +1570,21 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  /* [FIX #3] RESTORED USER'S ORIGINAL KEYBOARD LOGIC */
   if (bNavOpened) {
     e.preventDefault();
-    if (bGroupsOpened) {
-      /* [FIX #2] Query for [data-group] items only */
-      const groupItems = o.DynamicGroupsList ? qsa('li[data-group]', o.DynamicGroupsList) : [];
-      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
+    if (bGroupsOpened) { // Group List
+      const groupItems = o.GroupList ? qsa('li', o.GroupList) : []; // Use original query
+      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape'];
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
-
       if (e.key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       else if (e.key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click(); // This will now click the correct item
-      else if (e.key === 'ArrowRight') hideGroups();
-      else if (e.key === 'Escape') hideGroups();
-      else if (e.key === 'ArrowLeft') { /* intentionally do nothing - last panel */ }
+      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click(); 
+      else if (e.key === 'ArrowRight' || e.key === 'Escape') hideGroups(); 
       updateSelectedGroupInNav();
-    } else {
+    } else { // Channel List
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
-      if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
+       if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
       if (e.key === 'ArrowUp') {
           if (iChannelListIndex === 0 && o.SearchField) {
               o.SearchField.focus();
@@ -1586,20 +1604,28 @@ document.addEventListener('keydown', (e) => {
               iChannelListIndex = (iChannelListIndex + 1) % aFilteredChannelKeys.length;
               updateSelectedChannelInNav();
           }
-      } else if (e.key === 'Enter') {
+      }
+      else if (e.key === 'Enter') { 
           if (iChannelListIndex !== -1 && aFilteredChannelKeys.length > 0) {
-              loadChannel(iChannelListIndex);
-              hideNav();
+              loadChannel(iChannelListIndex); 
+              hideNav(); 
           }
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
-          hideNav();
+      }
+      else if (e.key === 'ArrowRight' || e.key === 'Escape') {
+          hideNav(); 
           if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur();
-      } else if (e.key === 'ArrowLeft') {
-          if (iChannelListIndex !== -1) showGroups();
+      }
+      else if (e.key === 'ArrowLeft') { // User's preferred logic
+          if (iChannelListIndex !== -1) showGroups(); 
+      }
+      // Only update nav selection if we didn't just focus the search bar
+      if (iChannelListIndex !== -1) {
+          updateSelectedChannelInNav();
       }
     }
-    return;
+    return; 
   }
+  /* --- END RESTORE --- */
 
   if (bChannelSettingsOpened) {
     e.preventDefault();
