@@ -1660,13 +1660,13 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (bGroupsOpened) {
       const groupItems = o.GroupList ? qsa('li', o.GroupList) : [];
-      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
+      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'ArrowLeft'];
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
 
       if (e.key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       else if (e.key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
       else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click();
-      else if (e.key === 'ArrowRight') hideGroups();
+      else if (e.key === 'ArrowLeft') hideGroups();
       else if (e.key === 'Escape') hideGroups();
       else if (e.key === 'ArrowLeft') { /* intentionally do nothing - last panel */ }
       updateSelectedGroupInNav();
@@ -1697,7 +1697,7 @@ document.addEventListener('keydown', (e) => {
               loadChannel(iChannelListIndex);
               hideNav();
           }
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
+      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
           hideNav();
           if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur();
       } else if (e.key === 'ArrowLeft') {
