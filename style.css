@@ -454,18 +454,3 @@ html, body {
   max-width: 80px; /* Redundant but safe */
   max-height: 80px;
 }
-
-/*  * This is the CSS-only fix for broken images.
- * It applies a background and hides the broken image icon/alt text,
- * replacing the need for the 'onerror' in JavaScript.
- */
-.nav_logo img,
-#ch_logo img {
-  object-fit: contain;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05); /* Fallback bg */
- 
-  /* Hides broken image icon in most browsers */
-  color: transparent;
-  text-indent: -10000px;
-}
