@@ -94,7 +94,6 @@ async function initPlayer() {
   buildDynamicGroupNav();
   sSelectedGroup = '__all';
 
-  // FIX: Group index calculation alignment with buildDynamicGroupNav
   if (o.GroupList) {
       const allGroupLiItems = o.GroupList.querySelectorAll('li');
       const allLi = Array.from(allGroupLiItems).find(li => li.dataset.group === '__all');
@@ -107,7 +106,6 @@ async function initPlayer() {
   } else {
       iGroupListIndex = 1;
   }
-  // END FIX
 
   buildNav();
   updateSelectedGroupInNav();
@@ -124,6 +122,7 @@ async function initPlayer() {
   
   ui.configure({
     controlPanelElements: ['pip'], // ONLY PIP is kept
+    overflowMenuButtons: [], // Hide all overflow buttons
     addSeekBar: false,
     addBigPlayButton: false,
     showBuffering: true,
@@ -273,7 +272,7 @@ function setupControls() {
       handleSingleTapAction();
     } else {
       if (currentTime - lastTapTime < 300) {
-        // This is handled by dblclick listener or touchend
+        // Handled by dblclick
       } else {
         handleSingleTapAction();
         lastTapTime = currentTime;
@@ -287,27 +286,32 @@ function setupControls() {
   });
 }
 
-// --- START: NEW MOBILE SWIPE LOGIC ---
+// --- START: NEW MOBILE SWIPE LOGIC (FIXED FOR MIRRORED BEHAVIOR) ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
-    if (deltaX > 0) { // Swipe Right --> (Left-to-Right)
+    if (deltaX > 0) { // Swipe Right (Open Nav / Go Back in Settings/Groups)
       if (bChannelSettingsOpened) {
         hideChannelSettings(); // Go back from Settings
-      } else if (bNavOpened && !bGroupsOpened) {
-        showGroups(); // Dig deeper into Groups
+      } else if (bGroupsOpened) {
+        hideGroups(); // Go back from Groups to Channel List
       } else if (!bNavOpened) {
-        showNav(); // Open Nav
+        // Swipe LTR from edge to open main panel
+        if (touchStartX < 50) showNav(); 
       }
-    } else if (deltaX < 0) { // Swipe Left <-- (Right-to-Left)
-      if (bGroupsOpened) {
-        hideGroups(); // Go back from Groups
-      } else if (bNavOpened) {
-        hideNav(); // Go back from Nav
-      } else if (!bChannelSettingsOpened) {
+    } else if (deltaX < 0) { // Swipe Left (Close Nav / Drill Down into Groups/Settings)
+      if (bNavOpened) {
+        if (!bGroupsOpened) {
+            showGroups(); // Drill down from Channel List to Groups
+        } else {
+            hideNav(); // Close the entire Nav panel (Groups open is the deepest)
+        }
+      } else if (bChannelSettingsOpened) {
+        // Do nothing, already in settings, or drill into submenus if implemented
+      } else if (!bNavOpened) {
         showChannelSettings(); // Open Settings
       }
     }
@@ -321,7 +325,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
-// --- END: NEW MOBILE SWIPE LOGIC ---
+// --- END: NEW MOBILE SWIPE LOGIC (FIXED FOR MIRRORED BEHAVIOR) ---
 
 function handleSingleTapAction() {
   if (!isSessionActive) return;
@@ -405,10 +409,8 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', newChannelKey);
 
-  // Show the temporary channel switch message (Video 2 feature)
   showTempChannelSwitchMessage(newChannel.logo, newChannel.name, newChannel.number);
 
-  // FIX: Hide video element *before* loading to prevent black flash.
   if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
 
   if (o.ChannelLoader) {
@@ -572,7 +574,7 @@ function selectGroup(index) {
   }
   
   requestAnimationFrame(() => {
-      hideGroups(); // Close the group list to show the channel list
+      hideGroups(); // Slide back to channel list
   });
 }
 
@@ -632,14 +634,13 @@ function buildNav() {
 
     const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : '';
     
-    // FIX: Updated HTML structure to support the new .channel-logo-small CSS
+    // Logo Fix
     const logoHtml = ch.logo
         ? `<div class="channel-logo-small"><img src="${ch.logo}" alt="" onerror="this.style.display='none'; this.onerror=null;"></div>`
         : '<div class="channel-logo-small" style="width: 50px;"></div>';
 
     const safeName = (ch.name || 'Unknown Channel').replace(/</g, '&lt;');
 
-    // Added logoHtml to the start of the list item
     item.innerHTML = `${logoHtml}<span class="list-title">${safeName}</span><span class="list-ch">${ch.number || '?'}</span>${fav}`;
     frag.appendChild(item);
   });
@@ -986,7 +987,6 @@ function toggleFavourite() {
 /* -------------------------
     UI State & Helpers
     ------------------------- */
-// NEW FUNCTION: Temporary Channel Switch Overlay (Video 2 Feature)
 function showTempChannelSwitchMessage(logoUrl, name, number) {
     if (!o.TempMessageOverlay) return;
     clearTimeout(tempMessageTimeout);
@@ -1061,11 +1061,16 @@ function clearUi(exclude) {
   }
 }
 
-
+// Left Panel - Main Channel List
 function showNav() {
   if (!o.Nav) return;
   bNavOpened = true;
   o.Nav.classList.add('visible');
+  
+  if (o.ListContainer) {
+      o.ListContainer.classList.remove('groups-opened');
+      bGroupsOpened = false;
+  }
   updateSelectedChannelInNav();
 }
 
@@ -1074,15 +1079,13 @@ function hideNav() {
   bNavOpened = false;
   bGroupsOpened = false;
   o.Nav.classList.remove('visible');
-  if (o.ListContainer?.classList.contains('groups-opened')) {
-      hideGroups();
-  }
 }
 
+// Left Panel - Drill Down to Groups
 function showGroups() {
   if (bNavOpened && o.ListContainer) {
     bGroupsOpened = true;
-    o.ListContainer.classList.add('groups-opened');
+    o.ListContainer.classList.add('groups-opened'); // Slide Channel List out, Groups in
     updateSelectedGroupInNav();
   }
 }
@@ -1090,7 +1093,7 @@ function showGroups() {
 function hideGroups() {
   bGroupsOpened = false;
   if (o.ListContainer) {
-      o.ListContainer.classList.remove('groups-opened');
+      o.ListContainer.classList.remove('groups-opened'); // Slide back to Channel List
   }
 }
 
@@ -1141,9 +1144,8 @@ function renderGuideContent() {
       <li><kbd>E</kbd> - EPG</li>
       <li><kbd>H</kbd> - User Manual (Guide)</li>
       <li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li>
-      <li><kbd>←</kbd> - Open Channel List</li>
-      <li><kbd>←</kbd> (when list open) - Open Group List</li>
-      <li><kbd>→</kbd> - Open Channel Settings</li>
+      <li><kbd>←</kbd> - Open Channel List / Open Group List</li>
+      <li><kbd>→</kbd> - Close Panel / Open Channel Settings</li>
       <li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show Channel Info / Select Item</li>
       <li><kbd>ESC</kbd> - Go Back / Close Panel</li>
       <li><kbd>Double Tap/Click</kbd> - Toggle Fullscreen</li>
@@ -1327,6 +1329,7 @@ function updateSettingsModalSelection() {
 }
 
 function toggleFullScreen() {
+    // Fulscreen is applied to the playerContainer which holds the video AND the panels.
     const elem = document.documentElement;
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
@@ -1376,7 +1379,7 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
-// --- START: NEW TV REMOTE KEYDOWN LOGIC ---
+// --- START: TV REMOTE KEYDOWN LOGIC (FINALIZED) ---
 document.addEventListener('keydown', (e) => {
 
   if (document.activeElement === o.SearchField) {
@@ -1464,6 +1467,7 @@ document.addEventListener('keydown', (e) => {
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
+      // GROUP LIST (Deepest Left Panel)
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
       const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
@@ -1474,16 +1478,15 @@ document.addEventListener('keydown', (e) => {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
       } else if (e.key === 'Enter') { 
           groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowRight') { 
-          hideGroups(); 
-      } else if (e.key === 'Escape') {
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // Back (Close drill-down)
           hideGroups(); 
       } else if (e.key === 'ArrowLeft') { 
-          // Do nothing (last panel)
+          // Do nothing
       }
       updateSelectedGroupInNav();
 
     } else { 
+      // CHANNEL LIST (Main Left Panel)
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
         if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
       
@@ -1511,10 +1514,10 @@ document.addEventListener('keydown', (e) => {
               loadChannel(iChannelListIndex); 
               hideNav();
           }
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { 
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // Close Nav
           hideNav(); 
           if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur(); 
-      } else if (e.key === 'ArrowLeft') { 
+      } else if (e.key === 'ArrowLeft') { // Drill Down (Open Groups)
           if (iChannelListIndex !== -1) { 
               showGroups(); 
           }
@@ -1523,16 +1526,18 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // This is the default player key handling
+  // DEFAULT PLAYER KEYS (Panels are closed)
   const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
   if (!PLAYER_KEYS.includes(e.key)) return;
 
   e.preventDefault();
   switch (e.key) {
     case 'ArrowLeft':
-        showNav();
+        showNav(); // Open Channel List
         break;
-    case 'ArrowRight': showChannelSettings(); break;
+    case 'ArrowRight': 
+        showChannelSettings(); // Open Settings
+        break;
     case 'Enter': showChannelName(); break;
     case 'ArrowUp': loadChannel(iActiveChannelIndex - 1); break;
     case 'ArrowDown': loadChannel(iActiveChannelIndex + 1); break;
@@ -1542,7 +1547,7 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
-// --- END: NEW TV REMOTE KEYDOWN LOGIC ---
+// --- END: TV REMOTE KEYDOWN LOGIC (FINALIZED) ---
 
 
 /**
