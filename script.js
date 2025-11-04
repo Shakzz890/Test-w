@@ -54,8 +54,8 @@ let channels = {
 
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
-let iChannelListIndex = 0; // Tracks the highlighted item in the nav list
-let iActiveChannelIndex = 0; // Tracks the currently playing channel
+let iChannelListIndex = 0; 
+let iActiveChannelIndex = 0; 
 let iGroupListIndex = 1;
 let channelNameTimeout = null;
 let isSessionActive = false;
@@ -69,11 +69,11 @@ let iChannelSettingsIndex = 0;
 let iVideoSettingsIndex = 0;
 let iEpgChannelIndex = 0;
 let aEpgFilteredChannelKeys = [];
-let iSettingsModalIndex = 0; // For modal navigation
+let iSettingsModalIndex = 0; 
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
-let loaderFadeTimeout = null; // For loader fade-out
-let tempMessageTimeout = null; // For temp message
+let loaderFadeTimeout = null; 
+let tempMessageTimeout = null; 
 
 /* -------------------------
     Utilities
@@ -235,7 +235,7 @@ function setupControls() {
     const SWIPE_THRESHOLD = 50;
     const TAP_THRESHOLD = 15;
 
-    // 1. Check for SWIPE
+    // 1. Check for SWIPE (Simplified to restore functionality)
     if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
       handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
       lastTapTime = 0;
@@ -286,36 +286,34 @@ function setupControls() {
   });
 }
 
-// --- START: NEW MOBILE SWIPE LOGIC (FIXED FOR MIRRORED BEHAVIOR) ---
+// --- START: RESTORED SWIPE LOGIC ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
-    if (deltaX > 0) { // Swipe Right (Open Nav / Go Back in Settings/Groups)
+    if (deltaX > 0) { // Swipe Right (Open Nav / Go Back)
       if (bChannelSettingsOpened) {
-        hideChannelSettings(); // Go back from Settings
+        hideChannelSettings(); 
       } else if (bGroupsOpened) {
-        hideGroups(); // Go back from Groups to Channel List
-      } else if (!bNavOpened) {
-        // Swipe LTR from edge to open main panel
-        if (touchStartX < 50) showNav(); 
+        hideGroups(); 
+      } else if (!bNavOpened && touchStartX < 50) {
+        showNav(); // Open Nav from left edge
       }
-    } else if (deltaX < 0) { // Swipe Left (Close Nav / Drill Down into Groups/Settings)
+    } else if (deltaX < 0) { // Swipe Left (Close Nav / Open Settings)
       if (bNavOpened) {
-        if (!bGroupsOpened) {
-            showGroups(); // Drill down from Channel List to Groups
+        if (bGroupsOpened) {
+            hideNav(); // Close entire panel from deepest level
         } else {
-            hideNav(); // Close the entire Nav panel (Groups open is the deepest)
+            showGroups(); // Drill down to groups
         }
-      } else if (bChannelSettingsOpened) {
-        // Do nothing, already in settings, or drill into submenus if implemented
-      } else if (!bNavOpened) {
+      } else if (!bChannelSettingsOpened) {
         showChannelSettings(); // Open Settings
       }
     }
   } else { // Vertical Swipe
+    // Channel switching
     if (!bNavOpened && !bChannelSettingsOpened) {
       if (deltaY > 0) {
         loadChannel(iActiveChannelIndex + 1);
@@ -325,7 +323,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
-// --- END: NEW MOBILE SWIPE LOGIC (FIXED FOR MIRRORED BEHAVIOR) ---
+// --- END: RESTORED SWIPE LOGIC ---
 
 function handleSingleTapAction() {
   if (!isSessionActive) return;
@@ -634,7 +632,7 @@ function buildNav() {
 
     const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : '';
     
-    // Logo Fix
+    // Logo Fix: Uses .channel-logo-small (requires correct CSS)
     const logoHtml = ch.logo
         ? `<div class="channel-logo-small"><img src="${ch.logo}" alt="" onerror="this.style.display='none'; this.onerror=null;"></div>`
         : '<div class="channel-logo-small" style="width: 50px;"></div>';
@@ -1067,6 +1065,7 @@ function showNav() {
   bNavOpened = true;
   o.Nav.classList.add('visible');
   
+  // Ensure we start on Channel List (no groups open)
   if (o.ListContainer) {
       o.ListContainer.classList.remove('groups-opened');
       bGroupsOpened = false;
@@ -1085,7 +1084,7 @@ function hideNav() {
 function showGroups() {
   if (bNavOpened && o.ListContainer) {
     bGroupsOpened = true;
-    o.ListContainer.classList.add('groups-opened'); // Slide Channel List out, Groups in
+    o.ListContainer.classList.add('groups-opened'); // Slide to show Groups
     updateSelectedGroupInNav();
   }
 }
@@ -1222,7 +1221,7 @@ function showChannelName() {
   clearTimeout(channelNameTimeout);
   if (!o.ChannelInfo || !o.ChannelInfoName || !o.ChannelInfoEpg || !o.ChannelInfoLogo) return;
   if (!aFilteredChannelKeys || iActiveChannelIndex >= aFilteredChannelKeys.length) return; 
-  const chKey = aFilteredChannelKeys[iActiveChannelIndex]; 
+  const chKey = aFilteredChannelKeys[iActiveChannelKeys.indexOf(aFilteredChannelKeys[iActiveChannelIndex])]; 
   const ch = channels[chKey];
   if (!ch) return;
 
@@ -1378,7 +1377,7 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
-// --- START: TV REMOTE KEYDOWN LOGIC (FINALIZED) ---
+// --- START: TV REMOTE KEYDOWN LOGIC (STABLE VERSION) ---
 document.addEventListener('keydown', (e) => {
 
   if (document.activeElement === o.SearchField) {
@@ -1396,80 +1395,18 @@ document.addEventListener('keydown', (e) => {
       return;
   }
 
-  if (bGuideOpened) {
-      e.preventDefault();
-      if (e.key === 'Escape') window.hideGuide();
+  if (bGuideOpened || bSettingsModalOpened || bEpgOpened) {
+      // Handle modal/guide navigation and escape
+      if (e.key === 'Escape') clearUi();
       return;
   }
-
-  if (bSettingsModalOpened) {
-      e.preventDefault();
-      const items = o.SettingsModalContent.querySelectorAll('.modal-selectable');
-      if (!items || items.length === 0) {
-          if (e.key === 'Escape') window.hideSettingsModal();
-          return;
-      }
-
-      if (e.key === 'ArrowUp') {
-          iSettingsModalIndex = Math.max(0, iSettingsModalIndex - 1);
-          updateSettingsModalSelection();
-      } else if (e.key === 'ArrowDown') {
-          iSettingsModalIndex = Math.min(items.length - 1, iSettingsModalIndex + 1);
-          updateSettingsModalSelection();
-      } else if (e.key === 'Enter') {
-          const selectedItem = items[iSettingsModalIndex];
-          if (selectedItem) {
-              if (selectedItem.tagName === 'LI' && selectedItem.hasAttribute('data-value')) {
-                  const type = o.SettingsModalContent.querySelector('input[name="quality"]') ? 'quality' : 'format';
-                  if (type === 'quality') {
-                      window.applyQualityAndClose(selectedItem.dataset.value);
-                  } else if (type === 'format') {
-                      window.applyFormatAndClose(selectedItem.dataset.value);
-                  } else {
-                      if (typeof selectedItem.click === 'function') selectedItem.click();
-                  }
-              } else if (typeof selectedItem.click === 'function') {
-                  selectedItem.click();
-              }
-          }
-      } else if (e.key === 'Escape') {
-          const closeButton = Array.from(items).find(btn => btn.tagName === 'BUTTON' && (btn.textContent === 'CANCEL' || btn.textContent === 'CLOSE'));
-          if (closeButton) {
-              closeButton.click();
-          } else {
-              window.hideSettingsModal();
-          }
-      }
-      return;
-  }
-
-  if (bEpgOpened) {
-    e.preventDefault();
-    const EPG_KEYS = ['Escape', 'ArrowUp', 'ArrowDown', 'Enter']; 
-    if (!EPG_KEYS.includes(e.key)) return;
-
-    if (e.key === 'Escape') {
-        hideEpg();
-    } else if (e.key === 'ArrowUp') {
-        iEpgChannelIndex = Math.max(0, iEpgChannelIndex - 1);
-        renderEpg(); 
-    } else if (e.key === 'ArrowDown') {
-        iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1);
-        renderEpg(); 
-    }
-    else if (e.key === 'Enter') { 
-        // DO NOTHING.
-    }
-    return;
-  }
-
+  
+  // Logic inside NAV PANEL (Left)
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
-      // GROUP LIST (Deepest Left Panel)
+      // GROUP LIST (Leftmost Drill)
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
-      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
-      if (!GROUP_LIST_KEYS.includes(e.key)) return;
 
       if (e.key === 'ArrowUp') {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
@@ -1477,23 +1414,19 @@ document.addEventListener('keydown', (e) => {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
       } else if (e.key === 'Enter') { 
           groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // Back (Close drill-down)
-          hideGroups(); 
-      } else if (e.key === 'ArrowLeft') { 
-          // Do nothing
-      }
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { 
+          hideGroups(); // Go back to Channel List
+      } 
       updateSelectedGroupInNav();
 
     } else { 
       // CHANNEL LIST (Main Left Panel)
-      const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
-        if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
-      
+      const channelItems = o.ChannelList.querySelectorAll('li.channel-item');
+
       if (e.key === 'ArrowUp') {
           if (iChannelListIndex === 0 && o.SearchField) { 
               o.SearchField.focus();
-              const currentSelected = o.ChannelList.querySelector('.selected');
-              if (currentSelected) currentSelected.classList.remove('selected');
+              channelItems[iChannelListIndex].classList.remove('selected');
               iChannelListIndex = -1; 
           } else if (iChannelListIndex > 0) { 
               iChannelListIndex = (iChannelListIndex - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length; 
@@ -1515,7 +1448,6 @@ document.addEventListener('keydown', (e) => {
           }
       } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // Close Nav
           hideNav(); 
-          if (iChannelListIndex === -1 && o.SearchField) o.SearchField.blur(); 
       } else if (e.key === 'ArrowLeft') { // Drill Down (Open Groups)
           if (iChannelListIndex !== -1) { 
               showGroups(); 
@@ -1524,6 +1456,44 @@ document.addEventListener('keydown', (e) => {
     }
     return;
   }
+  
+  // Logic inside CHANNEL SETTINGS PANEL (Right)
+  if (bChannelSettingsOpened) {
+    e.preventDefault();
+    const isSubmenu = o.SettingsContainer?.classList.contains('submenu-visible');
+    
+    if (isSubmenu) {
+        const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
+        if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
+        else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
+        else if (e.key === 'Enter') {
+            submenuItems[iVideoSettingsIndex]?.click();
+        }
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // Go Back (to Main Settings Menu)
+            hideVideoFormatMenu();
+        }
+        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+    } else { 
+        // Main Settings Menu
+        const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
+        if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
+        else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
+        else if (e.key === 'Enter') {
+            mainItems[iChannelSettingsIndex]?.click();
+        }
+        else if (e.key === 'ArrowRight') { // Drill Down (Into Video/Format submenu)
+            if (iChannelSettingsIndex === 1) { 
+                mainItems[iChannelSettingsIndex]?.click();
+            }
+        }
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+             hideChannelSettings(); // Close the entire Settings panel
+        }
+        updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+    }
+    return;
+  }
+
 
   // DEFAULT PLAYER KEYS (Panels are closed)
   const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
@@ -1546,7 +1516,7 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
-// --- END: TV REMOTE KEYDOWN LOGIC (FINALIZED) ---
+// --- END: TV REMOTE KEYDOWN LOGIC (STABLE VERSION) ---
 
 
 /**
