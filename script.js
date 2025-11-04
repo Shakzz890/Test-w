@@ -46,8 +46,11 @@ let channels = {
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
     animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
+    // --- FIXED: Logo URL typo ---
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
+    // --- FIXED: Logo URL typo ---
     nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
+    // --- FIXED: Logo URL typo ---
     pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
@@ -77,8 +80,8 @@ let aEpgFilteredChannelKeys = [];
 let iSettingsModalIndex = 0; // Index for modal selection
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
-let loaderFadeTimeout = null; // <-- Added timeout variable
-let tempMessageTimeout = null; // <-- Added for temp message
+let loaderFadeTimeout = null; 
+let tempMessageTimeout = null; 
 
 /* -------------------------
     Utilities
@@ -130,7 +133,7 @@ async function initPlayer() {
     controlPanelElements: [],
     addSeekBar: false,
     addBigPlayButton: false,
-    showBuffering: true, // <-- SET TO TRUE
+    showBuffering: true, 
     clickToPlay: false
   });
 
@@ -143,14 +146,14 @@ async function initPlayer() {
 
   player.addEventListener('error', e => {
     console.error('Shaka Error:', e.detail);
-    showIdleAnimation(true); // Show idle animation on error
+    showIdleAnimation(true); 
     if (o.ChannelLoader) {
-      clearTimeout(loaderFadeTimeout); // Stop any fade out
+      clearTimeout(loaderFadeTimeout); 
       o.ChannelLoader.classList.add('HIDDEN');
       o.ChannelLoader.style.opacity = '1';
       o.ChannelLoader.classList.remove('fade-out');
     }
-    if (o.AvPlayer) o.AvPlayer.style.opacity = '1'; // Show video element again
+    if (o.AvPlayer) o.AvPlayer.style.opacity = '1'; 
   });
 
   player.addEventListener('trackschanged', renderChannelSettings);
@@ -159,33 +162,28 @@ async function initPlayer() {
 
   setupControls();
   showIdleAnimation(true);
-  loadInitialChannel(); // Load channel data, but don't play yet
+  loadInitialChannel(); 
 }
 
 function handleBuffering(event) {
-    clearTimeout(loaderFadeTimeout); // Always clear any pending transitions
+    clearTimeout(loaderFadeTimeout); 
 
     if (event.buffering) {
-        // Just hide video
         if(o.AvPlayer) o.AvPlayer.style.opacity = '0';
     } else {
-        // This event fires when buffering stops.
         hideLoaderAndShowVideo();
     }
 }
 
 function handlePlaying() {
-    // This fires when playback actually starts or resumes.
     hideLoaderAndShowVideo();
 }
 
 function hideLoaderAndShowVideo() {
-    clearTimeout(loaderFadeTimeout); // Clear any pending hide
+    clearTimeout(loaderFadeTimeout); 
 
-    // Show video
     if(o.AvPlayer) o.AvPlayer.style.opacity = '1';
 
-    // If our custom loader is visible, fade it out.
     if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
         o.ChannelLoader.classList.add('fade-out');
 
@@ -195,7 +193,7 @@ function hideLoaderAndShowVideo() {
                 o.ChannelLoader.style.opacity = '1'; 
                 o.ChannelLoader.classList.remove('fade-out'); 
             }
-        }, 500); // Match fade-out duration
+        }, 500); 
     }
 }
 
@@ -207,7 +205,7 @@ function setupControls() {
         if (e.touches.length === 1) {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
-            touchEndX = touchStartX; // Reset end points
+            touchEndX = touchStartX; 
             touchEndY = touchStartY;
         }
     }, { passive: true });
@@ -221,7 +219,7 @@ function setupControls() {
 
     playerContainer.addEventListener('touchend', e => {
         if (e.changedTouches.length !== 1) {
-            return; // Not a single touch
+            return; 
         }
 
         const targetElement = document.elementFromPoint(touchStartX, touchStartY);
@@ -299,12 +297,14 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     if (isHorizontal) {
         if (deltaX > 0) { // Swipe Right ->
             if (bChannelSettingsOpened) hideChannelSettings();
-            else if (bGroupsOpened) hideGroups(); // Swiped right from Channel list
-            else if (bNavOpened && !bGroupsOpened) hideNav(); // Swiped right from Group list
+            // --- MODIFIED: Swapped logic ---
+            else if (bGroupsOpened) hideGroups(); // Swiped right from Group list
+            else if (bNavOpened && !bGroupsOpened) hideNav(); // Swiped right from Channel list
             else if (!bNavOpened && !bChannelSettingsOpened) showNav(); // Swiped right from main screen
         } else { // Swipe Left <-
-            if (bNavOpened && !bGroupsOpened) showGroups(); // Swiped left from Group list
-            else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings(); // Only open if no panels are open
+            // --- MODIFIED: Swapped logic ---
+            if (bNavOpened && !bGroupsOpened) showGroups(); // Swiped left from Channel list
+            else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings(); 
             else if (bNavOpened && bGroupsOpened) { /* Do nothing */ } 
         }
     } else { // Vertical Swipe
@@ -336,7 +336,10 @@ function handleDoubleTapAction() {
 
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
-  let initialChannelKey = 'SonictheHedgehog'; 
+  // --- START: MODIFICATION - Changed to a working stream ---
+  let initialChannelKey = 'pbarush'; 
+  // --- END: MODIFICATION ---
+  
   if (!channels[initialChannelKey]) {
       initialChannelKey = Object.keys(channels)[0];
       if (!initialChannelKey) {
@@ -638,7 +641,7 @@ function updateSelectedChannelInNav() {
           const newItem = channelItems[iCurrentChannel];
           if (newItem) {
             newItem.classList.add('selected');
-            if (bNavOpened && typeof newItem.scrollIntoView === 'function') {
+            if (bNavOpened && !bGroupsOpened && typeof newItem.scrollIntoView === 'function') { // Only scroll if ChannelList is visible
                 newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }
@@ -666,7 +669,7 @@ function updateSelectedGroupInNav() {
            const newItem = allLis[iGroupListIndex];
            if (newItem) {
              newItem.classList.add('selected');
-             if (bNavOpened && !bGroupsOpened && typeof newItem.scrollIntoView === 'function') { // Only scroll if GroupList is visible
+             if (bNavOpened && bGroupsOpened && typeof newItem.scrollIntoView === 'function') { // Only scroll if GroupList is visible
                  newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
              }
            }
@@ -1062,8 +1065,10 @@ function showNav() {
   if (!o.Nav) return;
   bNavOpened = true;
   o.Nav.classList.add('visible');
-  updateSelectedChannelInNav(); // This is fine, iCurrentChannel is already set
-  updateSelectedGroupInNav(); // Update group list selection
+  // --- MODIFICATION: Update correct panel on open ---
+  updateSelectedChannelInNav(); 
+  updateSelectedGroupInNav();
+  // --- END MODIFICATION ---
 }
 
 function hideNav() {
@@ -1080,7 +1085,9 @@ function showGroups() {
   if (bNavOpened && o.ListContainer) {
     bGroupsOpened = true;
     o.ListContainer.classList.add('groups-opened');
-    updateSelectedChannelInNav(); // Update channel list selection
+    // --- MODIFICATION: Update correct panel on open ---
+    updateSelectedGroupInNav();
+    // --- END MODIFICATION ---
   }
 }
 
@@ -1088,7 +1095,9 @@ function hideGroups() {
   bGroupsOpened = false;
   if (o.ListContainer) {
       o.ListContainer.classList.remove('groups-opened');
-      updateSelectedGroupInNav(); // Update group list selection
+      // --- MODIFICATION: Update correct panel on open ---
+      updateSelectedChannelInNav();
+      // --- END MODIFICATION ---
   }
 }
 
@@ -1374,8 +1383,9 @@ if (o.SearchField) {
 
 document.addEventListener('keydown', (e) => {
 
+  // --- MODIFICATION: Check if channel list is visible for search bar nav ---
   if (document.activeElement === o.SearchField) {
-      if (e.key === 'ArrowDown' && bNavOpened && bGroupsOpened) { // Only if ChannelList is open
+      if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) { // Only if ChannelList is open
           e.preventDefault(); 
           iCurrentChannel = 0; 
           if(o.SearchField) o.SearchField.blur();
@@ -1476,37 +1486,13 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // --- START: MODIFICATION - Swapped logic blocks ---
+  // --- START: MODIFICATION - Swapped logic blocks to match HTML swap ---
   if (bNavOpened) {
     e.preventDefault();
     
-    // --- THIS IS THE GROUP LIST (Panel 1) ---
+    // --- THIS IS THE CHANNEL LIST (Panel 1) ---
     // --- This logic runs when bGroupsOpened is FALSE ---
-    if (!bGroupsOpened) { 
-      const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
-      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
-      if (!GROUP_LIST_KEYS.includes(e.key)) return;
-
-      if (e.key === 'ArrowUp') {
-          iGroupListIndex = Math.max(0, iGroupListIndex - 1);
-      } else if (e.key === 'ArrowDown') {
-          iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      } else if (e.key === 'Enter') { // Only Enter selects
-          groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc closes nav
-          hideNav();
-      } else if (e.key === 'ArrowLeft') { // ArrowLeft from groups opens Channel List
-          const selectedItem = groupItems[iGroupListIndex];
-          // Only click if it's a category button
-          if (selectedItem && selectedItem.hasAttribute('data-group')) {
-              selectedItem.click(); // This will select group and show channel list
-          }
-      }
-      updateSelectedGroupInNav();
-
-    // --- THIS IS THE CHANNEL LIST (Panel 2) ---
-    // --- This logic runs when bGroupsOpened is TRUE ---
-    } else { 
+    if (!bGroupsOpened) {
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
        if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
 
@@ -1541,11 +1527,29 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc closes nav
             hideNav();
             if (iCurrentChannel === -1 && o.SearchField) o.SearchField.blur();
-      } else if (e.key === 'ArrowLeft') { // ArrowLeft goes back to Group List
+      } else if (e.key === 'ArrowLeft') { // ArrowLeft goes to Group List
             if (iCurrentChannel !== -1) { // Only if not in search
-               hideGroups();
+               showGroups();
             }
       }
+    }
+    // --- THIS IS THE GROUP LIST (Panel 2) ---
+    // --- This logic runs when bGroupsOpened is TRUE ---
+    else { 
+      const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
+      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
+      if (!GROUP_LIST_KEYS.includes(e.key)) return;
+
+      if (e.key === 'ArrowUp') {
+          iGroupListIndex = Math.max(0, iGroupListIndex - 1);
+      } else if (e.key === 'ArrowDown') {
+          iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
+      } else if (e.key === 'Enter' || e.key === 'ArrowLeft') { // Enter or ArrowLeft selects
+          groupItems[iGroupListIndex]?.click();
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc goes back to Channel List
+          hideGroups();
+      }
+      updateSelectedGroupInNav();
     }
     return;
   }
