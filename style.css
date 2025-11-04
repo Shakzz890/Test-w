@@ -226,10 +226,8 @@ html, body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   z-index: 10;
-  /* --- START: MODIFICATION --- */
   transition: transform var(--anim-time-fast) ease-out,
               visibility var(--anim-time-fast) ease-out;
-  /* --- END: MODIFICATION --- */
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
@@ -239,11 +237,11 @@ html, body {
 #nav {
   left: 0;
   transform: translateX(-100%);
-  visibility: hidden; /* <-- ADDED */
+  visibility: hidden; 
 }
 #nav.visible {
   transform: translateX(0);
-  visibility: visible; /* <-- ADDED */
+  visibility: visible; 
 }
 #brand-header {
   display: flex;
@@ -251,7 +249,7 @@ html, body {
   padding: 15px;
   height: 64px;
   border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0; /* Prevent header from shrinking */
+  flex-shrink: 0; 
 }
 #brand-header svg {
   width: 24px;
@@ -265,7 +263,7 @@ html, body {
 #search_item_wrapper {
   padding: 15px;
   border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0; /* Prevent search from shrinking */
+  flex-shrink: 0; 
 }
 #SearchField {
   width: 100%;
@@ -285,22 +283,27 @@ html, body {
 /* Panel slide container (Groups / Channels) */
 #list_container_scrollarea {
   flex-grow: 1;
-  /* [REFACTOR] Moved from inline style */
-  height: calc(100vh - 159px);
-  overflow: hidden; /* This hides the other panel */
+  /* --- START: FIX for Double Scrollbar --- */
+  min-height: 0; /* ADDED for proper flex sizing */
+  /* REMOVED explicit height: calc(100vh - 159px); */
+  /* --- END: FIX --- */
+  overflow: hidden; 
 }
 #list_container {
   display: flex;
-  width: 200%; /* 2x the width for 2 panels */
+  width: 200%; 
   height: 100%;
   transform: translateX(0);
   transition: transform var(--anim-time-fast) ease-out;
 }
+/* --- START: FIX for Blank Group List --- */
+/* This transform was wrong. It should be -50% to slide left */
 #list_container.groups-opened {
-  transform: translateX(-50%); /* Slides the container left */
+  transform: translateX(-50%); 
 }
+/* --- END: FIX --- */
 #GroupList, #ChannelList {
-  width: 50%; /* Each panel takes half of the 200% width */
+  width: 50%; 
   height: 100%;
   padding: 10px 0;
 }
@@ -309,11 +312,11 @@ html, body {
 #ChannelSettings {
   right: 0;
   transform: translateX(100%);
-  visibility: hidden; /* <-- ADDED */
+  visibility: hidden; 
 }
 #ChannelSettings.visible {
   transform: translateX(0);
-  visibility: visible; /* <-- ADDED */
+  visibility: visible; 
 }
 
 /* Panel slide container (Main / Video) */
@@ -321,7 +324,7 @@ html, body {
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden; /* Hides the other panel */
+  overflow: hidden; 
 }
 #SettingsMainMenu, #SettingsVideoFormatMenu {
   position: absolute;
@@ -334,12 +337,11 @@ html, body {
 }
 #SettingsMainMenu {
   transform: translateX(0);
-  padding-top: 60px; /* Space for stream info */
+  padding-top: 60px; 
 }
 #SettingsVideoFormatMenu {
-  transform: translateX(100%); /* Start off-screen to the right */
+  transform: translateX(100%); 
 }
-/* When submenu is visible, slide both panels */
 #settings_container.submenu-visible #SettingsMainMenu {
   transform: translateX(-100%);
 }
@@ -370,7 +372,6 @@ html, body {
   text-transform: uppercase;
 }
 
-/* [REFACTOR] Added rule for inline styled HR */
 .HR {
   margin: 16px 6px;
   height: 1px;
@@ -469,7 +470,6 @@ html, body {
 .channel-item.playing {
   border-left: 3px solid var(--text-primary);
   padding-left: 7px;
-  /* A slightly stronger style for the playing channel */
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -558,7 +558,6 @@ html, body {
   color: var(--text-primary);
 }
 
-/* [REFACTOR] Specific override for Guide popup */
 #Guide .fullscreen-popup {
   max-width: 800px;
   padding: 30px;
@@ -612,7 +611,7 @@ html, body {
 
 /* Settings Modal */
 #SettingsModal {
-  background: transparent; /* Blur overlay handles background */
+  background: transparent; 
   z-index: 30;
 }
 #SettingsModal h2 {
@@ -643,8 +642,9 @@ html, body {
 }
 .popup-content-list li input[type="radio"] {
   transform: scale(1.2);
-  accent-color: var(--text-primary);
-  /* Make radio buttons non-interactive for touch */
+  /* --- START: FIX for Radio Button Color --- */
+  accent-color: var(--bg-focus); /* CHANGED from --text-primary */
+  /* --- END: FIX --- */
   pointer-events: none;
 }
 .popup-buttons {
