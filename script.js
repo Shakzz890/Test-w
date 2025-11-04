@@ -88,7 +88,9 @@ async function initPlayer() {
     channels[key].key = key;
   });
 
+  // --- START: FIX - Clear search field on load ---
   if (o.SearchField) o.SearchField.value = '';
+  // --- END: FIX ---
 
   loadFavoritesFromStorage();
   setupMainMenuControls();
@@ -703,6 +705,7 @@ function renderChannelSettings() {
       o.SettingsMainMenu.innerHTML = `
         <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
         <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
+        <!-- REMOVED custom PiP button -->
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
       `;
       updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
@@ -797,6 +800,9 @@ function showSettingsModal(type) {
   }
   clearUi('settingsModal');
   o.BlurOverlay.classList.add('visible');
+  // --- START: FIX for Modal Scrollbar ---
+  document.body.classList.add('modal-open');
+  // --- END: FIX ---
   bSettingsModalOpened = true;
   iSettingsModalIndex = 0; 
   try {
@@ -810,6 +816,9 @@ function showSettingsModal(type) {
 }
 
 window.hideSettingsModal = () => {
+  // --- START: FIX for Modal Scrollbar ---
+  document.body.classList.remove('modal-open');
+  // --- END: FIX ---
   bSettingsModalOpened = false;
   if (o.SettingsModal) o.SettingsModal.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
@@ -976,10 +985,7 @@ function toggleFavourite() {
   }
 }
 
-// --- START: FIX for PiP ---
-// The entire togglePip() function is removed, as it's no longer called.
-// --- END: FIX for PiP ---
-
+// REMOVED togglePip() function
 
 /* -------------------------
     UI State & Helpers
@@ -1084,11 +1090,13 @@ window.showGuide = () => {
   if (!o.Guide || !o.GuideContent || !o.BlurOverlay) return;
   clearUi('guide');
   o.BlurOverlay.classList.add('visible');
+  document.body.classList.add('modal-open'); // <-- FIX for scrollbar
   renderGuideContent();
   bGuideOpened = true;
   o.Guide.classList.remove('HIDDEN');
 };
 window.hideGuide = () => {
+  document.body.classList.remove('modal-open'); // <-- FIX for scrollbar
   bGuideOpened = false;
   if (o.Guide) o.Guide.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
@@ -1120,6 +1128,7 @@ function renderGuideContent() {
 function showEpg() {
   if (!o.EpgOverlay || !o.EpgChannels || !o.EpgTimeline) return;
   clearUi('epg');
+  document.body.classList.add('modal-open'); // <-- FIX for scrollbar
 
   aEpgFilteredChannelKeys = Object.keys(channels)
       .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
@@ -1140,6 +1149,7 @@ function showEpg() {
   o.EpgOverlay.classList.remove('HIDDEN');
 }
 function hideEpg() {
+    document.body.classList.remove('modal-open'); // <-- FIX for scrollbar
     bEpgOpened = false;
     if (o.EpgOverlay) o.EpgOverlay.classList.add('HIDDEN');
 }
@@ -1335,8 +1345,6 @@ if (o.SearchField) {
       if (aFilteredChannelKeys.length > 0) {
         iCurrentChannel = 0;
         updateSelectedChannelInNav();
-      } else {
-        // Do nothing, keep playing current channel
       }
     });
 } else { console.error("SearchField element not found."); }
@@ -1445,16 +1453,15 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // --- START: This is the CORRECTED Panel Logic ---
+  // --- This is the Panel Logic ---
   if (bNavOpened) {
     e.preventDefault();
     
-    // --- THIS IS THE CHANNEL LIST (Panel 1) ---
+    // --- CHANNEL LIST (Panel 1) ---
     if (!bGroupsOpened) {
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
        if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
 
-      // Search Bar Navigation
       if (e.key === 'ArrowUp') {
           if (iCurrentChannel === 0 && o.SearchField) {
               o.SearchField.focus();
@@ -1474,22 +1481,21 @@ document.addEventListener('keydown', (e) => {
              iCurrentChannel = (iCurrentChannel + 1) % aFilteredChannelKeys.length;
              updateSelectedChannelInNav();
           }
-      // End Search Bar Nav
       } else if (e.key === 'Enter') { 
             if (iCurrentChannel !== -1 && aFilteredChannelKeys.length > 0) {
                  loadChannel(iCurrentChannel);
                  hideNav();
             }
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { 
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // Closes Panel
             hideNav();
             if (iCurrentChannel === -1 && o.SearchField) o.SearchField.blur();
-      } else if (e.key === 'ArrowLeft') { // ArrowLeft goes to Group List
+      } else if (e.key === 'ArrowLeft') { // Goes to Group List
             if (iCurrentChannel !== -1) { 
                showGroups();
             }
       }
     }
-    // --- THIS IS THE GROUP LIST (Panel 2) ---
+    // --- GROUP LIST (Panel 2) ---
     else { 
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
       const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
@@ -1499,18 +1505,18 @@ document.addEventListener('keydown', (e) => {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       } else if (e.key === 'ArrowDown') {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      } else if (e.key === 'Enter') { // Enter selects
+      } else if (e.key === 'Enter') { 
           groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowRight') { // ArrowRight goes back to Channel List
+      } else if (e.key === 'ArrowRight') { // Goes back to Channel List
           hideGroups();
-      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // ArrowLeft or Esc closes nav
+      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // Closes Panel
           hideNav();
       }
       updateSelectedGroupInNav();
     }
     return;
   }
-  // --- END: MODIFICATION ---
+  // --- End Panel Logic ---
 
 
   if (bChannelSettingsOpened) {
