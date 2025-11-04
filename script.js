@@ -1144,7 +1144,7 @@ function renderGuideContent() {
       <li><kbd>E</kbd> - EPG</li>
       <li><kbd>H</kbd> - User Manual (Guide)</li>
       <li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li>
-      <li><kbd>←</kbd> - Open Channel List / Open Group List</li>
+      <li><kbd>←</kbd> - Open Channel List / Drill Down to Groups</li>
       <li><kbd>→</kbd> - Close Panel / Open Channel Settings</li>
       <li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show Channel Info / Select Item</li>
       <li><kbd>ESC</kbd> - Go Back / Close Panel</li>
@@ -1329,7 +1329,6 @@ function updateSettingsModalSelection() {
 }
 
 function toggleFullScreen() {
-    // Fulscreen is applied to the playerContainer which holds the video AND the panels.
     const elem = document.documentElement;
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
