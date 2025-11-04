@@ -32,10 +32,8 @@ const o = {
   TempMessageOverlay: document.getElementById('TempMessageOverlay')
 };
 
-// --- START: Channel List URL Fixes ---
 let channels = {
     KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
-    // --- FIXED: Replaced PNG URL with a valid test stream ---
     StrawberryShortcake: { name: "Strawberry Shortcake (Test)", type: "hls", manifestUri: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"] },
     SonictheHedgehog: { name: "Sonic the Hedgehog", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258004/hls/master.m3u8?ads.xumo_channelId=88258004", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Sonic_The_Hedgehog.svg/1200px-Sonic_The_Hedgehog.svg.png", group: ["cartoons & animations"] },
     SuperMario: { name: "Super Mario", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258005/hls/master.m3u8?ads.xumo_channelId=88258005", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFkMkkUmZBGslGWGZMN2er5emlnqGCCU49wg&s", group: ["cartoons & animations"] },
@@ -46,20 +44,13 @@ let channels = {
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
     animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
-    // --- FIXED: Logo URL typo ---
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
-    // --- FIXED: Logo URL typo ---
     nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
-    // --- FIXED: Logo URL typo ---
-    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
+    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "httpsimg.com/550RYpJ.png", group: ["movies", "entertainment"] },
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
-    // --- FIXED: Replaced example.com URL with a valid test stream ---
     mrbeanlive: { name: "MR Bean (Test)", type: "hls", manifestUri: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
-   
 };
-// --- END: Channel List URL Fixes ---
-
 
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
@@ -77,7 +68,7 @@ let iChannelSettingsIndex = 0;
 let iVideoSettingsIndex = 0;
 let iEpgChannelIndex = 0;
 let aEpgFilteredChannelKeys = [];
-let iSettingsModalIndex = 0; // Index for modal selection
+let iSettingsModalIndex = 0; 
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
 let loaderFadeTimeout = null; 
@@ -96,6 +87,10 @@ async function initPlayer() {
     channels[key].number = i + 1;
     channels[key].key = key;
   });
+
+  // --- START: FIX - Clear search field on load ---
+  if (o.SearchField) o.SearchField.value = '';
+  // --- END: FIX ---
 
   loadFavoritesFromStorage();
   setupMainMenuControls();
@@ -297,13 +292,11 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     if (isHorizontal) {
         if (deltaX > 0) { // Swipe Right ->
             if (bChannelSettingsOpened) hideChannelSettings();
-            // --- MODIFIED: Swapped logic ---
-            else if (bGroupsOpened) hideGroups(); // Swiped right from Group list
-            else if (bNavOpened && !bGroupsOpened) hideNav(); // Swiped right from Channel list
-            else if (!bNavOpened && !bChannelSettingsOpened) showNav(); // Swiped right from main screen
+            else if (bGroupsOpened) hideGroups(); 
+            else if (bNavOpened && !bGroupsOpened) hideNav(); 
+            else if (!bNavOpened && !bChannelSettingsOpened) showNav(); 
         } else { // Swipe Left <-
-            // --- MODIFIED: Swapped logic ---
-            if (bNavOpened && !bGroupsOpened) showGroups(); // Swiped left from Channel list
+            if (bNavOpened && !bGroupsOpened) showGroups(); 
             else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings(); 
             else if (bNavOpened && bGroupsOpened) { /* Do nothing */ } 
         }
@@ -336,9 +329,7 @@ function handleDoubleTapAction() {
 
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
-  // --- START: MODIFICATION - Changed to a working stream ---
   let initialChannelKey = 'pbarush'; 
-  // --- END: MODIFICATION ---
   
   if (!channels[initialChannelKey]) {
       initialChannelKey = Object.keys(channels)[0];
@@ -591,7 +582,7 @@ function buildNav() {
   if (aFilteredChannelKeys.length === 0) {
     const msg = sSelectedGroup === '__fav'
         ? 'No favorite channels found. Add channels using the settings menu (→).'
-        : 'No channels found in this category.';
+        : (searchTerm ? 'No channels match your search.' : 'No channels found in this category.');
     o.ChannelList.innerHTML = `<li style="justify-content:center; color:#888; padding:12px; height: auto; line-height: normal; white-space: normal; text-align: center;">${msg}</li>`;
     return;
   }
@@ -1065,10 +1056,8 @@ function showNav() {
   if (!o.Nav) return;
   bNavOpened = true;
   o.Nav.classList.add('visible');
-  // --- MODIFICATION: Update correct panel on open ---
   updateSelectedChannelInNav(); 
   updateSelectedGroupInNav();
-  // --- END MODIFICATION ---
 }
 
 function hideNav() {
@@ -1085,9 +1074,7 @@ function showGroups() {
   if (bNavOpened && o.ListContainer) {
     bGroupsOpened = true;
     o.ListContainer.classList.add('groups-opened');
-    // --- MODIFICATION: Update correct panel on open ---
     updateSelectedGroupInNav();
-    // --- END MODIFICATION ---
   }
 }
 
@@ -1095,9 +1082,7 @@ function hideGroups() {
   bGroupsOpened = false;
   if (o.ListContainer) {
       o.ListContainer.classList.remove('groups-opened');
-      // --- MODIFICATION: Update correct panel on open ---
       updateSelectedChannelInNav();
-      // --- END MODIFICATION ---
   }
 }
 
@@ -1370,22 +1355,25 @@ if (o.PlayButton) {
 if (o.SearchField) {
     o.SearchField.addEventListener('input', () => {
       buildNav();
+      // --- START: FIX - Don't auto-load on search, just select ---
       if (aFilteredChannelKeys.length > 0) {
         iCurrentChannel = 0;
-        if (isSessionActive) { loadChannel(0); }
+        // if (isSessionActive) { loadChannel(0); } // REMOVED - user will press Enter
         updateSelectedChannelInNav();
       } else {
-        try { player?.unload(); } catch {}
-        showIdleAnimation(true);
+        // if list is empty, DO NOT unload the player
+        // try { player?.unload(); } catch {} // REMOVED
+        // showIdleAnimation(true); // REMOVED
       }
+      // --- END: FIX ---
     });
 } else { console.error("SearchField element not found."); }
 
 document.addEventListener('keydown', (e) => {
 
-  // --- MODIFICATION: Check if channel list is visible for search bar nav ---
+  // --- START: FIX - Corrected logic for search nav ---
   if (document.activeElement === o.SearchField) {
-      if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) { // Only if ChannelList is open
+      if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) { // Check for !bGroupsOpened
           e.preventDefault(); 
           iCurrentChannel = 0; 
           if(o.SearchField) o.SearchField.blur();
@@ -1398,6 +1386,7 @@ document.addEventListener('keydown', (e) => {
       }
       return; 
   }
+  // --- END: FIX ---
 
 
   if (bGuideOpened) {
@@ -1486,7 +1475,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // --- START: MODIFICATION - Swapped logic blocks to match HTML swap ---
+  // --- START: MODIFICATION - Corrected Panel Logic ---
   if (bNavOpened) {
     e.preventDefault();
     
@@ -1496,18 +1485,16 @@ document.addEventListener('keydown', (e) => {
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
        if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
 
-      // --- Search Bar Navigation ---
+      // Search Bar Navigation
       if (e.key === 'ArrowUp') {
           if (iCurrentChannel === 0 && o.SearchField) {
               o.SearchField.focus();
               const currentSelected = o.ChannelList.querySelector('.selected');
               if (currentSelected) currentSelected.classList.remove('selected');
-              iCurrentChannel = -1; // Indicate search field has focus
+              iCurrentChannel = -1; 
           } else if (iCurrentChannel > 0) {
               iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
               updateSelectedChannelInNav();
-          } else if (iCurrentChannel === -1) {
-              // If search is already focused, do nothing on ArrowUp
           }
       } else if (e.key === 'ArrowDown') {
           if (iCurrentChannel === -1 && aFilteredChannelKeys.length > 0) {
@@ -1518,17 +1505,17 @@ document.addEventListener('keydown', (e) => {
              iCurrentChannel = (iCurrentChannel + 1) % aFilteredChannelKeys.length;
              updateSelectedChannelInNav();
           }
-      // --- End Search Bar Nav ---
-      } else if (e.key === 'Enter') { // Only Enter selects
+      // End Search Bar Nav
+      } else if (e.key === 'Enter') { 
             if (iCurrentChannel !== -1 && aFilteredChannelKeys.length > 0) {
                  loadChannel(iCurrentChannel);
                  hideNav();
             }
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc closes nav
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { 
             hideNav();
             if (iCurrentChannel === -1 && o.SearchField) o.SearchField.blur();
       } else if (e.key === 'ArrowLeft') { // ArrowLeft goes to Group List
-            if (iCurrentChannel !== -1) { // Only if not in search
+            if (iCurrentChannel !== -1) { 
                showGroups();
             }
       }
@@ -1544,10 +1531,12 @@ document.addEventListener('keydown', (e) => {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       } else if (e.key === 'ArrowDown') {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      } else if (e.key === 'Enter' || e.key === 'ArrowLeft') { // Enter or ArrowLeft selects
+      } else if (e.key === 'Enter') { // Enter selects
           groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc goes back to Channel List
+      } else if (e.key === 'ArrowRight') { // ArrowRight goes back to Channel List
           hideGroups();
+      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // ArrowLeft or Esc closes nav
+          hideNav();
       }
       updateSelectedGroupInNav();
     }
