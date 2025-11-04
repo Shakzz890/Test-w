@@ -226,7 +226,10 @@ html, body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   z-index: 10;
-  transition: transform var(--anim-time-fast) ease-out;
+  /* --- START: MODIFICATION --- */
+  transition: transform var(--anim-time-fast) ease-out,
+              visibility var(--anim-time-fast) ease-out;
+  /* --- END: MODIFICATION --- */
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
@@ -236,9 +239,11 @@ html, body {
 #nav {
   left: 0;
   transform: translateX(-100%);
+  visibility: hidden; /* <-- ADDED */
 }
 #nav.visible {
   transform: translateX(0);
+  visibility: visible; /* <-- ADDED */
 }
 #brand-header {
   display: flex;
@@ -304,9 +309,11 @@ html, body {
 #ChannelSettings {
   right: 0;
   transform: translateX(100%);
+  visibility: hidden; /* <-- ADDED */
 }
 #ChannelSettings.visible {
   transform: translateX(0);
+  visibility: visible; /* <-- ADDED */
 }
 
 /* Panel slide container (Main / Video) */
