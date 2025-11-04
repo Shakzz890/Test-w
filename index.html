@@ -21,115 +21,115 @@
     <video id="avplayer" autoplay muted playsinline></video>
 
     <!-- Stream Info -->
-    <div id="StreamInfoOverlay" class="HIDDEN"></div>
+    <div id="StreamInfoOverlay" class="HIDDEN"></div>
 
-    <!-- Loader -->
-    <div id="ChannelLoader" class="HIDDEN">
-      <div class="loader-content">
-        <div class="loading-spinner"></div>
-        <span class="loading-text">Loading Channel...</span>
-      </div>
-    </div>
-  </div>
+    <!-- Loader -->
+    <div id="ChannelLoader" class="HIDDEN">
+      <div class="loader-content">
+        <div class="loading-spinner"></div>
+        <span class="loading-text">Loading Channel...</span>
+      </div>
+    </div>
+  </div>
 
-  <!-- Background Blur -->
-  <div id="BlurOverlay" class="fullscreen"></div>
+  <!-- Background Blur -->
+  <div id="BlurOverlay" class="fullscreen"></div>
 
-  <!-- Temporary Message -->
-  <div id="TempMessageOverlay" class_="HIDDEN"></div>
+  <!-- Temporary Message -->
+  <div id="TempMessageOverlay" class_="HIDDEN"></div>
 
-  <!-- UI Elements -->
-  <div id="ui_elements">
+  <!-- UI Elements -->
+  <div id="ui_elements">
 
-    <!-- Idle Animation -->
-    <div id="IdleAnimation" class="fullscreen">
-      <div class="idle-branding">
-        <h1>SHAKZZ TV</h1>
-        <p>FOR FREE</p>
-      </div>
-      <div id="PlayButton" title="Play">
-        <svg viewBox="0 0 24 24">
-          <path d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
-        </svg>
-      </div>
-    </div>
+    <!-- Idle Animation -->
+    <div id="IdleAnimation" class="fullscreen">
+      <div class="idle-branding">
+        <h1>SHAKZZ TV</h1>
+        <p>FOR FREE</p>
+      </div>
+      <div id="PlayButton" title="Play">
+        <svg viewBox="0 0 24 24">
+          <path d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+        </svg>
+      </div>
+    </div>
 
-    <!-- Left Navigation Panel -->
-    <nav id="nav" aria-label="Main Navigation">
-      <div id="brand-header">
-        <svg viewBox="0 0 24 24" fill="white">
-          <path d="M21,3H3C1.89,3,1,3.89,1,5V17C1,18.11,1.89,19,3,19H8V21H16V19H21
-                       C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17
-                       M16,11L11,15V7L16,11Z"></path>
-        </svg>
-        <span>Shakzz TV</span>
-      </div>
+    <!-- Left Navigation Panel -->
+    <nav id="nav" aria-label="Main Navigation">
+      <div id="brand-header">
+        <svg viewBox="0 0 24 24" fill="white">
+          <path d="M21,3H3C1.89,3,1,3.89,1,5V17C1,18.11,1.89,19,3,19H8V21H16V19H21
+                       C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17
+                       M16,11L11,15V7L16,11Z"></path>
+        </svg>
+        <span>Shakzz TV</span>
+      </div>
 
-      <div id="search_item_wrapper">
-        <input id="SearchField" type="search" placeholder="Search" aria-label="Search Channels" />
-      </div>
+      <div id="search_item_wrapper">
+        <input id="SearchField" type="search" placeholder="Search" aria-label="Search Channels" />
+      </div>
 
-      <!-- This inner container is for the group/channel slide animation -->
-      <div id="list_container_scrollarea" style="height: calc(100vh - 159px); overflow:hidden;">
-        <div id="list_container">
-          <div id="GroupList" class="custom-scrollbar">
-            <ul id="main_nav">
-              <li id="guide_button">GUIDE</li>
-              <li id="epg_button">EPG</li>
-            </ul>
+      <!-- This inner container is for the group/channel slide animation -->
+      <div id="list_container_scrollarea" style="height: calc(100vh - 159px); overflow:hidden;">
+        <div id="list_container">
+          <div id="GroupList" class="custom-scrollbar">
+            <ul id="main_nav">
+              <li id="guide_button">GUIDE</li>
+              <li id="epg_button">EPG</li>
+            </ul>
 
-            <div class="HR" style="margin:16px 6px; height:1px; background: var(--primary-gradient);"></div>
+            <div class="HR" style="margin:16px 6px; height:1px; background: var(--primary-gradient);"></div>
 
-            <h2 class="list_headline">CATEGORIES</h2>
-            <ul id="DynamicGroupsList"></ul>
-          </div>
-          <div id="ChannelList" class="custom-scrollbar"></div>
-        </div>
-      </div>
-    </nav>
+            <h2 class="list_headline">CATEGORIES</h2>
+            <ul id="DynamicGroupsList"></ul>
+          </div>
+          <div id="ChannelList" class="custom-scrollbar"></div>
+        </div>
+      </div>
+    </nav>
 
-    <!-- Right Settings Panel -->
-    <aside id="ChannelSettings" aria-label="Channel Settings">
-      <!-- This inner container is for the settings/video slide animation -->
-      <div id="settings_container">
-        <div id="SettingsMainMenu" class="custom-scrollbar"></div>
-        <div id="SettingsVideoFormatMenu" class="custom-scrollbar"></div>
-      </div>
-    </aside>
+    <!-- Right Settings Panel -->
+    <aside id="ChannelSettings" aria-label="Channel Settings">
+      <!-- This inner container is for the settings/video slide animation -->
+      <div id="settings_container">
+        <div id="SettingsMainMenu" class="custom-scrollbar"></div>
+        <div id="SettingsVideoFormatMenu" class="custom-scrollbar"></div>
+      </div>
+    </aside>
 
-    <!-- Channel Info Overlay -->
-    <div id="ChannelInfo">
-      <div id="ch_logo"></div>
-      <div id="channel_text_container">
-        <div id="channel_name"></div>
-        <div id="channel_epg"></div>
-      </div>
-    </div>
+    <!-- Channel Info Overlay -->
+    <div id="ChannelInfo">
+      <div id="ch_logo"></div>
+      <div id="channel_text_container">
+        <div id="channel_name"></div>
+        <div id="channel_epg"></div>
+      </div>
+    </div>
 
-    <!-- GUIDE Modal -->
-    <div id="Guide" class="fullscreen HIDDEN" aria-hidden="true">
-      <div class="fullscreen-popup" style="max-width:800px; padding: 30px;">
-        <button class="close-button" onclick="hideGuide()" aria-label="Close Guide"></button>
-        <div id="GuideContent"></div>
-      </div>
-    </div>
+    <!-- GUIDE Modal -->
+    <div id="Guide" class="fullscreen HIDDEN" aria-hidden="true">
+      <div class="fullscreen-popup" style="max-width:800px; padding: 30px;">
+        <button class="close-button" onclick="hideGuide()" aria-label="Close Guide"></button>
+        <div id="GuideContent"></div>
+      </div>
+    </div>
 
-    <!-- EPG Modal -->
-    <div id="EpgOverlay" class="fullscreen HIDDEN" aria-hidden="true">
-      <div id="EpgChannels" class="custom-scrollbar"></div>
-      <div id="EpgTimeline" class="custom-scrollbar"></div>
-    </div>
+    <!-- EPG Modal -->
+    <div id="EpgOverlay" class="fullscreen HIDDEN" aria-hidden="true">
+      <div id="EpgChannels" class="custom-scrollbar"></div>
+      <div id="EpgTimeline" class="custom-scrollbar"></div>
+    </div>
 
-    <!-- Settings Modal -->
-    <div id="SettingsModal" class="fullscreen HIDDEN" aria-hidden="true">
-      <div class="fullscreen-popup">
-        <div id="SettingsModalContent"></div>
-      </div>
-    </div>
+    <!-- Settings Modal -->
+    <div id="SettingsModal" class="fullscreen HIDDEN" aria-hidden="true">
+      <div class="fullscreen-popup">
+        <div id="SettingsModalContent"></div>
+      </div>
+    </div>
 
-  </div>
+  </div>
 
-  <!-- Main Script -->
-  <script src="script.js"></script>
+  <!-- Main Script -->
+  <script src="script.js"></script>
 </body>
 </html>
