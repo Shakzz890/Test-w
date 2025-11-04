@@ -32,14 +32,20 @@
 html, body {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: hidden; /* Default to hidden */
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   user-select: none;
-  -webkit-user-select: none; /* Added for broader compatibility */
+  -webkit-user-select: none; 
   -moz-user-select: none;
 }
+
+/* --- START: FIX for Modal Scrollbar --- */
+body.modal-open {
+  overflow: hidden; /* Force no scroll when modal is open */
+}
+/* --- END: FIX --- */
 
 #playerContainer {
   width: 100%;
@@ -48,13 +54,13 @@ html, body {
   top: 0;
   left: 0;
   background: var(--bg-primary);
-  outline: none; /* For TV remote focus */
+  outline: none; 
 }
 
 #avplayer {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Default aspect ratio */
+  object-fit: contain; 
   opacity: 1;
   transition: opacity 0.3s ease-in-out;
 }
@@ -283,9 +289,9 @@ html, body {
 /* Panel slide container (Groups / Channels) */
 #list_container_scrollarea {
   flex-grow: 1;
-  /* --- START: FIX for Double Scrollbar --- */
-  min-height: 0; /* ADDED for proper flex sizing */
-  /* REMOVED explicit height: calc(100vh - 159px); */
+  /* --- START: FIX for Double Scrollbar & Blank Panel --- */
+  min-height: 0; /* ADDED: Allows flex-grow to work properly */
+  /* REMOVED: height: calc(100vh - 159px); */
   /* --- END: FIX --- */
   overflow: hidden; 
 }
@@ -296,12 +302,9 @@ html, body {
   transform: translateX(0);
   transition: transform var(--anim-time-fast) ease-out;
 }
-/* --- START: FIX for Blank Group List --- */
-/* This transform was wrong. It should be -50% to slide left */
 #list_container.groups-opened {
   transform: translateX(-50%); 
 }
-/* --- END: FIX --- */
 #GroupList, #ChannelList {
   width: 50%; 
   height: 100%;
@@ -642,9 +645,7 @@ html, body {
 }
 .popup-content-list li input[type="radio"] {
   transform: scale(1.2);
-  /* --- START: FIX for Radio Button Color --- */
-  accent-color: var(--bg-focus); /* CHANGED from --text-primary */
-  /* --- END: FIX --- */
+  accent-color: var(--bg-focus); 
   pointer-events: none;
 }
 .popup-buttons {
