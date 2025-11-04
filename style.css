@@ -1,385 +1,698 @@
-/* ==============================
-   ROOT & VARIABLES
-   ============================== */
+/* -------------------------
+    ROOT & VARIABLES
+   ------------------------- */
 :root {
-  --bg-primary: #000;
-  --bg-secondary: #111;
-  --bg-overlay: rgba(0, 0, 0, 0.85);
-  --bg-panel: rgba(18, 18, 18, 0.95);
-  --bg-panel-solid: #121212;
-  --bg-hover: rgba(255, 255, 255, 0.1);
-  --bg-selected: #505050;
-  --bg-focus: #0078d4;
-  --text-primary: #f1f1f1;
-  --text-secondary: #aaa;
-  --border-color: #444;
-  --primary-gradient: linear-gradient(90deg, #ff007b, #ff7b00);
-  --anim-fast: 0.3s;
+  --bg-primary: #000;
+  --bg-secondary: #111;
+  --bg-overlay: rgba(0, 0, 0, 0.85);
+  --bg-panel: rgba(18, 18, 18, 0.95);
+  --bg-panel-solid: #121212;
+  --bg-hover: rgba(255, 255, 255, 0.1);
+  --bg-selected: #505050;
+  --bg-focus: #0078d4;
+  --text-primary: #f1f1f1;
+  --text-secondary: #aaa;
+  --text-medium: #888;
+  --border-color: #444;
+  --primary-gradient: linear-gradient(90deg, #ff007b, #ff7b00);
+
+  /* Animation Timings */
+  --anim-time-fast: 0.3s;
 }
 
-/* ==============================
-   BASE
-   ============================== */
+/* -------------------------
+    BASE & PLAYER
+   ------------------------- */
 * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: system-ui, sans-serif;
-  user-select: none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  user-select: none;
+  -webkit-user-select: none; /* Added for broader compatibility */
+  -moz-user-select: none;
 }
 
 #playerContainer {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: var(--bg-primary);
-  outline: none;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: var(--bg-primary);
+  outline: none; /* For TV remote focus */
 }
 
 #avplayer {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transition: opacity 0.3s ease-in-out;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Default aspect ratio */
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
 }
 
-/* ==============================
-   UTILITY CLASSES
-   ============================== */
+/* -------------------------
+    UTILITY CLASSES
+   ------------------------- */
 .fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 5;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
 }
-
 .HIDDEN {
-  display: none !important;
-  visibility: hidden;
-  opacity: 0;
+  display: none !important;
+  visibility: hidden;
+  opacity: 0;
 }
-
 .custom-scrollbar {
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
-
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
+  background: var(--border-color);
+  border-radius: 3px;
 }
 
-/* ==============================
-   LEFT PANEL (NAVIGATION)
-   ============================== */
-#nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  width: 320px;
-  max-width: 80%;
-  background: var(--bg-panel);
-  backdrop-filter: blur(10px);
-  transform: translateX(-100%);
-  transition: transform var(--anim-fast) ease-out;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+/* -------------------------
+    OVERLAYS (LOADERS, INFO)
+   ------------------------- */
+#BlurOverlay {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+#BlurOverlay.visible {
+  opacity: 1;
+  visibility: visible;
 }
 
-#nav.visible {
-  transform: translateX(0);
-}
-
-/* Header */
-#brand-header {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  height: 64px;
-  border-bottom: 1px solid var(--border-color);
-}
-#brand-header svg {
-  width: 24px;
-  height: 24px;
-  margin-right: 10px;
-}
-#brand-header span {
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-/* Search */
-#search_item_wrapper {
-  padding: 15px;
-  border-bottom: 1px solid var(--border-color);
-}
-#SearchField {
-  width: 100%;
-  padding: 10px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  border-radius: 5px;
-}
-#SearchField:focus {
-  border-color: var(--bg-focus);
-  box-shadow: 0 0 5px var(--bg-focus);
-  outline: none;
-}
-
-/* Dual list container (Channels / Groups) */
-#list_container_scrollarea {
-  flex-grow: 1;
-  overflow: hidden;
-  height: calc(100vh - 159px);
-}
-
-#list_container {
-  display: flex;
-  width: 200%;
-  height: 100%;
-  transform: translateX(0);
-  transition: transform var(--anim-fast) ease-out;
-}
-
-/* When group list is open */
-#list_container.groups-opened {
-  transform: translateX(-50%);
-}
-
-/* Two sides inside the nav */
-#ChannelList,
-#GroupList {
-  width: 50%;
-  height: 100%;
-  padding: 10px 0;
-}
-
-/* Scrollable content */
-#main_nav, #DynamicGroupsList {
-  list-style: none;
-  padding: 0;
-}
-#main_nav li, #DynamicGroupsList li {
-  padding: 15px 20px;
-  border-radius: 5px;
-  margin: 2px 5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-#main_nav li:hover,
-#DynamicGroupsList li:hover {
-  background: var(--bg-hover);
-}
-#main_nav li.selected,
-#DynamicGroupsList li.selected {
-  background: var(--bg-selected);
-  font-weight: 600;
-}
-
-/* Divider + Headline */
-.HR {
-  margin: 16px 6px;
-  height: 1px;
-  background: var(--primary-gradient);
-}
-.list_headline {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  padding: 10px 20px;
-  text-transform: uppercase;
-}
-
-/* ==============================
-   RIGHT PANEL (SETTINGS)
-   ============================== */
-#ChannelSettings {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 320px;
-  max-width: 80%;
-  background: var(--bg-panel);
-  transform: translateX(100%);
-  transition: transform var(--anim-fast) ease-out;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-}
-#ChannelSettings.visible {
-  transform: translateX(0);
-}
-
-/* Internal Slide Animation */
-#settings_container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-#SettingsMainMenu, #SettingsVideoFormatMenu {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  transition: transform var(--anim-fast) ease-out;
-  padding: 10px;
-}
-#SettingsMainMenu {
-  transform: translateX(0);
-  padding-top: 60px;
-}
-#SettingsVideoFormatMenu {
-  transform: translateX(100%);
-}
-#settings_container.submenu-visible #SettingsMainMenu {
-  transform: translateX(-100%);
-}
-#settings_container.submenu-visible #SettingsVideoFormatMenu {
-  transform: translateX(0);
-}
-
-/* ==============================
-   CHANNEL ITEMS
-   ============================== */
-.channel-item {
-  display: flex;
-  align-items: center;
-  height: 60px;
-  padding: 8px 10px;
-  margin: 2px 5px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.channel-item:hover {
-  background: var(--bg-hover);
-}
-.channel-item.selected {
-  background: var(--bg-selected);
-  font-weight: 600;
-}
-.channel-item.playing {
-  border-left: 3px solid var(--text-primary);
-  padding-left: 7px;
-}
-
-.list-title {
-  flex-grow: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ==============================
-   INFO + MISC OVERLAYS
-   ============================== */
-#ChannelInfo {
-  position: fixed;
-  bottom: 50px;
-  left: 50%;
-  transform: translateX(-50%) translateY(200px);
-  background: var(--bg-panel);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  padding: 15px 20px;
-  z-index: 9;
-  opacity: 0;
-  visibility: hidden;
-  transition: transform 0.3s, opacity 0.3s, visibility 0.3s;
-}
-#ChannelInfo.visible {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-  visibility: visible;
-}
-
-/* ==============================
-   LOADER / IDLE / MESSAGES
-   ============================== */
 #ChannelLoader {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-primary);
-  position: absolute;
-  inset: 0;
-  z-index: 8;
-  transition: opacity 0.5s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-primary);
+  background-size: cover;
+  background-position: center;
+  z-index: 8;
+  opacity: 1;
+  transition: opacity 0.5s ease-out;
 }
-#ChannelLoader.fade-out { opacity: 0; }
+#ChannelLoader.fade-out {
+  opacity: 0;
+}
+.loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 20px;
+  border-radius: 10px;
+}
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #444;
+  border-top: 4px solid var(--text-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.loading-text {
+  font-size: 1.1em;
+  font-weight: 500;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
 #IdleAnimation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  background: var(--bg-primary);
-  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  background-size: cover;
+  background-position: center;
+  z-index: 7;
+}
+.idle-branding {
+  text-align: center;
+  margin-bottom: 40px;
 }
 .idle-branding h1 {
-  font-size: 3rem;
-  font-weight: 900;
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 1px;
 }
 .idle-branding p {
-  font-size: 1.2rem;
-  color: var(--text-secondary);
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
 }
 #PlayButton {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  border: 2px solid white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 40px;
-  background: rgba(255,255,255,0.1);
-  transition: all 0.2s;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
 }
 #PlayButton:hover {
-  background: rgba(255,255,255,0.2);
-  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
 }
 #PlayButton svg {
-  width: 50px;
-  height: 50px;
-  fill: white;
-  margin-left: 8px;
+  width: 50px;
+  height: 50px;
+  fill: white;
+  margin-left: 8px;
 }
 
+#StreamInfoOverlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 9;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 5px;
+  font-family: monospace;
+  white-space: pre;
+  font-size: 0.9em;
+}
+
+/* -------------------------
+    PANELS (NAV & SETTINGS)
+   ------------------------- */
+#nav, #ChannelSettings {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  width: 320px;
+  max-width: 80%;
+  background: var(--bg-panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 10;
+  transition: transform var(--anim-time-fast) ease-out;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Left Nav Panel --- */
+#nav {
+  left: 0;
+  transform: translateX(-100%);
+}
+#nav.visible {
+  transform: translateX(0);
+}
+#brand-header {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  height: 64px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+#brand-header svg {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+#brand-header span {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+#search_item_wrapper {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0; /* Prevent search from shrinking */
+}
+#SearchField {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 5px;
+  font-size: 1rem;
+}
+#SearchField:focus {
+  outline: none;
+  border-color: var(--bg-focus);
+  box-shadow: 0 0 5px var(--bg-focus);
+}
+
+/* Panel slide container (Groups / Channels) */
+#list_container_scrollarea {
+  flex-grow: 1;
+  /* [REFACTOR] Moved from inline style */
+  height: calc(100vh - 159px);
+  overflow: hidden; /* This hides the other panel */
+}
+#list_container {
+  display: flex;
+  width: 200%; /* 2x the width for 2 panels */
+  height: 100%;
+  transform: translateX(0);
+  transition: transform var(--anim-time-fast) ease-out;
+}
+#list_container.groups-opened {
+  transform: translateX(-50%); /* Slides the container left */
+}
+#GroupList, #ChannelList {
+  width: 50%; /* Each panel takes half of the 200% width */
+  height: 100%;
+  padding: 10px 0;
+}
+
+/* --- Right Settings Panel --- */
+#ChannelSettings {
+  right: 0;
+  transform: translateX(100%);
+}
+#ChannelSettings.visible {
+  transform: translateX(0);
+}
+
+/* Panel slide container (Main / Video) */
+#settings_container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Hides the other panel */
+}
+#SettingsMainMenu, #SettingsVideoFormatMenu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  transition: transform var(--anim-time-fast) ease-out;
+}
+#SettingsMainMenu {
+  transform: translateX(0);
+  padding-top: 60px; /* Space for stream info */
+}
+#SettingsVideoFormatMenu {
+  transform: translateX(100%); /* Start off-screen to the right */
+}
+/* When submenu is visible, slide both panels */
+#settings_container.submenu-visible #SettingsMainMenu {
+  transform: translateX(-100%);
+}
+#settings_container.submenu-visible #SettingsVideoFormatMenu {
+  transform: translateX(0);
+}
+
+/* -------------------------
+    LISTS & ITEMS
+   ------------------------- */
+#main_nav, #DynamicGroupsList {
+  list-style: none;
+  padding: 0;
+}
+#main_nav li, #DynamicGroupsList li {
+  padding: 15px 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 5px;
+  margin: 2px 5px;
+}
+.list_headline {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  padding: 10px 20px;
+  text-transform: uppercase;
+}
+
+/* [REFACTOR] Added rule for inline styled HR */
+.HR {
+  margin: 16px 6px;
+  height: 1px;
+  background: var(--primary-gradient);
+}
+
+.channel-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  height: 60px;
+  border-radius: 5px;
+  margin: 2px 5px;
+}
+.fav-star {
+  width: 20px;
+  color: #ffc107;
+  font-size: 0.8em;
+}
+.list-ch {
+  width: 40px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: right;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+.list-title {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav_logo {
+  width: 50px;
+  height: 40px;
+  margin-left: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav_logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Settings Items */
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 15px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  margin: 2px 5px;
+}
+.settings-item-header {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 10px;
+}
+
+/* Hover/Selected states for all list items */
+#main_nav li:hover,
+#DynamicGroupsList li:hover,
+.channel-item:hover,
+.settings-item:hover {
+  background: var(--bg-hover);
+}
+#main_nav li.selected,
+#DynamicGroupsList li.selected,
+.channel-item.selected,
+.settings-item.selected {
+  background: var(--bg-selected);
+  font-weight: 600;
+}
+/* TV Remote Focus */
+#SearchField:focus,
+#main_nav li:focus-visible,
+#DynamicGroupsList li:focus-visible,
+.channel-item:focus-visible,
+.settings-item:focus-visible,
+.modal-selectable:focus-visible,
+.close-button:focus-visible,
+#PlayButton:focus-visible {
+  outline: 2px solid var(--bg-focus);
+  outline-offset: -2px;
+  box-shadow: 0 0 10px var(--bg-focus);
+}
+.channel-item.playing {
+  border-left: 3px solid var(--text-primary);
+  padding-left: 7px;
+  /* A slightly stronger style for the playing channel */
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* -------------------------
+    CHANNEL INFO
+   ------------------------- */
+#ChannelInfo {
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%) translateY(200px);
+  background: var(--bg-panel);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  z-index: 9;
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.3s, opacity 0.3s, visibility 0.3s;
+}
+#ChannelInfo.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+#ch_logo {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 15px;
+}
+#ch_logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+#channel_name {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+#channel_epg {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+/* -------------------------
+    MODALS (GUIDE, EPG, SETTINGS)
+   ------------------------- */
+.fullscreen-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 30px;
+  text-align: center;
+}
+.close-button::before {
+  content: '×';
+}
+.close-button:hover {
+  color: var(--text-primary);
+}
+
+/* [REFACTOR] Specific override for Guide popup */
+#Guide .fullscreen-popup {
+  max-width: 800px;
+  padding: 30px;
+}
+
+/* EPG */
+#EpgOverlay {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: 100%;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 25;
+  padding: 5vh 5vw;
+  gap: 10px;
+}
+#EpgChannels {
+  background: var(--bg-panel);
+  border-radius: 5px;
+  height: 100%;
+}
+#EpgTimeline {
+  background: var(--bg-panel);
+  border-radius: 5px;
+  height: 100%;
+}
+.epg-ch-item {
+  padding: 15px;
+  font-size: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  cursor: default;
+}
+.epg-ch-item.selected {
+  background: var(--bg-selected);
+  font-weight: 600;
+}
+.epg-pr-item {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.epg-pr-time {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+.epg-pr-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Settings Modal */
+#SettingsModal {
+  background: transparent; /* Blur overlay handles background */
+  z-index: 30;
+}
+#SettingsModal h2 {
+  padding: 20px 25px;
+  font-size: 1.3rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.popup-content-list {
+  list-style: none;
+  padding: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.popup-content-list li {
+  padding: 18px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.popup-content-list li:hover {
+  background: var(--bg-hover);
+}
+.popup-content-list li.selected {
+  background: var(--bg-selected);
+}
+.popup-content-list li input[type="radio"] {
+  transform: scale(1.2);
+  accent-color: var(--text-primary);
+  /* Make radio buttons non-interactive for touch */
+  pointer-events: none;
+}
+.popup-buttons {
+  padding: 15px;
+  text-align: right;
+  border-top: 1px solid var(--border-color);
+}
+.popup-buttons button {
+  padding: 10px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+.popup-buttons button:hover {
+  background: var(--bg-hover);
+}
+.popup-buttons button.selected {
+  background: var(--bg-selected);
+}
+.edit-modal-field {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 5px;
+  font-size: 1rem;
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+.edit-modal-field:focus {
+  outline: none;
+  border-color: var(--bg-focus);
+}
+
+/* Temp Message */
 #TempMessageOverlay {
-  position: fixed;
-  bottom: 50px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--bg-panel-solid);
-  border: 1px solid var(--border-color);
-  padding: 15px 25px;
-  border-radius: 8px;
-  z-index: 40;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--border-color);
+  padding: 15px 25px;
+  border-radius: 8px;
+  z-index: 40;
+  font-size: 1.1rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
 }
 #TempMessageOverlay.visible {
-  opacity: 1;
-  visibility: visible;
+  opacity: 1;
+  visibility: visible;
 }
