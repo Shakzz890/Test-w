@@ -36,23 +36,23 @@ const o = {
 
 // --- START: Channel List Fixes ---
 let channels = {
-    KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
-    StrawberryShortcake: { name: "Strawberry Shortcake", type: "hls", manifestUri: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", logo: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"] },
-    SonictheHedgehog: { name: "Sonic the Hedgehog", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258004/hls/master.m3u8?ads.xumo_channelId=88258004", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Sonic_The_Hedgehog.svg/1200px-Sonic_The_Hedgehog.svg.png", group: ["cartoons & animations"] },
-    SuperMario: { name: "Super Mario", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258005/hls/master.m3u8?ads.xumo_channelId=88258005", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFkMkkUmZBGslGWGZMN2er5emlnqGCCU49wg&s", group: ["cartoons & animations"] },
-    Teletubbies: { name: "Teletubbies", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258003/hls/master.m3u8?ads.xumo_channelId=88258003", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/5a/Teletubbies_Logo.png/330px-Teletubbies_Logo.png", group: ["cartoons & animations"] },
-    anione: { name: "Ani One", type: "hls", manifestUri: "https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", group: ["cartoons & animations"] },
-  aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
-    sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
-    pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
-    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
-    discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
-    nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "httpsD://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
-    nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "httpsD://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
-    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "httpsD://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
-    angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
-    zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
-    mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://example.com/placeholder/live.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
+    KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https.://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https.://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
+    StrawberryShortcake: { name: "Strawberry Shortcake", type: "hls", manifestUri: "https.://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", logo: "https.://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"] },
+    SonictheHedgehog: { name: "Sonic the Hedgehog", type: "hls", manifestUri: "https.://d1si3n1st4nkgb.cloudfront.net/10000/88258004/hls/master.m3u8?ads.xumo_channelId=88258004", logo: "https.://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Sonic_The_Hedgehog.svg/1200px-Sonic_The_Hedgehog.svg.png", group: ["cartoons & animations"] },
+    SuperMario: { name: "Super Mario", type: "hls", manifestUri: "https.://d1si3n1st4nkgb.cloudfront.net/10000/88258005/hls/master.m3u8?ads.xumo_channelId=88258005", logo: "https.://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFkMkkUmZBGslGWGZMN2er5emlnqGCCU49wg&s", group: ["cartoons & animations"] },
+    Teletubbies: { name: "Teletubbies", type: "hls", manifestUri: "https.://d1si3n1st4nkgb.cloudfront.net/10000/88258003/hls/master.m3u8?ads.xumo_channelId=88258003", logo: "https.://upload.wikimedia.org/wikipedia/en/thumb/5/5a/Teletubbies_Logo.png/330px-Teletubbies_Logo.png", group: ["cartoons & animations"] },
+    anione: { name: "Ani One", type: "hls", manifestUri: "https.://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https.://www.medialink.com.hk/img/ani-one-logo.jpg", group: ["cartoons & animations"] },
+  aniplus: { name: "Aniplus", type: "hls", manifestUri: "https.://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https.://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
+    sinemanila: { name: "SineManila", type: "hls", manifestUri: "https.://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https.://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
+    pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https.://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https.://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
+    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https.://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https.://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
+    discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https.://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https.://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
+    nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https.://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
+    nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https.://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
+    pbo: { name: "PBO", type: "clearkey", manifestUri: "https.://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
+    angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https.://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https.://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
+    zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https.://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https.://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
+    mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https.://example.com/placeholder/live.m3u8", logo: "https.://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
    
 };
 // --- END: Channel List Fixes ---
@@ -837,15 +837,18 @@ function renderChannelSettings() {
       o.SettingsVideoInfo.textContent = `Video: ${vRes} (${vCodec}) | Audio: ${aCodec}`;
   }
 
+  // --- START: MODIFICATION - Added PiP Button ---
   if (o.SettingsMainMenu) {
       const currentFormat = getAspectRatio();
       o.SettingsMainMenu.innerHTML = `
         <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
         <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
+        <div class="settings-item" onclick="togglePip()">Picture-in-Picture</div>
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
       `;
       updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
   } else { console.error("SettingsMainMenu element not found"); }
+  // --- END: MODIFICATION ---
 }
 
 function showVideoFormatMenu() {
@@ -1130,6 +1133,29 @@ function toggleFavourite() {
   }
   // --- END: Update nav immediately ---
 }
+
+// --- START: NEW PiP FUNCTION ---
+function togglePip() {
+  if (!document.pictureInPictureEnabled) {
+    console.warn("PiP is not supported by this browser.");
+    showTempMessage("Picture-in-Picture not supported.");
+    return;
+  }
+  try {
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture();
+    } else {
+      if (o.AvPlayer) {
+        o.AvPlayer.requestPictureInPicture();
+      }
+    }
+  } catch (error) {
+    console.error("Error toggling PiP:", error);
+    showTempMessage("Could not enter PiP mode.");
+  }
+  hideChannelSettings(); // Close settings after clicking
+}
+// --- END: NEW PiP FUNCTION ---
 
 
 /* -------------------------
@@ -1622,27 +1648,26 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  // --- START: MODIFICATION for Left Panel Logic ---
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
-      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft']; // <-- Added ArrowLeft
+      const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
 
-      // --- START: MODIFIED LOGIC ---
       if (e.key === 'ArrowUp') {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       } else if (e.key === 'ArrowDown') {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      } else if (e.key === 'Enter' || e.key === 'ArrowRight') { // Right key acts like Enter
+      } else if (e.key === 'Enter') { // Only Enter selects
           groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc goes back to Channel List
           hideGroups();
-      } else if (e.key === 'ArrowLeft') { // Left key closes nav
+      } else if (e.key === 'ArrowLeft') { // ArrowLeft from groups closes the whole nav
           hideNav();
       }
       updateSelectedGroupInNav();
-      // --- END: MODIFIED LOGIC ---
 
     } else { // Channel List
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
@@ -1675,48 +1700,64 @@ document.addEventListener('keydown', (e) => {
              updateSelectedChannelInNav();
           }
       // --- END CHANGE: Search Bar Navigation ---
-      } else if (e.key === 'Enter') {
-            // --- START CHANGE: Don't load channel if search focused ---
+      } else if (e.key === 'Enter') { // Only Enter selects
             if (iCurrentChannel !== -1 && aFilteredChannelKeys.length > 0) {
                  loadChannel(iCurrentChannel);
                  hideNav();
             }
-            // --- END CHANGE ---
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc closes nav
             hideNav();
             if (iCurrentChannel === -1 && o.SearchField) o.SearchField.blur(); // Blur search if closing nav
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft') { // ArrowLeft opens Group List
             if (iCurrentChannel !== -1) { // Only show groups if not focused on search
                showGroups();
             }
       }
-      // updateSelectedChannelInNav(); // Moved inside ArrowUp/Down logic
     }
     return;
   }
+  // --- END: MODIFICATION ---
 
+  // --- START: MODIFICATION for Right Panel Logic ---
   if (bChannelSettingsOpened) {
     e.preventDefault();
     const isSubmenu = o.SettingsContainer?.classList.contains('submenu-visible');
     const SETTINGS_KEYS = ['Escape', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight'];
      if (!SETTINGS_KEYS.includes(e.key)) return;
+    
     if (isSubmenu) {
         const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        else if (e.key === 'Enter' || e.key === 'ArrowRight') submenuItems[iVideoSettingsIndex]?.click();
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideVideoFormatMenu();
+        else if (e.key === 'Enter') { // Only Enter selects
+            submenuItems[iVideoSettingsIndex]?.click();
+        }
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // ArrowLeft or Esc goes back
+            hideVideoFormatMenu();
+        }
+        // ArrowRight does nothing
         updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-    } else {
+    } else { // Main Settings
         const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
-        else if (e.key === 'Enter' || e.key === 'ArrowRight') mainItems[iChannelSettingsIndex]?.click();
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideChannelSettings();
+        else if (e.key === 'Enter') { // Only Enter selects
+            mainItems[iChannelSettingsIndex]?.click();
+        } else if (e.key === 'ArrowRight') { // ArrowRight drills IN (if possible)
+            const selectedItem = mainItems[iChannelSettingsIndex];
+            // Only click if it's the "Video / Format" item
+            if (selectedItem && selectedItem.onclick.toString().includes('showVideoFormatMenu')) {
+                selectedItem.click();
+            }
+        }
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // ArrowLeft or Esc closes settings
+            hideChannelSettings();
+        }
         updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
     }
     return;
   }
+  // --- END: MODIFICATION ---
 
   const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
   if (!PLAYER_KEYS.includes(e.key)) return;
