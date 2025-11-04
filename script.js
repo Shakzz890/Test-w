@@ -1,6 +1,6 @@
 // script.js
-// Merged & fixed version of your JS (keeps original behaviour, adds left-panel navigation fix and modal-scroll lock)
-// Author: rebuilt per user's request
+// Full merged JS with fixes for left panel transition and scrollbar issues.
+// Changes are kept minimal and localized. Look for "/* FIX */" comments.
 
 let player = null;
 let ui = null;
@@ -36,9 +36,7 @@ const o = {
   TempMessageOverlay: document.getElementById('TempMessageOverlay')
 };
 
-// -----------------------
-// Channel list (kept as provided)
-// -----------------------
+// --------------------- CHANNEL LIST (kept from your code) ---------------------
 let channels = {
     KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https.://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https.://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"] },
     StrawberryShortcake: { name: "Strawberry Shortcake", type: "hls", manifestUri: "https.://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", logo: "https.://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"] },
@@ -46,7 +44,7 @@ let channels = {
     SuperMario: { name: "Super Mario", type: "hls", manifestUri: "https.://d1si3n1st4nkgb.cloudfront.net/10000/88258005/hls/master.m3u8?ads.xumo_channelId=88258005", logo: "https.://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFkMkkUmZBGslGWGZMN2er5emlnqGCCU49wg&s", group: ["cartoons & animations"] },
     Teletubbies: { name: "Teletubbies", type: "hls", manifestUri: "https.://d1si3n1st4nkgb.cloudfront.net/10000/88258003/hls/master.m3u8?ads.xumo_channelId=88258003", logo: "https.://upload.wikimedia.org/wikipedia/en/thumb/5/5a/Teletubbies_Logo.png/330px-Teletubbies_Logo.png", group: ["cartoons & animations"] },
     anione: { name: "Ani One", type: "hls", manifestUri: "https.://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https.://www.medialink.com.hk/img/ani-one-logo.jpg", group: ["cartoons & animations"] },
-    aniplus: { name: "Aniplus", type: "hls", manifestUri: "https.://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https.://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
+  aniplus: { name: "Aniplus", type: "hls", manifestUri: "https.://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https.://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
     sinemanila: { name: "SineManila", type: "hls", manifestUri: "https.://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https.://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https.://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https.://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
     animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https.://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https.://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
@@ -57,6 +55,7 @@ let channels = {
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https.://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https.://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https.://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https.://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
     mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https.://example.com/placeholder/live.m3u8", logo: "https.://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
+   
 };
 
 let aFilteredChannelKeys = [];
@@ -75,20 +74,20 @@ let iChannelSettingsIndex = 0;
 let iVideoSettingsIndex = 0;
 let iEpgChannelIndex = 0;
 let aEpgFilteredChannelKeys = [];
-let iSettingsModalIndex = 0;
+let iSettingsModalIndex = 0; // Index for modal selection
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 let lastTapTime = 0;
-let loaderFadeTimeout = null;
-let tempMessageTimeout = null;
+let loaderFadeTimeout = null; // <-- Added timeout variable
+let tempMessageTimeout = null; // <-- Added for temp message
 
 /* -------------------------
     Utilities
-------------------------- */
+    ------------------------- */
 function getEl(id) { return document.getElementById(id); }
 
 /* -------------------------
     Core Player Functions
-------------------------- */
+    ------------------------- */
 async function initPlayer() {
   Object.keys(channels).forEach((key, i) => {
     channels[key].number = i + 1;
@@ -108,6 +107,7 @@ async function initPlayer() {
       } else {
           iGroupListIndex = Array.from(allGroupLiItems).findIndex(li => li.textContent.trim() === 'ALL CHANNELS');
           if (iGroupListIndex === -1) iGroupListIndex = 1;
+          console.warn("'__all' group item not found, using fallback index:", iGroupListIndex);
       }
   } else {
       iGroupListIndex = 1;
@@ -127,83 +127,112 @@ async function initPlayer() {
   ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
 
   ui.configure({
+    // --- START: Removed quotes from keys AND enabled Shaka spinner ---
     controlPanelElements: [],
     addSeekBar: false,
     addBigPlayButton: false,
-    showBuffering: true,
+    showBuffering: true, // <-- SET TO TRUE
     clickToPlay: false
+    // --- END: Removed quotes from keys AND enabled Shaka spinner ---
   });
 
   player.attach(o.AvPlayer);
 
   player.configure({
     abr: { defaultBandwidthEstimate: 500000 },
+    // --- START: Increased buffering goals slightly - May help with stream glitches ---
     streaming: { rebufferingGoal: 3, bufferingGoal: 10 }
+    // --- END: Increased buffering goals ---
   });
 
   player.addEventListener('error', e => {
     console.error('Shaka Error:', e.detail);
-    showIdleAnimation(true);
+    showIdleAnimation(true); // Show idle animation on error
+    // --- START: Hide custom loader on error too ---
     if (o.ChannelLoader) {
-      clearTimeout(loaderFadeTimeout);
+      clearTimeout(loaderFadeTimeout); // Stop any fade out
       o.ChannelLoader.classList.add('HIDDEN');
       o.ChannelLoader.style.opacity = '1';
       o.ChannelLoader.classList.remove('fade-out');
     }
-    if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
+    if (o.AvPlayer) o.AvPlayer.style.opacity = '1'; // Show video element again
+    // --- END: Hide custom loader on error ---
   });
 
   player.addEventListener('trackschanged', renderChannelSettings);
+
+  // --- START: Add Buffering Listener ---
   player.addEventListener('buffering', handleBuffering);
+  // --- END: Add Buffering Listener ---
+
+  // --- START: Add Playing Listener ---
   player.addEventListener('playing', handlePlaying);
+  // --- END: Add Playing Listener ---
 
+  // --- START: NEW: Setup consolidated controls ---
   setupControls();
+  // --- END: NEW: Setup consolidated controls ---
 
+  // --- START: Show initial idle animation ---
   showIdleAnimation(true);
-  loadInitialChannel();
+  // --- END: Show initial idle animation ---
+  loadInitialChannel(); // Load channel data, but don't play yet
 }
 
+// --- START: Updated Buffering Handler ---
 function handleBuffering(event) {
-    clearTimeout(loaderFadeTimeout);
+    clearTimeout(loaderFadeTimeout); // Always clear any pending transitions
+
     if (event.buffering) {
-        // Let shaka spinner show; only fade video
+        // --- BUFFERING STARTED ---
         if(o.AvPlayer) o.AvPlayer.style.opacity = '0';
     } else {
+        // --- BUFFERING ENDED ---
         hideLoaderAndShowVideo();
     }
 }
+// --- END: Updated Buffering Handler ---
 
+// --- START: Add Playing Handler ---
 function handlePlaying() {
     hideLoaderAndShowVideo();
 }
+// --- END: Add Playing Handler ---
 
+// --- START: NEW HELPER FUNCTION ---
 function hideLoaderAndShowVideo() {
-    clearTimeout(loaderFadeTimeout);
+    clearTimeout(loaderFadeTimeout); // Clear any pending hide
+
+    // Show video
     if(o.AvPlayer) o.AvPlayer.style.opacity = '1';
+
+    // If our custom loader is visible, fade it out.
     if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
         o.ChannelLoader.classList.add('fade-out');
+
         loaderFadeTimeout = setTimeout(() => {
-            if (o.ChannelLoader) {
+            if (o.ChannelLoader) { 
                 o.ChannelLoader.classList.add('HIDDEN');
-                o.ChannelLoader.style.opacity = '1';
-                o.ChannelLoader.classList.remove('fade-out');
+                o.ChannelLoader.style.opacity = '1'; 
+                o.ChannelLoader.classList.remove('fade-out'); 
             }
-        }, 500);
+        }, 500); // Match fade-out duration
     }
 }
+// --- END: NEW HELPER FUNCTION ---
 
-/* -------------------------
-    Controls (touch/click)
-------------------------- */
+
+// --- START: NEW CONSOLIDATED CONTROL LOGIC ---
 function setupControls() {
     const playerContainer = o.PlayerContainer;
+
     if (!playerContainer) return;
 
     playerContainer.addEventListener('touchstart', e => {
         if (e.touches.length === 1) {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
-            touchEndX = touchStartX;
+            touchEndX = touchStartX; // Reset end points
             touchEndY = touchStartY;
         }
     }, { passive: true });
@@ -216,13 +245,20 @@ function setupControls() {
     }, { passive: true });
 
     playerContainer.addEventListener('touchend', e => {
-        if (e.changedTouches.length !== 1) return;
+        if (e.changedTouches.length !== 1) {
+            return; // Not a single touch
+        }
+
+        // Check if swipe started inside an overlay
         const targetElement = document.elementFromPoint(touchStartX, touchStartY);
         if (targetElement && (targetElement.closest('#nav') || targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay') )) {
             touchStartX = touchStartY = touchEndX = touchEndY = 0;
             return;
         }
+        
+        // Check if we are over the play button
         if (targetElement && targetElement.closest('#PlayButton')) {
+            // Let the PlayButton's own 'mousedown' handle it
             touchStartX = touchStartY = touchEndX = touchEndY = 0;
             return;
         }
@@ -232,52 +268,78 @@ function setupControls() {
         const absDeltaX = Math.abs(deltaX);
         const absDeltaY = Math.abs(deltaY);
         const SWIPE_THRESHOLD = 50;
-        const TAP_THRESHOLD = 15;
+        const TAP_THRESHOLD = 15; // Increased slightly
 
+        // --- 1. Check for SWIPE ---
         if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
             handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY);
+            // Reset tap tracking
             lastTapTime = 0;
             touchStartX = touchStartY = touchEndX = touchEndY = 0;
-            return;
+            return; // It was a swipe, we are done.
         }
 
+        // --- 2. Check for TAP (if not a swipe) ---
         if (absDeltaX < TAP_THRESHOLD && absDeltaY < TAP_THRESHOLD) {
             const currentTime = new Date().getTime();
-            if (currentTime - lastTapTime < 300) {
-                e.preventDefault();
+            if (currentTime - lastTapTime < 300) { // 300ms for double-tap
+                // DOUBLE-TAP
+                e.preventDefault(); // Prevent zoom and click
                 handleDoubleTapAction();
-                lastTapTime = 0;
+                lastTapTime = 0; // Reset after double-tap
             } else {
+                // SINGLE-TAP
                 lastTapTime = currentTime;
             }
         }
+        
+        // Reset coordinates
         touchStartX = touchStartY = touchEndX = touchEndY = 0;
-    }, { passive: false });
+    }, { passive: false }); // We need passive: false to call e.preventDefault() on double-tap
 
     playerContainer.addEventListener('click', e => {
-        if (e.target && e.target.closest('#PlayButton')) return;
-        if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay') )) {
+        // This 'click' event fires for:
+        // 1. A real mouse click
+        // 2. A 'touchend' that was NOT a swipe and NOT a double-tap
+        
+        // Check if click was on the play button
+        if (e.target && e.target.closest('#PlayButton')) {
+            // Let the PlayButton's 'mousedown' listener handle it.
             return;
         }
+        
+        // Check if click was inside an open panel
+        if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay') )) {
+            // Click was inside UI, don't treat it as a player tap
+            return;
+        }
+
         const currentTime = new Date().getTime();
+        // 350ms is just over double-tap, so this catches single taps/clicks
         const isFromTap = (currentTime - lastTapTime) < 350;
 
         if (isFromTap) {
+            // This is a single tap.
             handleSingleTapAction();
         } else {
+            // This is a mouse click. Check for double-click.
             if (currentTime - lastTapTime < 300) {
+                // Double-click
                 handleDoubleTapAction();
                 lastTapTime = 0;
             } else {
+                // Single-click
                 handleSingleTapAction();
                 lastTapTime = currentTime;
             }
         }
     });
 
+    // dblclick is for mouse users only. touchend handles touch double-tap.
     playerContainer.addEventListener('dblclick', e => {
+        // This is for mouse-only double-click.
         e.preventDefault();
-        handleDoubleTapAction();
+        handleDoubleTapAction(); // Ensure mouse double-click also works
     });
 }
 
@@ -286,26 +348,37 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     if (isHorizontal) {
         if (deltaX > 0) { // Swipe Right ->
             if (bChannelSettingsOpened) hideChannelSettings();
-            else if (bGroupsOpened) hideGroups();
-            else if (bNavOpened && !bGroupsOpened) hideNav();
-            else if (!bNavOpened && !bChannelSettingsOpened) showNav();
+            else if (bGroupsOpened) hideGroups(); // Swiped right from Group list
+            else if (bNavOpened && !bGroupsOpened) hideNav(); // Swiped right from Channel list
+            else if (!bNavOpened && !bChannelSettingsOpened) showNav(); // Swiped right from main screen
         } else { // Swipe Left <-
-            if (bNavOpened && !bGroupsOpened) showGroups();
-            else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings();
+            if (bNavOpened && !bGroupsOpened) showGroups(); // Swiped left from Channel list
+            else if (!bChannelSettingsOpened && !bNavOpened) showChannelSettings(); // Only open if no panels are open
+            else if (bNavOpened && bGroupsOpened) { /* Do nothing, or close nav: hideNav(); */ } 
         }
-    } else {
+    } else { // Vertical Swipe
         if (!bNavOpened && !bChannelSettingsOpened && !bGuideOpened && !bEpgOpened && !bSettingsModalOpened) {
-            if (deltaY > 0) loadChannel(iCurrentChannel + 1);
-            else loadChannel(iCurrentChannel - 1);
+            if (deltaY > 0) {
+                loadChannel(iCurrentChannel + 1); // Swipe Down
+            } else {
+                loadChannel(iCurrentChannel - 1); // Swipe Up
+            }
         }
     }
 }
 
 function handleSingleTapAction() {
-    if (!isSessionActive) return;
+    if (!isSessionActive) {
+        // If session hasn't started, do nothing on single tap
+        // (PlayButton handles the first play)
+        return;
+    }
+
+    // If any panel is open, single tap closes it.
     if (bNavOpened || bChannelSettingsOpened || bGuideOpened || bEpgOpened || bSettingsModalOpened) {
         clearUi();
     } else {
+        // If no panels are open, show channel name
         showChannelName();
     }
 }
@@ -313,17 +386,19 @@ function handleSingleTapAction() {
 function handleDoubleTapAction() {
     toggleFullScreen();
 }
+// --- END: NEW CONSOLIDATED CONTROL LOGIC ---
 
-/* -------------------------
-    Channel loading & init
-------------------------- */
+
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
-  let initialChannelKey = 'SonictheHedgehog';
+  // --- START: Loading Fix ---
+  let initialChannelKey = 'SonictheHedgehog'; // <-- CHANGED THIS LINE from 'aniplus'
+  // --- END: Loading Fix ---
   if (!channels[initialChannelKey]) {
       initialChannelKey = Object.keys(channels)[0];
       if (!initialChannelKey) {
           console.error("No channels defined.");
+          // showIdleAnimation(true); // Already shown in init
           return;
       }
   }
@@ -333,6 +408,7 @@ function loadInitialChannel() {
       buildNav();
       if (aFilteredChannelKeys.length === 0) {
            console.error("No channels available even in the '__all' group.");
+           // showIdleAnimation(true); // Already shown in init
            return;
       }
   }
@@ -346,29 +422,37 @@ function loadInitialChannel() {
 
   if (!initialChannelKey || !aFilteredChannelKeys.includes(initialChannelKey)) {
        console.error("Could not determine a valid initial channel from filtered list.");
+       // showIdleAnimation(true); // Already shown in init
        return;
   }
 
   const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
+  // --- START: Don't load immediately, just set index ---
   iCurrentChannel = (initialIndex >= 0 ? initialIndex : 0);
-  updateSelectedChannelInNav();
+  updateSelectedChannelInNav(); // Update highlight in nav
+  // loadChannel(initialIndex >= 0 ? initialIndex : 0, { isInitialLoad: true }); // REMOVED - will load on first play
+  // --- END: Don't load immediately ---
 }
 
+
 async function loadChannel(index, options = {}) {
+  // --- START: Clear previous fade timeout ---
   clearTimeout(loaderFadeTimeout);
+  // --- END: Clear previous fade timeout ---
 
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0) {
     console.warn("loadChannel called with no filtered channels available.");
     try { await player?.unload(); } catch {}
-    showIdleAnimation(!isSessionActive);
+    showIdleAnimation(!isSessionActive); // Show idle only if session hasn't started
     return;
   }
 
   iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length;
+
   const channelKey = aFilteredChannelKeys[iCurrentChannel];
   if (!channelKey || !channels[channelKey]) {
        console.error(`Invalid channel key or data for index ${iCurrentChannel}: ${channelKey}`);
-       showIdleAnimation(!isSessionActive);
+       showIdleAnimation(!isSessionActive); // Show idle only if session hasn't started
        return;
   }
   const channel = channels[channelKey];
@@ -380,11 +464,14 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', channelKey);
 
+  // --- START: MODIFIED Show Loader ---
   if (o.ChannelLoader) {
       o.ChannelLoader.classList.remove('fade-out');
       o.ChannelLoader.style.opacity = '1';
       o.ChannelLoader.classList.remove('HIDDEN');
   }
+  // REMOVED: if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
+  // --- END: MODIFIED Show Loader ---
 
   hideChannelName();
   updateSelectedChannelInNav();
@@ -394,12 +481,14 @@ async function loadChannel(index, options = {}) {
     if (channel.type === 'clearkey' && channel.keyId && channel.key) {
       player.configure({ drm: { clearKeys: { [channel.keyId]: channel.key } } });
     }
+
     player.getNetworkingEngine()?.clearAllRequestFilters();
     if (channel.userAgent) {
       player.getNetworkingEngine()?.registerRequestFilter((type, request) => {
         request.headers['User-Agent'] = channel.userAgent;
       });
     }
+
     await player.load(channel.manifestUri);
 
     if (isSessionActive) {
@@ -409,36 +498,46 @@ async function loadChannel(index, options = {}) {
       }
       showChannelName();
     }
+
   } catch (error) {
     console.error(`Error loading channel "${channel?.name}":`, error);
-    showIdleAnimation(!isSessionActive);
+    showIdleAnimation(!isSessionActive); // Show idle only if session hasn't started
+    // --- START: Hide loader immediately on error ---
     if (o.ChannelLoader) {
-      clearTimeout(loaderFadeTimeout);
+      clearTimeout(loaderFadeTimeout); // Stop any pending fade
       o.ChannelLoader.classList.add('HIDDEN');
-      o.ChannelLoader.style.opacity = '1';
-      o.ChannelLoader.classList.remove('fade-out');
+      o.ChannelLoader.style.opacity = '1'; // Reset for next time
+      o.ChannelLoader.classList.remove('fade-out'); // Reset for next time
     }
-    if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
+    if (o.AvPlayer) o.AvPlayer.style.opacity = '1'; // Show video element again even on error
+    // --- END: Hide loader immediately on error ---
   }
 }
 
 /* -------------------------
     UI and Navigation
-------------------------- */
+    ------------------------- */
 function setupMainMenuControls() {
   const guideBtn = getEl('guide_button');
   const epgBtn = getEl('epg_button');
   if (guideBtn) guideBtn.onclick = showGuide;
+  else console.warn("guide_button not found.");
   if (epgBtn) epgBtn.onclick = showEpg;
+  else console.warn("epg_button not found.");
 
   if (o.PlayButton) {
-      o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
+      o.PlayButton.removeEventListener('mousedown', handleFirstPlay); // Use mousedown for better responsiveness
       o.PlayButton.addEventListener('mousedown', handleFirstPlay);
+  } else {
+      console.error("PlayButton element not found.");
   }
 }
 
 function buildDynamicGroupNav() {
-  if (!o.DynamicGroupsList || !o.GroupList) return;
+  if (!o.DynamicGroupsList || !o.GroupList) {
+      console.error("Required group list elements not found.");
+      return;
+  }
 
   let sortedGroups = [];
   try {
@@ -470,6 +569,7 @@ function buildDynamicGroupNav() {
 
   allListItems.forEach(li => o.DynamicGroupsList.appendChild(li));
 
+  // Attach click handlers on the full (left-panel) group list too
   const fullGroupListItems = o.GroupList.querySelectorAll('li');
 
   fullGroupListItems.forEach((li, index) => {
@@ -485,13 +585,39 @@ function buildDynamicGroupNav() {
   });
 }
 
+/* -------------------------
+    FIX: Helper to ensure scrolling only active on visible list
+    This prevents double scrollbars and blank panel appearance.
+   ------------------------- */
+function enableListScroll(listEl) {
+    if (!listEl) return;
+    listEl.style.overflowY = 'auto';
+    // small safety: ensure there's a min-height so scroll works inside flex
+    listEl.style.minHeight = '0';
+}
+function disableListScroll(listEl) {
+    if (!listEl) return;
+    listEl.style.overflowY = 'hidden';
+}
+
+/* -------------------------
+    Group selection
+   ------------------------- */
 function selectGroup(index) {
-  if (!o.GroupList || !o.ListContainer) return;
+  if (!o.GroupList || !o.ListContainer) {
+       console.error("GroupList or ListContainer not found.");
+       return;
+  }
 
   const groupItems = o.GroupList.querySelectorAll('li');
-  if (index < 0 || index >= groupItems.length) return;
+  if (index < 0 || index >= groupItems.length) {
+       console.warn("Invalid index passed to selectGroup:", index);
+       return;
+  }
   const item = groupItems[index];
-  if (!item || !item.hasAttribute('data-group')) return;
+  if (!item || !item.hasAttribute('data-group')) {
+       return;
+  }
 
   if (item.dataset.group === '__fav') {
       const hasFavorites = Object.values(channels).some(ch => ch.favorite === true);
@@ -501,27 +627,36 @@ function selectGroup(index) {
           return;
       }
   }
-
   sSelectedGroup = item.dataset.group;
   iGroupListIndex = index;
   updateSelectedGroupInNav();
 
-  // Rebuild channel list immediately, then return to channel list view
+  // Rebuild the channel list immediately for chosen group
   buildNav();
 
+  // Reset channel index if channel list exists
   if (aFilteredChannelKeys.length > 0) {
     iCurrentChannel = 0;
     updateSelectedChannelInNav();
   }
 
-  // After selecting a group, go back to channel list (this matches expected flow)
+  /* FIX: ensure DOM is rendered before doing animation
+     This prevents the blank panel when sliding (browser needs to paint the rebuilt list) */
   requestAnimationFrame(() => {
+      // After painting, hide the groups view (go back to channels)
       hideGroups();
   });
 }
 
+/* -------------------------
+    Build Nav (channels)
+   ------------------------- */
 function buildNav() {
-  if (!o.ChannelList || !o.SearchField) return;
+  if (!o.ChannelList || !o.SearchField) {
+      console.error("ChannelList or SearchField element not found.");
+      return;
+  }
+
   const searchTerm = o.SearchField.value.toLowerCase();
 
   try {
@@ -540,6 +675,8 @@ function buildNav() {
       console.error("Error filtering/sorting channels:", error);
       aFilteredChannelKeys = [];
   }
+
+  console.log(`Building Nav for group: "${sSelectedGroup}", Found channels: ${aFilteredChannelKeys.length}`);
 
   o.ChannelList.innerHTML = '';
   o.ChannelList.scrollTop = 0;
@@ -581,6 +718,16 @@ function buildNav() {
   });
 
   o.ChannelList.appendChild(frag);
+
+  // Ensure only the visible list can scroll
+  if (bGroupsOpened) {
+      disableListScroll(o.ChannelList);
+      enableListScroll(o.GroupList);
+  } else {
+      enableListScroll(o.ChannelList);
+      disableListScroll(o.GroupList);
+  }
+
   updateSelectedChannelInNav();
 }
 
@@ -601,15 +748,17 @@ function updateSelectedChannelInNav() {
             }
           }
       } else if (aFilteredChannelKeys.length > 0 && channelItems.length > 0) {
-           iCurrentChannel = 0;
+           iCurrentChannel = 0; // Reset to 0 if out of bounds
            const firstItem = channelItems[0];
            if (firstItem) firstItem.classList.add('selected');
+           console.warn("iCurrentChannel was out of bounds, selecting first channel.");
        } else {
-          iCurrentChannel = 0;
+      iCurrentChannel = 0; // Reset if list becomes empty
        }
 
   } catch (error) { console.error("Error updating selected channel in nav:", error); }
 }
+
 
 function updateSelectedGroupInNav() {
    if (!o.GroupList) return;
@@ -633,8 +782,9 @@ function updateSelectedGroupInNav() {
 }
 
 /* -------------------------
-    Settings & Modals (kept + minor fixes)
-------------------------- */
+    Settings & Modals
+   ------------------------- */
+/* (kept unchanged from your earlier code) */
 function renderChannelSettings() {
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0 || iCurrentChannel >= aFilteredChannelKeys.length) return;
   const currentChannelKey = aFilteredChannelKeys[iCurrentChannel];
@@ -659,6 +809,7 @@ function renderChannelSettings() {
       o.SettingsVideoInfo.textContent = `Video: ${vRes} (${vCodec}) | Audio: ${aCodec}`;
   }
 
+  // --- START: MODIFICATION - Added PiP Button ---
   if (o.SettingsMainMenu) {
       const currentFormat = getAspectRatio();
       o.SettingsMainMenu.innerHTML = `
@@ -668,7 +819,8 @@ function renderChannelSettings() {
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
       `;
       updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
-  }
+  } else { console.error("SettingsMainMenu element not found"); }
+  // --- END: MODIFICATION ---
 }
 
 function showVideoFormatMenu() {
@@ -676,15 +828,17 @@ function showVideoFormatMenu() {
     o.SettingsContainer.classList.add('submenu-visible');
     iVideoSettingsIndex = 0;
     renderVideoFormatMenu();
-  }
+  } else { console.error("SettingsContainer element not found."); }
 }
 
 function hideVideoFormatMenu() {
   if (o.SettingsContainer) {
       o.SettingsContainer.classList.remove('submenu-visible');
       iChannelSettingsIndex = 1;
-      if (o.SettingsMainMenu) updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
-  }
+      if (o.SettingsMainMenu) {
+          updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+      } else { console.error("SettingsMainMenu element not found for focus update."); }
+  } else { console.error("SettingsContainer element not found."); }
 }
 
 function renderVideoFormatMenu() {
@@ -703,7 +857,7 @@ function renderVideoFormatMenu() {
         </div>
       `;
       updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-  }
+  } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
 
 function getAspectRatio() {
@@ -717,7 +871,7 @@ function getAspectRatio() {
 
 function setAspectRatio(format) {
   if (!o.AvPlayer) return;
-  o.AvPlayer.style.transform = 'scale(1)';
+  o.AvPlayer.style.transform = 'scale(1)'; // Reset scale first
   let formatName = 'Original';
   switch(format) {
     case 'stretch':
@@ -729,33 +883,35 @@ function setAspectRatio(format) {
       formatName = '16:9';
       break;
     case 'fill':
-      o.AvPlayer.style.objectFit = 'cover';
+      o.AvPlayer.style.objectFit = 'cover'; // Cover without scaling
       formatName = 'Fill';
       break;
     case 'zoom':
       o.AvPlayer.style.objectFit = 'cover';
-      o.AvPlayer.style.transform = 'scale(1.15)';
+      o.AvPlayer.style.transform = 'scale(1.15)'; // Cover + scale
       formatName = 'Zoom';
       break;
-    default:
+    default: // Also handles 'original'
       o.AvPlayer.style.objectFit = 'contain';
       formatName = 'Original';
   }
   localStorage.setItem('iptvAspectRatio', formatName);
-  renderVideoFormatMenu();
+  renderVideoFormatMenu(); // Update the settings menu display
 }
 
 function togglePlaybackControls() {
     hideChannelSettings();
 }
 
-/* ----- Modal show/hide must toggle body.modal-open to prevent double scrollbar ----- */
 function showSettingsModal(type) {
-  if (!o.SettingsModal || !o.SettingsModalContent || !o.BlurOverlay) return;
-  clearUi('settingsModal'); // close others
+  if (!o.SettingsModal || !o.SettingsModalContent || !o.BlurOverlay) {
+      console.error("Required modal elements not found.");
+      return;
+  }
+  clearUi('settingsModal');
   o.BlurOverlay.classList.add('visible');
   bSettingsModalOpened = true;
-  iSettingsModalIndex = 0;
+  iSettingsModalIndex = 0; // Reset index when modal opens
   try {
       o.SettingsModalContent.innerHTML = renderModalContent(type);
   } catch (error) {
@@ -763,15 +919,20 @@ function showSettingsModal(type) {
       o.SettingsModalContent.innerHTML = '<p>Error loading content.</p>';
   }
   o.SettingsModal.classList.remove('HIDDEN');
-  document.body.classList.add('modal-open'); // lock background scroll
-  updateSettingsModalSelection();
+
+  /* FIX: prevent body scroll while modal is open to avoid double scrollbar */
+  document.body.classList.add('modal-open');
+
+  updateSettingsModalSelection(); // Highlight first item
 }
 
 window.hideSettingsModal = () => {
   bSettingsModalOpened = false;
   if (o.SettingsModal) o.SettingsModal.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
-  document.body.classList.remove('modal-open'); // unlock background scroll
+
+  /* FIX: remove the body class here */
+  document.body.classList.remove('modal-open');
 };
 
 function renderModalContent(type) {
@@ -791,6 +952,7 @@ function renderModalContent(type) {
 
       } else if (type === 'format') {
         const currentFormat = getAspectRatio();
+         // --- START: Reordered and added Fill option ---
         contentHtml = `<h2>Video Format</h2><ul class="popup-content-list">
             <li class="modal-selectable" data-value="original" onclick="applyFormatAndClose('original')">Original <input type="radio" name="format" value="original" ${currentFormat === 'Original' ? 'checked' : ''}></li>
             <li class="modal-selectable" data-value="16:9" onclick="applyFormatAndClose('16:9')">16:9 <input type="radio" name="format" value="16:9" ${currentFormat === '16:9' ? 'checked' : ''}></li>
@@ -798,9 +960,11 @@ function renderModalContent(type) {
             <li class="modal-selectable" data-value="stretch" onclick="applyFormatAndClose('stretch')">Stretch <input type="radio" name="format" value="stretch" ${currentFormat === 'Stretch' ? 'checked' : ''}></li>
             <li class="modal-selectable" data-value="zoom" onclick="applyFormatAndClose('zoom')">Zoom <input type="radio" name="format" value="zoom" ${currentFormat === 'Zoom' ? 'checked' : ''}></li>
           </ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CANCEL</button></div>`;
+         // --- END: Reordered and added Fill option ---
+
       } else if (type === 'subtitles') {
         const textTracks = player.getTextTracks() || [];
-        const audioTracks = player.getAudioLanguagesAndRoles?.() || [];
+        const audioTracks = player.getAudioLanguagesAndRoles() || [];
         let subItemsHtml = `<li class="modal-selectable" onclick="setSubtitlesAndClose(null, false)">Off</li>`;
         textTracks.forEach(track => {
           const safeTrackData = { id: track.id, label: track.label, language: track.language };
@@ -809,6 +973,7 @@ function renderModalContent(type) {
         });
         let audioItemsHtml = audioTracks.map(track => `<li class="modal-selectable" onclick="setAudioAndClose('${track.language}')">${track.language} (Audio)</li>`).join('');
         contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" onclick="hideSettingsModal()">CLOSE</button></div>`;
+
       } else if (type === 'edit') {
         if (!aFilteredChannelKeys || iCurrentChannel >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>';
         const currentChannel = channels[aFilteredChannelKeys[iCurrentChannel]];
@@ -846,6 +1011,7 @@ window.applyChannelEdit = () => {
 
 function applyQualityAndClose(selected) {
     if (!player) return;
+    console.log("Applying Quality:", selected);
     try {
         if (selected === 'auto') {
             player.configure({ abr: { enabled: true } });
@@ -855,29 +1021,35 @@ function applyQualityAndClose(selected) {
             if (trackToSelect) {
                 player.selectVariantTrack(trackToSelect, true);
             } else {
-                player.configure({ abr: { enabled: true } });
+                console.warn("Selected quality track not found:", selected);
+                player.configure({ abr: { enabled: true } }); // Fallback to auto
             }
         }
     } catch (error) {
         console.error("Error applying quality setting:", error);
-        try { player.configure({ abr: { enabled: true } }); } catch { }
+        try { player.configure({ abr: { enabled: true } }); } catch { } // Fallback to auto on error
     }
     hideSettingsModal();
 }
 
 function applyFormatAndClose(value) {
+    console.log("Applying Format:", value);
     setAspectRatio(value);
     hideSettingsModal();
 }
 
 function setSubtitlesAndClose(track, isVisible) {
     if (!player) return;
+    console.log("Applying Subtitles:", track, isVisible);
     try {
         player.setTextTrackVisibility(isVisible);
         if (isVisible && track && typeof track.id !== 'undefined') {
             const trackToSelect = (player.getTextTracks() || []).find(t => t.id === track.id);
-            if (trackToSelect) player.selectTextTrack(trackToSelect);
-            else console.warn("Subtitle track not found:", track.id);
+            if (trackToSelect) {
+                player.selectTextTrack(trackToSelect);
+            } else {
+                console.warn("Subtitle track not found:", track.id);
+            }
         }
     } catch (error) {
         console.error("Error setting subtitles:", error);
@@ -887,8 +1059,15 @@ function setSubtitlesAndClose(track, isVisible) {
 
 function setAudioAndClose(lang) {
     if (!player) return;
+    console.log("Applying Audio:", lang);
     if (typeof lang === 'string' && lang) {
-        try { player.selectAudioLanguage(lang); } catch (error) { console.error("Error setting audio language:", error); }
+        try {
+            player.selectAudioLanguage(lang);
+        } catch (error) {
+            console.error("Error setting audio language:", error);
+        }
+    } else {
+        console.warn("Invalid audio language provided:", lang);
     }
     hideSettingsModal();
 }
@@ -901,54 +1080,69 @@ function toggleFavourite() {
   channels[key].favorite = !channels[key].favorite;
   saveFavoritesToStorage();
 
-  if (bChannelSettingsOpened) renderChannelSettings();
+  if (bChannelSettingsOpened) {
+      renderChannelSettings();
+  }
 
   if (bNavOpened && (sSelectedGroup === '__fav' || sSelectedGroup === '__all')) {
      buildNav();
      const newIndex = aFilteredChannelKeys.indexOf(key);
-     if (newIndex !== -1) iCurrentChannel = newIndex;
-     else if (aFilteredChannelKeys.length > 0) iCurrentChannel = 0;
-     else iCurrentChannel = 0;
+     if (newIndex !== -1) {
+         iCurrentChannel = newIndex;
+     } else if (aFilteredChannelKeys.length > 0) {
+         iCurrentChannel = 0;
+     } else {
+         iCurrentChannel = 0;
+     }
      updateSelectedChannelInNav();
   }
 }
 
 function togglePip() {
   if (!document.pictureInPictureEnabled) {
+    console.warn("PiP is not supported by this browser.");
     showTempMessage("Picture-in-Picture not supported.");
     return;
   }
   try {
-    if (document.pictureInPictureElement) document.exitPictureInPicture();
-    else if (o.AvPlayer) o.AvPlayer.requestPictureInPicture();
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture();
+    } else {
+      if (o.AvPlayer) {
+        o.AvPlayer.requestPictureInPicture();
+      }
+    }
   } catch (error) {
     console.error("Error toggling PiP:", error);
     showTempMessage("Could not enter PiP mode.");
   }
-  hideChannelSettings();
+  hideChannelSettings(); // Close settings after clicking
 }
 
 /* -------------------------
     UI State & Helpers
-------------------------- */
+   ------------------------- */
 function showTempMessage(message) {
     if (!o.TempMessageOverlay) return;
-    clearTimeout(tempMessageTimeout);
+    clearTimeout(tempMessageTimeout); // Clear previous timeout if any
     o.TempMessageOverlay.textContent = message;
     o.TempMessageOverlay.classList.remove('HIDDEN');
     o.TempMessageOverlay.classList.add('visible');
 
     tempMessageTimeout = setTimeout(() => {
         o.TempMessageOverlay.classList.remove('visible');
-        setTimeout(() => o.TempMessageOverlay.classList.add('HIDDEN'), 300);
-    }, 3000);
+        setTimeout(() => o.TempMessageOverlay.classList.add('HIDDEN'), 300); // Match CSS transition
+    }, 3000); // Show message for 3 seconds
 }
 
 function showIdleAnimation(showPlayButton = false) {
   if (o.IdleAnimation) o.IdleAnimation.classList.remove('HIDDEN');
   if (o.PlayButton) {
-      if (showPlayButton && !isSessionActive) o.PlayButton.classList.remove('HIDDEN');
-      else o.PlayButton.classList.add('HIDDEN');
+      if (showPlayButton && !isSessionActive) {
+          o.PlayButton.classList.remove('HIDDEN');
+      } else {
+          o.PlayButton.classList.add('HIDDEN');
+      }
   }
 }
 
@@ -956,6 +1150,9 @@ function hideIdleAnimation() {
     if (o.IdleAnimation) o.IdleAnimation.classList.add('HIDDEN');
 }
 
+/* -------------------------
+    Clear UI
+   ------------------------- */
 function clearUi(exclude) {
   if (exclude !== 'nav' && exclude !== 'epg' && exclude !== 'guide') hideNav();
   if (exclude !== 'channelSettings' && exclude !== 'settingsModal') hideChannelSettings();
@@ -963,46 +1160,103 @@ function clearUi(exclude) {
   if (exclude !== 'channelName') hideChannelName();
   if (exclude !== 'settingsModal') window.hideSettingsModal();
   if (exclude !== 'epg') hideEpg();
-
+  // --- START: Hide temp message on UI clear ---
   if (o.TempMessageOverlay && !o.TempMessageOverlay.classList.contains('HIDDEN')) {
       clearTimeout(tempMessageTimeout);
       o.TempMessageOverlay.classList.remove('visible');
       o.TempMessageOverlay.classList.add('HIDDEN');
   }
+  // --- END: Hide temp message ---
 }
 
+
+/* -------------------------
+    LEFT PANEL: show/hide groups + nav
+   ------------------------- */
 function showNav() {
   if (!o.Nav) return;
   bNavOpened = true;
   bGroupsOpened = false;
-  o.ListContainer?.classList.remove('groups-opened');
+
+  // Ensure lists are built and scroll state correct BEFORE making panel visible
+  buildDynamicGroupNav(); // ensure groups exist
+  buildNav(); // ensure channels exist
+
+  // Ensure only channel list scrolls initially
+  enableListScroll(o.ChannelList);
+  disableListScroll(o.GroupList);
+
+  // Make panel visible (overlay)
   o.Nav.classList.add('visible');
+
+  // Reset internal transform to ensure slide works
+  if (o.ListContainer) {
+      o.ListContainer.classList.remove('groups-opened');
+  }
+
+  // Focus: highlight current channel
   updateSelectedChannelInNav();
 }
 
+/* FIX: improved hideNav to reset groups and scrolling */
 function hideNav() {
   if (!o.Nav) return;
   bNavOpened = false;
   bGroupsOpened = false;
+
+  // Hide panel
   o.Nav.classList.remove('visible');
-  if (o.ListContainer?.classList.contains('groups-opened')) {
+
+  // Reset container transform
+  if (o.ListContainer) {
       o.ListContainer.classList.remove('groups-opened');
   }
+
+  // Ensure group scroll disabled and channel scroll enabled (for next open)
+  enableListScroll(o.ChannelList);
+  disableListScroll(o.GroupList);
 }
 
+/* FIX: showGroups now ensures DOM ready + scroll control before sliding */
 function showGroups() {
   if (bNavOpened && o.ListContainer) {
-    bGroupsOpened = true;
-    o.ListContainer.classList.add('groups-opened');
-    updateSelectedGroupInNav();
+    // Make sure groups are rendered (dynamic content)
+    buildDynamicGroupNav();
+
+    // Small delay to let DOM update, then do the transform so it won't be blank
+    requestAnimationFrame(() => {
+        bGroupsOpened = true;
+        o.ListContainer.classList.add('groups-opened');
+
+        // Scroll handling: disable channel, enable group
+        disableListScroll(o.ChannelList);
+        enableListScroll(o.GroupList);
+
+        // ensure selected group is visible
+        updateSelectedGroupInNav();
+    });
   }
 }
 
+/* FIX: hideGroups should revert scroll to channel list and keep panel open */
 function hideGroups() {
   bGroupsOpened = false;
-  if (o.ListContainer) o.ListContainer.classList.remove('groups-opened');
+  if (o.ListContainer) {
+      // Remove slide class
+      o.ListContainer.classList.remove('groups-opened');
+
+      // ensure channel list scroll enabled again
+      enableListScroll(o.ChannelList);
+      disableListScroll(o.GroupList);
+
+      // update channel highlight
+      updateSelectedChannelInNav();
+  }
 }
 
+/* -------------------------
+    Right panel (unchanged)
+   ------------------------- */
 function showChannelSettings() {
   if (!o.ChannelSettings) return;
   clearUi('channelSettings');
@@ -1023,16 +1277,20 @@ window.showGuide = () => {
   if (!o.Guide || !o.GuideContent || !o.BlurOverlay) return;
   clearUi('guide');
   o.BlurOverlay.classList.add('visible');
+  renderGuideContent();
   bGuideOpened = true;
   o.Guide.classList.remove('HIDDEN');
-  document.body.classList.add('modal-open'); // lock background when guide is open
-  renderGuideContent();
+
+  // prevent background scroll when guide modal is open
+  document.body.classList.add('modal-open');
 };
 window.hideGuide = () => {
   bGuideOpened = false;
   if (o.Guide) o.Guide.classList.add('HIDDEN');
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
-  document.body.classList.remove('modal-open'); // unlock
+
+  // restore body scroll
+  document.body.classList.remove('modal-open');
 };
 
 function renderGuideContent() {
@@ -1056,11 +1314,14 @@ function renderGuideContent() {
 
 /* -------------------------
     EPG
-------------------------- */
+   ------------------------- */
 function showEpg() {
   if (!o.EpgOverlay || !o.EpgChannels || !o.EpgTimeline) return;
   clearUi('epg');
-  aEpgFilteredChannelKeys = Object.keys(channels).sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
+
+  aEpgFilteredChannelKeys = Object.keys(channels)
+      .sort((a, b) => (channels[a]?.number ?? Infinity) - (channels[b]?.number ?? Infinity));
+
   const currentKey = aFilteredChannelKeys[iCurrentChannel];
   iEpgChannelIndex = aEpgFilteredChannelKeys.indexOf(currentKey);
   if (iEpgChannelIndex === -1) {
@@ -1070,19 +1331,25 @@ function showEpg() {
       }
       if (iEpgChannelIndex === -1) iEpgChannelIndex = 0;
   }
+
   renderEpg();
   bEpgOpened = true;
   o.EpgOverlay.classList.remove('HIDDEN');
+
+  // prevent body scroll while EPG open
   document.body.classList.add('modal-open');
 }
 function hideEpg() {
     bEpgOpened = false;
     if (o.EpgOverlay) o.EpgOverlay.classList.add('HIDDEN');
+
+    // restore body scroll
     document.body.classList.remove('modal-open');
 }
 
 function renderEpg() {
   if (!o.EpgChannels || !o.EpgTimeline) return;
+
   let channelsHtml = '';
   aEpgFilteredChannelKeys.forEach((key, index) => {
     const ch = channels[key];
@@ -1092,7 +1359,9 @@ function renderEpg() {
     channelsHtml += `<div class="epg-ch-item ${selectedClass}">${ch.number || '?'}. ${safeName}</div>`;
   });
   o.EpgChannels.innerHTML = channelsHtml;
+
   o.EpgTimeline.innerHTML = generateDummyEpg();
+
   try {
       const selectedItem = o.EpgChannels.querySelector('.selected');
       if (selectedItem && typeof selectedItem.scrollIntoView === 'function') {
@@ -1111,7 +1380,7 @@ function generateDummyEpg() {
 
 /* -------------------------
     Channel name display
-------------------------- */
+   ------------------------- */
 function showChannelName() {
   clearTimeout(channelNameTimeout);
   if (!o.ChannelInfo || !o.ChannelInfoName || !o.ChannelInfoEpg || !o.ChannelInfoLogo) return;
@@ -1134,7 +1403,7 @@ function hideChannelName() {
 
 /* -------------------------
     Favorites storage
-------------------------- */
+   ------------------------- */
 function loadFavoritesFromStorage() {
   try {
     const favs = JSON.parse(localStorage.getItem("iptvFavoriteChannels") || "[]");
@@ -1142,37 +1411,42 @@ function loadFavoritesFromStorage() {
         Object.keys(channels).forEach(key => {
             if (channels[key]) { channels[key].favorite = favs.includes(key); }
         });
-    }
+    } else { console.warn("Favorites data from localStorage is not an array."); }
   } catch(e) { console.error("Error loading favorites:", e); }
 }
 
 function saveFavoritesToStorage() {
   try {
-    const favs = Object.entries(channels).filter(([,ch]) => ch && ch.favorite).map(([key]) => key);
+    const favs = Object.entries(channels)
+                      .filter(([,ch]) => ch && ch.favorite)
+                      .map(([key]) => key);
     localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs));
+    console.log("Saved Favorites:", favs);
   } catch(e) { console.error("Error saving favorites:", e); }
 }
 
 /* -------------------------
     First Play handling
-------------------------- */
+   ------------------------- */
 function handleFirstPlay() {
   if (isSessionActive) return;
   isSessionActive = true;
+
   hideIdleAnimation();
+
   if(aFilteredChannelKeys.length > 0 && iCurrentChannel >= 0 && iCurrentChannel < aFilteredChannelKeys.length){
       loadChannel(iCurrentChannel);
   } else {
       console.error("No valid channel selected on first play.");
-      showIdleAnimation(true);
+      showIdleAnimation(true); // Show idle again if no channel is loadable
       isSessionActive = false;
       return;
   }
 }
 
 /* -------------------------
-    Settings selection helper
-------------------------- */
+    Settings selection helpers
+   ------------------------- */
 function updateSettingsSelection(container, index) {
   if (!container || typeof container.querySelector !== 'function') return;
   try {
@@ -1188,7 +1462,7 @@ function updateSettingsSelection(container, index) {
                 item.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
-      }
+      } else { console.warn("Invalid index or no items for settings selection:", index); }
   } catch (error) { console.error("Error updating settings selection:", error); }
 }
 
@@ -1207,6 +1481,8 @@ function updateSettingsModalSelection() {
                     item.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
+        } else {
+            console.warn("Invalid index or no items for modal selection:", iSettingsModalIndex);
         }
     } catch (error) {
         console.error("Error updating settings modal selection:", error);
@@ -1215,28 +1491,42 @@ function updateSettingsModalSelection() {
 
 /* -------------------------
     Fullscreen toggle
-------------------------- */
+   ------------------------- */
 function toggleFullScreen() {
+    console.log("Toggle Fullscreen triggered");
     const elem = document.documentElement;
+
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
-        if (elem.requestFullscreen) elem.requestFullscreen().catch(()=>{});
-        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-        else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
-        else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.mozRequestFullScreen) {
+            elem.mozRequestFullScreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        } else {
+             console.warn("Fullscreen API is not supported by this browser.");
+        }
     } else {
-        if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-        else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
-        else if (document.msExitFullscreen) document.msExitFullscreen();
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(err => console.error(`Error attempting to disable full-screen mode: ${err.message} (${err.name})`));
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
     }
 }
 
 /* -------------------------
-    Keyboard Handling
-------------------------- */
+    Keyboard Handling (large block)
+   ------------------------- */
 if (o.PlayButton) {
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
-}
+} else { console.error("PlayButton element not found."); }
 
 if (o.SearchField) {
     o.SearchField.addEventListener('input', () => {
@@ -1250,24 +1540,27 @@ if (o.SearchField) {
         showIdleAnimation(true);
       }
     });
-}
+} else { console.error("SearchField element not found."); }
 
 document.addEventListener('keydown', (e) => {
-  // Search field navigation
+  // --- START CHANGE: Handle ArrowDown from Search ---
   if (document.activeElement === o.SearchField) {
       if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) {
-          e.preventDefault();
-          iCurrentChannel = 0;
+          e.preventDefault(); // Prevent default scroll
+          iCurrentChannel = 0; // Focus first channel
           if(o.SearchField) o.SearchField.blur();
           updateSelectedChannelInNav();
       } else if (e.key === 'Escape') {
            e.preventDefault();
            if(o.SearchField) o.SearchField.blur();
+           // Optionally move focus back to the first channel or just blur
            iCurrentChannel = 0;
            updateSelectedChannelInNav();
       }
-      return;
+      return; // Let other keys work normally in the input
   }
+  // --- END CHANGE ---
+
 
   if (bGuideOpened) {
      e.preventDefault();
@@ -1290,19 +1583,35 @@ document.addEventListener('keydown', (e) => {
           iSettingsModalIndex = Math.min(items.length - 1, iSettingsModalIndex + 1);
           updateSettingsModalSelection();
       } else if (e.key === 'Enter') {
+          // --- START CHANGE ---
+          // Check if it's a list item or a button
           const selectedItem = items[iSettingsModalIndex];
           if (selectedItem) {
                if (selectedItem.tagName === 'LI' && selectedItem.hasAttribute('data-value')) {
-                   const type = o.SettingsModalContent.querySelector('input[name="quality"]') ? 'quality' : 'format';
-                   if (type === 'quality') applyQualityAndClose(selectedItem.dataset.value);
-                   else if (type === 'format') applyFormatAndClose(selectedItem.dataset.value);
-                   else if (typeof selectedItem.click === 'function') selectedItem.click();
-               } else if (typeof selectedItem.click === 'function') selectedItem.click();
+                   // If it's a list item with a value (quality/format), apply directly
+                   const type = o.SettingsModalContent.querySelector('input[name="quality"]') ? 'quality' : 'format'; // Determine modal type
+                   if (type === 'quality') {
+                       applyQualityAndClose(selectedItem.dataset.value);
+                   } else if (type === 'format') {
+                       applyFormatAndClose(selectedItem.dataset.value);
+                   } else {
+                        // Default click for other list items (like subtitles/audio)
+                         if (typeof selectedItem.click === 'function') selectedItem.click();
+                   }
+               } else if (typeof selectedItem.click === 'function') {
+                 // If it's a button or other clickable item, just click it
+                 selectedItem.click();
+               }
           }
+          // --- END CHANGE ---
       } else if (e.key === 'Escape') {
+          // Find a "CANCEL" or "CLOSE" button to click, otherwise just hide
           const closeButton = Array.from(items).find(btn => btn.tagName === 'BUTTON' && (btn.textContent === 'CANCEL' || btn.textContent === 'CLOSE'));
-          if (closeButton) closeButton.click();
-          else window.hideSettingsModal();
+          if (closeButton) {
+              closeButton.click();
+          } else {
+              window.hideSettingsModal();
+          }
       }
       return;
   }
@@ -1313,10 +1622,13 @@ document.addEventListener('keydown', (e) => {
     if (!EPG_KEYS.includes(e.key)) return;
     if (e.key === 'Escape') hideEpg();
     else if (e.key === 'ArrowUp') iEpgChannelIndex = Math.max(0, iEpgChannelIndex - 1);
-    else if (e.key === 'ArrowDown') iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1);
+    else if (e.key === 'ArrowDown') {
+         iEpgChannelIndex = Math.min(aEpgFilteredChannelKeys.length - 1, iEpgChannelIndex + 1);
+    }
     else if (e.key === 'Enter') {
         const selectedKey = aEpgFilteredChannelKeys[iEpgChannelIndex];
         const mainIndex = aFilteredChannelKeys.indexOf(selectedKey);
+
         if (mainIndex !== -1) {
             loadChannel(mainIndex);
         } else {
@@ -1331,7 +1643,11 @@ document.addEventListener('keydown', (e) => {
             }
             buildNav();
             const newMainIndex = aFilteredChannelKeys.indexOf(selectedKey);
-            if (newMainIndex !== -1) loadChannel(newMainIndex);
+            if (newMainIndex !== -1) {
+                loadChannel(newMainIndex);
+            } else {
+                console.warn("Selected EPG channel not found even in 'ALL' group:", selectedKey);
+            }
         }
         hideEpg();
     }
@@ -1339,7 +1655,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Left panel handling (fixed behavior)
+  // --- START: MODIFICATION for Left Panel Logic ---
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
@@ -1347,12 +1663,15 @@ document.addEventListener('keydown', (e) => {
       const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
       if (!GROUP_LIST_KEYS.includes(e.key)) return;
 
-      if (e.key === 'ArrowUp') iGroupListIndex = Math.max(0, iGroupListIndex - 1);
-      else if (e.key === 'ArrowDown') iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      else if (e.key === 'Enter') groupItems[iGroupListIndex]?.click();
-      else if (e.key === 'ArrowRight' || e.key === 'Escape') hideGroups(); // go back to channel list
-      else if (e.key === 'ArrowLeft') {
-          // If already viewing groups and user presses ArrowLeft again -> close nav (not go deeper)
+      if (e.key === 'ArrowUp') {
+          iGroupListIndex = Math.max(0, iGroupListIndex - 1);
+      } else if (e.key === 'ArrowDown') {
+          iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
+      } else if (e.key === 'Enter') { // Only Enter selects
+          groupItems[iGroupListIndex]?.click();
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc goes back to Channel List
+          hideGroups();
+      } else if (e.key === 'ArrowLeft') { // ArrowLeft from groups closes the whole nav
           hideNav();
       }
       updateSelectedGroupInNav();
@@ -1360,80 +1679,103 @@ document.addEventListener('keydown', (e) => {
     } else { // Channel List
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
        if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
-
+      // --- START CHANGE: Search Bar Navigation ---
       if (e.key === 'ArrowUp') {
           if (iCurrentChannel === 0 && o.SearchField) {
+              // If on the first channel, move focus UP to search field
               o.SearchField.focus();
+              // Deselect channel visually
               const currentSelected = o.ChannelList.querySelector('.selected');
               if (currentSelected) currentSelected.classList.remove('selected');
-              iCurrentChannel = -1;
+              iCurrentChannel = -1; // Indicate search field has focus
           } else if (iCurrentChannel > 0) {
+              // Otherwise, cycle up the channel list
               iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length;
               updateSelectedChannelInNav();
+          } else if (iCurrentChannel === -1) {
+              // If search is already focused, do nothing on ArrowUp
           }
       } else if (e.key === 'ArrowDown') {
           if (iCurrentChannel === -1 && aFilteredChannelKeys.length > 0) {
+              // If search field had focus, move focus DOWN to first channel
               iCurrentChannel = 0;
               updateSelectedChannelInNav();
-              o.SearchField.blur();
-          } else if (aFilteredChannelKeys.length > 0 && iCurrentChannel !== -1) {
+              o.SearchField.blur(); // Remove focus from search field
+          } else if (aFilteredChannelKeys.length > 0 && iCurrentChannel !== -1) { // Only cycle down if not focused on search
+             // Otherwise, cycle down the channel list
              iCurrentChannel = (iCurrentChannel + 1) % aFilteredChannelKeys.length;
              updateSelectedChannelInNav();
           }
-      } else if (e.key === 'Enter') {
+      // --- END CHANGE: Search Bar Navigation ---
+      } else if (e.key === 'Enter') { // Only Enter selects
             if (iCurrentChannel !== -1 && aFilteredChannelKeys.length > 0) {
                  loadChannel(iCurrentChannel);
                  hideNav();
             }
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // ArrowRight or Esc closes nav
             hideNav();
-            if (iCurrentChannel === -1 && o.SearchField) o.SearchField.blur();
-      } else if (e.key === 'ArrowLeft') {
-            // ArrowLeft from channel list opens group list
-            if (iCurrentChannel !== -1) showGroups();
+            if (iCurrentChannel === -1 && o.SearchField) o.SearchField.blur(); // Blur search if closing nav
+      } else if (e.key === 'ArrowLeft') { // ArrowLeft opens Group List
+            if (iCurrentChannel !== -1) { // Only show groups if not focused on search
+               showGroups();
+            }
       }
     }
     return;
   }
+  // --- END: MODIFICATION ---
 
-  // Right panel settings logic (kept)
+  // --- START: MODIFICATION for Right Panel Logic ---
   if (bChannelSettingsOpened) {
     e.preventDefault();
     const isSubmenu = o.SettingsContainer?.classList.contains('submenu-visible');
     const SETTINGS_KEYS = ['Escape', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight'];
      if (!SETTINGS_KEYS.includes(e.key)) return;
+    
     if (isSubmenu) {
         const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        else if (e.key === 'Enter') submenuItems[iVideoSettingsIndex]?.click();
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideVideoFormatMenu();
+        else if (e.key === 'Enter') { // Only Enter selects
+            submenuItems[iVideoSettingsIndex]?.click();
+        }
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // ArrowLeft or Esc goes back
+            hideVideoFormatMenu();
+        }
+        // ArrowRight does nothing
         updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-    } else {
+    } else { // Main Settings
         const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
-        else if (e.key === 'Enter') mainItems[iChannelSettingsIndex]?.click();
-        else if (e.key === 'ArrowRight') {
+        else if (e.key === 'Enter') { // Only Enter selects
+            mainItems[iChannelSettingsIndex]?.click();
+        } else if (e.key === 'ArrowRight') { // ArrowRight drills IN (if possible)
             const selectedItem = mainItems[iChannelSettingsIndex];
-            if (selectedItem && selectedItem.onclick.toString().includes('showVideoFormatMenu')) selectedItem.click();
+            // Only click if it's the "Video / Format" item
+            if (selectedItem && selectedItem.onclick.toString().includes('showVideoFormatMenu')) {
+                selectedItem.click();
+            }
         }
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') hideChannelSettings();
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // ArrowLeft or Esc closes settings
+            hideChannelSettings();
+        }
         updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
     }
     return;
   }
+  // --- END: MODIFICATION ---
 
   const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
   if (!PLAYER_KEYS.includes(e.key)) return;
 
   e.preventDefault();
   switch (e.key) {
+    // --- START: MODIFIED LOGIC ---
     case 'ArrowLeft':
-        // If nothing open => open nav (channel list)
-        // If nav closed and channel-settings closed, open nav
-        showNav();
+        showNav(); // This will open the nav, defaulting to the Channel List
         break;
+    // --- END: MODIFIED LOGIC ---
     case 'ArrowRight': showChannelSettings(); break;
     case 'Enter': showChannelName(); break;
     case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
@@ -1445,7 +1787,9 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// --- REMOVED all old 'document' touch listeners ---
+
 /* -------------------------
     Init
-------------------------- */
+   ------------------------- */
 document.addEventListener('DOMContentLoaded', initPlayer);
