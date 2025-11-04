@@ -46,7 +46,7 @@ let channels = {
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
     nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
-    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "httpsimg.com/550RYpJ.png", group: ["movies", "entertainment"] },
+    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
     mrbeanlive: { name: "MR Bean (Test)", type: "hls", manifestUri: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
@@ -88,9 +88,7 @@ async function initPlayer() {
     channels[key].key = key;
   });
 
-  // --- START: FIX - Clear search field on load ---
   if (o.SearchField) o.SearchField.value = '';
-  // --- END: FIX ---
 
   loadFavoritesFromStorage();
   setupMainMenuControls();
@@ -124,13 +122,16 @@ async function initPlayer() {
   player = new shaka.Player();
   ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
 
+  // --- START: FIX for PiP ---
   ui.configure({
-    controlPanelElements: [],
+    // Add the built-in Shaka PiP button
+    controlPanelElements: ['picture_in_picture'], 
     addSeekBar: false,
     addBigPlayButton: false,
     showBuffering: true, 
     clickToPlay: false
   });
+  // --- END: FIX for PiP ---
 
   player.attach(o.AvPlayer);
 
@@ -697,15 +698,16 @@ function renderChannelSettings() {
       o.SettingsVideoInfo.textContent = `Video: ${vRes} (${vCodec}) | Audio: ${aCodec}`;
   }
 
+  // --- START: FIX for PiP ---
   if (o.SettingsMainMenu) {
       o.SettingsMainMenu.innerHTML = `
         <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
         <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
-        <div class="settings-item" onclick="togglePip()">Picture-in-Picture</div>
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
       `;
       updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
   } else { console.error("SettingsMainMenu element not found"); }
+  // --- END: FIX for PiP ---
 }
 
 function showVideoFormatMenu() {
@@ -974,34 +976,9 @@ function toggleFavourite() {
   }
 }
 
-function togglePip() {
-  if (!isSessionActive) {
-    showTempMessage("Please start playing a channel first.");
-    hideChannelSettings();
-    return;
-  }
-
-  if (!document.pictureInPictureEnabled) {
-    console.warn("PiP is not supported by this browser.");
-    showTempMessage("Picture-in-Picture not supported.");
-    hideChannelSettings();
-    return;
-  }
-
-  try {
-    if (document.pictureInPictureElement) {
-      document.exitPictureInPicture();
-    } else {
-      if (o.AvPlayer) {
-        o.AvPlayer.requestPictureInPicture();
-      }
-    }
-  } catch (error) {
-    console.error("Error toggling PiP:", error);
-    showTempMessage("Could not enter PiP mode.");
-  }
-  hideChannelSettings(); 
-}
+// --- START: FIX for PiP ---
+// The entire togglePip() function is removed, as it's no longer called.
+// --- END: FIX for PiP ---
 
 
 /* -------------------------
@@ -1355,25 +1332,19 @@ if (o.PlayButton) {
 if (o.SearchField) {
     o.SearchField.addEventListener('input', () => {
       buildNav();
-      // --- START: FIX - Don't auto-load on search, just select ---
       if (aFilteredChannelKeys.length > 0) {
         iCurrentChannel = 0;
-        // if (isSessionActive) { loadChannel(0); } // REMOVED - user will press Enter
         updateSelectedChannelInNav();
       } else {
-        // if list is empty, DO NOT unload the player
-        // try { player?.unload(); } catch {} // REMOVED
-        // showIdleAnimation(true); // REMOVED
+        // Do nothing, keep playing current channel
       }
-      // --- END: FIX ---
     });
 } else { console.error("SearchField element not found."); }
 
 document.addEventListener('keydown', (e) => {
 
-  // --- START: FIX - Corrected logic for search nav ---
   if (document.activeElement === o.SearchField) {
-      if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) { // Check for !bGroupsOpened
+      if (e.key === 'ArrowDown' && bNavOpened && !bGroupsOpened) { 
           e.preventDefault(); 
           iCurrentChannel = 0; 
           if(o.SearchField) o.SearchField.blur();
@@ -1386,7 +1357,6 @@ document.addEventListener('keydown', (e) => {
       }
       return; 
   }
-  // --- END: FIX ---
 
 
   if (bGuideOpened) {
@@ -1475,12 +1445,11 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // --- START: MODIFICATION - Corrected Panel Logic ---
+  // --- START: This is the CORRECTED Panel Logic ---
   if (bNavOpened) {
     e.preventDefault();
     
     // --- THIS IS THE CHANNEL LIST (Panel 1) ---
-    // --- This logic runs when bGroupsOpened is FALSE ---
     if (!bGroupsOpened) {
       const CHANNEL_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
        if (!CHANNEL_LIST_KEYS.includes(e.key)) return;
@@ -1521,7 +1490,6 @@ document.addEventListener('keydown', (e) => {
       }
     }
     // --- THIS IS THE GROUP LIST (Panel 2) ---
-    // --- This logic runs when bGroupsOpened is TRUE ---
     else { 
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
       const GROUP_LIST_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
