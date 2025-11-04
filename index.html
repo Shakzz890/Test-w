@@ -5,25 +5,19 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Shakzz TV Player</title>
 
-  <!-- Shaka Player -->
   <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/shaka-player.ui.js" defer></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/controls.css" />
 
-  <!-- App Styles -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Meta -->
   <meta name="theme-color" content="#000000" />
 </head>
 <body>
-  <!-- Player Container -->
   <div id="playerContainer" tabindex="-1">
     <video id="avplayer" autoplay muted playsinline></video>
 
-    <!-- Stream Info -->
     <div id="StreamInfoOverlay" class="HIDDEN"></div>
 
-    <!-- Loader -->
     <div id="ChannelLoader" class="HIDDEN">
       <div class="loader-content">
         <div class="loading-spinner"></div>
@@ -32,16 +26,12 @@
     </div>
   </div>
 
-  <!-- Background Blur -->
   <div id="BlurOverlay" class="fullscreen"></div>
 
-  <!-- Temporary Message -->
   <div id="TempMessageOverlay" class_="HIDDEN"></div>
 
-  <!-- UI Elements -->
   <div id="ui_elements">
 
-    <!-- Idle Animation -->
     <div id="IdleAnimation" class="fullscreen">
       <div class="idle-branding">
         <h1>SHAKZZ TV</h1>
@@ -54,7 +44,6 @@
       </div>
     </div>
 
-    <!-- Left Navigation Panel -->
     <nav id="nav" aria-label="Main Navigation">
       <div id="brand-header">
         <svg viewBox="0 0 24 24" fill="white">
@@ -69,9 +58,10 @@
         <input id="SearchField" type="search" placeholder="Search" aria-label="Search Channels" />
       </div>
 
-      <!-- This inner container is for the group/channel slide animation -->
       <div id="list_container_scrollarea" style="height: calc(100vh - 159px); overflow:hidden;">
         <div id="list_container">
+          <div id="ChannelList" class="custom-scrollbar"></div>
+          
           <div id="GroupList" class="custom-scrollbar">
             <ul id="main_nav">
               <li id="guide_button">GUIDE</li>
@@ -83,21 +73,17 @@
             <h2 class="list_headline">CATEGORIES</h2>
             <ul id="DynamicGroupsList"></ul>
           </div>
-          <div id="ChannelList" class="custom-scrollbar"></div>
-        </div>
+          </div>
       </div>
     </nav>
 
-    <!-- Right Settings Panel -->
     <aside id="ChannelSettings" aria-label="Channel Settings">
-      <!-- This inner container is for the settings/video slide animation -->
       <div id="settings_container">
         <div id="SettingsMainMenu" class="custom-scrollbar"></div>
         <div id="SettingsVideoFormatMenu" class="custom-scrollbar"></div>
       </div>
     </aside>
 
-    <!-- Channel Info Overlay -->
     <div id="ChannelInfo">
       <div id="ch_logo"></div>
       <div id="channel_text_container">
@@ -106,7 +92,6 @@
       </div>
     </div>
 
-    <!-- GUIDE Modal -->
     <div id="Guide" class="fullscreen HIDDEN" aria-hidden="true">
       <div class="fullscreen-popup" style="max-width:800px; padding: 30px;">
         <button class="close-button" onclick="hideGuide()" aria-label="Close Guide"></button>
@@ -114,13 +99,11 @@
       </div>
     </div>
 
-    <!-- EPG Modal -->
     <div id="EpgOverlay" class="fullscreen HIDDEN" aria-hidden="true">
       <div id="EpgChannels" class="custom-scrollbar"></div>
       <div id="EpgTimeline" class="custom-scrollbar"></div>
     </div>
 
-    <!-- Settings Modal -->
     <div id="SettingsModal" class="fullscreen HIDDEN" aria-hidden="true">
       <div class="fullscreen-popup">
         <div id="SettingsModalContent"></div>
@@ -129,7 +112,6 @@
 
   </div>
 
-  <!-- Main Script -->
   <script src="script.js"></script>
 </body>
 </html>
