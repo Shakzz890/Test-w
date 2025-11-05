@@ -203,7 +203,7 @@ body.modal-open {
     margin-left:8px;
 }
 
-/* ------------------------- PANELS (NAV & SETTINGS) - overlay slide-out panels ------------------------- */
+/* ------------------------- PANELS (NAV & SETTINGS) ------------------------- */
 #nav, #ChannelSettings {
     position: fixed;
     top: 0;
@@ -220,7 +220,7 @@ body.modal-open {
     flex-direction:column;
 }
 
-/* Left Nav Panel (slide in from left) */
+/* Left Nav Panel */
 #nav {
     left: 0;
     transform: translateX(-100%);
@@ -232,7 +232,7 @@ body.modal-open {
     visibility: visible;
 }
 
-/* Right Settings Panel (slide in from right) */
+/* Right Panel */
 #ChannelSettings {
     right: 0;
     transform: translateX(100%);
@@ -247,7 +247,7 @@ body.modal-open {
 #brand-header {
     display:flex;
     align-items:center;
-    padding:15px;
+    padding:15px 20px;
     height:64px;
     border-bottom:1px solid var(--border-color);
     flex-shrink:0;
@@ -264,15 +264,16 @@ body.modal-open {
     font-weight:600;
 }
 
+/* --- FIX: Search bar alignment --- */
 #search_item_wrapper {
-    padding:15px;
+    padding:15px 20px;
     border-bottom:1px solid var(--border-color);
     flex-shrink:0;
 }
 
 #SearchField {
     width:100%;
-    padding:10px;
+    padding:12px 15px;
     background:var(--bg-secondary);
     border:1px solid var(--border-color);
     color:var(--text-primary);
@@ -286,7 +287,7 @@ body.modal-open {
     box-shadow: 0 0 5px var(--bg-focus);
 }
 
-/* Panel slide container (Groups/Channels) */
+/* --- Slide Containers --- */
 #list_container_scrollarea {
     flex-grow:1;
     min-height:0;
@@ -297,13 +298,11 @@ body.modal-open {
     display:flex;
     width:200%; 
     height:100%;
-    /* FIX: Initial position. If GroupList is FIRST, shift left by 50% to show ChannelList (Element 2) */
     transform: translateX(-50%); 
     transition: transform var(--anim-time-fast) ease-out;
 }
 
 #list_container.groups-opened {
-    /* FIX: Slide RIGHT to show GroupList (Element 1) */
     transform: translateX(0); 
 }
 
@@ -314,7 +313,7 @@ body.modal-open {
     flex-shrink: 0; 
 }
 
-/* Settings container styles */
+/* --- Settings container --- */
 #settings_container {
     position:relative;
     width:100%;
@@ -349,26 +348,26 @@ body.modal-open {
     transform: translateX(0);
 }
 
-/* ------------------------- LISTS & ITEMS ------------------------- */
+/* ------------------------- LISTS ------------------------- */
 #main_nav, #DynamicGroupsList {
     list-style:none;
     padding:0;
 }
 
 #main_nav li, #DynamicGroupsList li {
-    padding:15px 20px;
+    padding:15px 25px;
     font-size:1rem;
     font-weight:500;
     cursor:pointer;
     transition:background .2s;
     border-radius:5px;
-    margin:2px 5px;
+    margin:3px 8px;
 }
 
 .list_headline {
     font-size:0.9rem;
     color:var(--text-secondary);
-    padding:10px 20px;
+    padding:12px 25px;
     text-transform:uppercase;
     cursor: pointer; 
 }
@@ -389,7 +388,6 @@ body.modal-open {
     margin:2px 5px;
 }
 
-/* --- FIX: Styles for the Channel Logo (from HTML .nav_logo) --- */
 .nav_logo {
     width:40px; 
     height:40px; 
@@ -406,7 +404,6 @@ body.modal-open {
     max-height: 100%;
     object-fit: contain; 
 }
-/* --- END FIX: Channel Logo Styles --- */
 
 .fav-star {
     width:20px;
@@ -495,7 +492,7 @@ body.modal-open {
     visibility:visible;
 }
 
-/* ------------------------- MODALS (GUIDE, EPG, SETTINGS) ------------------------- */
+/* ------------------------- MODALS ------------------------- */
 .fullscreen-popup {
     position:absolute;
     top:50%;
@@ -551,19 +548,13 @@ body.modal-open {
     gap: 10px;
 }
 
-#EpgChannels {
+#EpgChannels, #EpgTimeline {
     background: var(--bg-panel);
     border-radius:5px;
     height:100%;
 }
 
-#EpgTimeline {
-    background: var(--bg-panel);
-    border-radius:5px;
-    height:100%;
-}
-
-/* Settings Modal content */
+/* Settings Modal */
 #SettingsModal {
     background: transparent;
     z-index: 35;
@@ -625,6 +616,26 @@ body.modal-open {
 
 .popup-buttons button:hover {
     background:var(--bg-hover);
+}
+
+/* --- Highlight for Cancel button --- */
+.popup-buttons button:focus-visible,
+.popup-buttons button:focus,
+.popup-buttons button.selected {
+    outline: 2px solid var(--bg-focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 8px var(--bg-focus);
+}
+
+.popup-buttons button.cancel-button:focus-visible,
+.popup-buttons button.cancel-button.selected {
+    background: var(--bg-selected);
+    border-color: var(--bg-focus);
+}
+
+.popup-buttons button.cancel-button:hover {
+    background: var(--bg-hover);
+    border-color: var(--bg-focus);
 }
 
 .edit-modal-field {
