@@ -297,20 +297,21 @@ body.modal-open {
     display:flex;
     width:200%; 
     height:100%;
-    transform: translateX(0);
+    /* FIX: Initial position. If GroupList is FIRST, shift left by 50% to show ChannelList (Element 2) */
+    transform: translateX(-50%); 
     transition: transform var(--anim-time-fast) ease-out;
 }
 
 #list_container.groups-opened {
-    /* FIX: Slides LEFT by 50% to show the second list item (GroupList) */
-    transform: translateX(-50%);
+    /* FIX: Slide RIGHT to show GroupList (Element 1) */
+    transform: translateX(0); 
 }
 
 #GroupList, #ChannelList {
-    width:50%; /* Each list takes up half of the 200% container */
+    width:50%; 
     height:100%;
     padding:10px 0;
-    flex-shrink: 0; /* Prevents shrinking */
+    flex-shrink: 0; 
 }
 
 /* Settings container styles */
@@ -392,7 +393,7 @@ body.modal-open {
 .nav_logo {
     width:40px; 
     height:40px; 
-    margin-left:auto; /* Pushes the logo to the right end of the item, matching video */
+    margin-left:auto; 
     margin-right:10px; 
     flex-shrink:0;
     display:flex;
@@ -403,7 +404,7 @@ body.modal-open {
 .nav_logo img {
     max-width: 100%;
     max-height: 100%;
-    object-fit: contain; /* Prevents distortion, scales to fit */
+    object-fit: contain; 
 }
 /* --- END FIX: Channel Logo Styles --- */
 
@@ -428,7 +429,6 @@ body.modal-open {
     overflow:hidden;
     text-overflow:ellipsis;
 }
-
 
 /* Settings Items */
 .settings-item {
