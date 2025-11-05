@@ -45,7 +45,7 @@ let channels = {
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
     nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
-    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f9f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
+    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f7f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
     mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://example.com/placeholder.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
@@ -57,7 +57,7 @@ let channels = {
 
 let aFilteredChannelKeys = [];
 let sSelectedGroup = '__all';
-let iCurrentChannel = 0;
+let iCurrentChannel = 0; 
 let iGroupListIndex = 1; 
 let channelNameTimeout = null;
 let isSessionActive = false;
@@ -470,7 +470,7 @@ async function loadChannel(index, options = {}) {
 function setupMainMenuControls() {
   const guideBtn = getEl('guide_button');
   const epgBtn = getEl('epg_button');
-  const listHeadline = document.querySelector('.list_headline');
+  const listHeadline = document.querySelector('.list_headline'); 
 
   if (guideBtn) guideBtn.onclick = window.showGuide;
   else console.warn("guide_button not found.");
@@ -827,7 +827,7 @@ function showSettingsModal(type) {
   }
   o.SettingsModal.classList.remove('HIDDEN');
   
-  // New: Force focus and select the first item for keyboard control
+  // Force focus and select the first item for keyboard control
   setTimeout(() => updateSettingsModalSelection(), 50); 
 }
 
@@ -845,13 +845,14 @@ function renderModalContent(type) {
 
       if (type === 'quality') {
         const tracks = [...new Map((player.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a,b)=>b.height-a.height);
-        // Added class 'modal-selectable' to LI and Button elements for keyboard control
+        // Added class 'modal-selectable' to LI for keyboard control
         let itemsHtml = `<li class="modal-selectable" data-action="radio" data-key="quality" data-value="auto">Auto <input type="radio" name="quality" value="auto" ${player.getConfiguration()?.abr?.enabled ? 'checked' : ''}></li>`;
         tracks.forEach(track => {
           const bps = track.bandwidth > 1000000 ? `${(track.bandwidth/1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth/1e3)} Kbps`;
           const isChecked = track.active && !player.getConfiguration()?.abr?.enabled;
           itemsHtml += `<li class="modal-selectable" data-action="radio" data-key="quality" data-value='${track.id}'>${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
         });
+        // Added class 'modal-selectable' to Button for keyboard control
         contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="cancel" onclick="hideSettingsModal()">CANCEL</button><button class="modal-selectable" data-action="ok" onclick="applyQualitySetting()">OK</button></div>`;
 
       } else if (type === 'subtitles') {
@@ -1284,17 +1285,28 @@ function updateSettingsModalSelection() {
 
         // Use a broader selector to include both <li> and <button> in the modal
         const items = o.SettingsModalContent.querySelectorAll('.modal-selectable');
+        const itemsCount = items.length;
         
-        if (items && iSettingsModalIndex >= 0 && iSettingsModalIndex < items.length) {
+        if (items && iSettingsModalIndex >= 0 && iSettingsModalIndex < itemsCount) {
             const item = items[iSettingsModalIndex];
             if (item) {
                 item.classList.add('selected');
+                // Auto-check the radio button when selecting the list item
+                const radio = item.querySelector('input[type="radio"]');
+                if (radio) radio.checked = true;
+
                 if (typeof item.scrollIntoView === 'function') {
                     item.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
         } else {
-            console.warn("Invalid index or no items for modal selection:", iSettingsModalIndex);
+             // Handle wrapping around (e.g., if index is out of bounds due to calculation)
+             if (iSettingsModalIndex < 0) iSettingsModalIndex = 0;
+             else if (iSettingsModalIndex >= itemsCount) iSettingsModalIndex = itemsCount - 1;
+             
+             // Re-call selection if index was corrected
+             if (itemsCount > 0) updateSettingsModalSelection();
+             else console.warn("Invalid index or no items for modal selection:", iSettingsModalIndex);
         }
     } catch (error) {
         console.error("Error updating settings modal selection:", error);
@@ -1351,7 +1363,7 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
-// --- START: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH MODAL FIX) ---
+// --- START: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH REVERSED NAV/GROUP ARROW LOGIC) ---
 document.addEventListener('keydown', (e) => {
 
   // Ignore all input if the SearchField is focused
@@ -1378,7 +1390,6 @@ document.addEventListener('keydown', (e) => {
   // --- MODAL NAVIGATION FIX ---
   if (bSettingsModalOpened) {
       e.preventDefault();
-      // Get all selectable elements (LI and buttons)
       const items = o.SettingsModalContent.querySelectorAll('.modal-selectable');
       const itemsCount = items.length;
 
@@ -1393,35 +1404,27 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'ArrowDown') {
           iSettingsModalIndex = Math.min(itemsCount - 1, iSettingsModalIndex + 1);
           updateSettingsModalSelection();
-      } else if (e.key === 'Enter') {
+      } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
           const selectedItem = items[iSettingsModalIndex];
-          if (selectedItem) {
-              // Execute action based on element type/data-action
-              if (selectedItem.tagName === 'LI') {
-                  // For list items with radio buttons (Quality)
-                  const radio = selectedItem.querySelector('input[type="radio"]');
-                  if (radio) {
-                      radio.checked = true; // Select the radio button
-                      // If it's the Quality Modal and we press Enter, confirm the selection immediately
-                      if (selectedItem.closest('.popup-content-list')?.previousElementSibling?.textContent.includes('Quality')) {
-                          window.applyQualitySetting();
-                      }
-                  } 
-                  // For subtitle/audio list items
-                  else if (selectedItem.dataset.action === 'subtitle_off') {
-                      window.setSubtitles(null, false);
-                  } else if (selectedItem.dataset.action === 'subtitle_on') {
-                      const track = JSON.parse(selectedItem.dataset.track.replace(/\\u003c/g, '<'));
-                      window.setSubtitles(track, true);
-                  } else if (selectedItem.dataset.action === 'audio') {
-                      window.setAudio(selectedItem.dataset.lang);
-                  }
-                  
-              } else if (selectedItem.tagName === 'BUTTON') {
-                  selectedItem.click(); // Trigger the button's action
+          if (!selectedItem) return;
+          
+          if (selectedItem.tagName === 'LI') {
+              const action = selectedItem.dataset.action;
+              if (action === 'radio') {
+                  // Quality List: Enter/Right confirms the radio selection and applies it
+                  window.applyQualitySetting();
+              } else if (action === 'subtitle_off') {
+                  window.setSubtitles(null, false);
+              } else if (action === 'subtitle_on') {
+                  const track = JSON.parse(selectedItem.dataset.track.replace(/\\u003c/g, '<'));
+                  window.setSubtitles(track, true);
+              } else if (action === 'audio') {
+                  window.setAudio(selectedItem.dataset.lang);
               }
+          } else if (selectedItem.tagName === 'BUTTON') {
+              selectedItem.click(); // Trigger button action
           }
-      } else if (e.key === 'Escape') {
+      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
           window.hideSettingsModal();
       }
       return;
@@ -1442,11 +1445,13 @@ document.addEventListener('keydown', (e) => {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       } else if (e.key === 'ArrowDown') {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
-      } else if (e.key === 'Enter' || e.key === 'ArrowRight') { // <-- DRILL DOWN/SELECT
+      } else if (e.key === 'Enter') { 
           groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- GO BACK
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // <-- GO BACK
           hideGroups(); // Go back to Channel List
-      } 
+      } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN/SELECT
+           groupItems[iGroupListIndex]?.click(); // Or do nothing, as it's the end of the drill
+      }
       updateSelectedGroupInNav();
 
     } else { 
@@ -1459,31 +1464,26 @@ document.addEventListener('keydown', (e) => {
           if (iCurrentChannel === 0 && o.SearchField) { 
               o.SearchField.focus();
               channelItems[iCurrentChannel].classList.remove('selected');
-              // Index remains 0 for continuity after refocus
           } else if (iCurrentChannel > 0) { 
               iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length; 
-              updateSelectedChannelInNav();
           }
       } else if (e.key === 'ArrowDown') {
-          // If search field was just active, move to first channel item
           if (document.activeElement === o.SearchField) {
               o.SearchField.blur();
               iCurrentChannel = 0;
-              updateSelectedChannelInNav();
           } else if (aFilteredChannelKeys.length > 0) { 
               iCurrentChannel = (iCurrentChannel + 1) % aFilteredChannelKeys.length; 
-              updateSelectedChannelInNav();
           }
       } else if (e.key === 'Enter') {
           if (iCurrentChannel !== -1 && aFilteredChannelKeys.length > 0) { 
               loadChannel(iCurrentChannel); 
               hideNav();
           }
-      } else if (e.key === 'ArrowRight') { // <-- DRILL DOWN (Open Groups)
+      } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN (Open Groups)
           if (iCurrentChannel !== -1) { 
               showGroups(); 
           }
-      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- GO BACK
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // <-- GO BACK
           hideNav(); // Close the entire panel
       }
       updateSelectedChannelInNav();
@@ -1556,7 +1556,7 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
-// --- END: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH MODAL FIX) ---
+// --- END: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH REVERSED NAV/GROUP ARROW LOGIC) ---
 
 
 /**
