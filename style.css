@@ -295,16 +295,15 @@ body.modal-open {
 
 #list_container {
     display:flex;
-    width:200%; /* Important: Allows both ChannelList and GroupList to be side-by-side */
+    width:200%; 
     height:100%;
-    /* FIX: The default transform: translateX(0) is correct to show the first list item (ChannelList) */
-    transform:translateX(0);
+    transform: translateX(0);
     transition: transform var(--anim-time-fast) ease-out;
 }
 
 #list_container.groups-opened {
     /* FIX: Slides LEFT by 50% to show the second list item (GroupList) */
-    transform: translateX(-50%); 
+    transform: translateX(-50%);
 }
 
 #GroupList, #ChannelList {
