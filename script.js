@@ -44,8 +44,8 @@ let channels = {
     animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
-    nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://i.imgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
-    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f7f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://i.imgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
+    nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://iimgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
+    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f7f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://iimgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
     mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://example.com/placeholder.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
@@ -293,7 +293,7 @@ function setupControls() {
   });
 }
 
-// --- START: STABLE SWIPE LOGIC (REVERSED LEFT PANEL) ---
+// --- START: STABLE SWIPE LOGIC (FINALIZED) ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
@@ -304,22 +304,21 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
       if (bChannelSettingsOpened) {
         hideChannelSettings(); 
       } else if (bGroupsOpened) {
-        hideGroups(); // Groups -> Channels
+        hideGroups(); // Groups -> Channels (Slides right to show channels)
       } else if (bNavOpened) {
         hideNav(); // Channels -> Closed
+      } else if (!bNavOpened) {
+        showNav(); // Open Nav from left edge
       }
     } else if (deltaX < 0) { // Swipe Left (Drill Down / Open)
       if (bNavOpened) {
         if (bGroupsOpened) {
             // Do nothing, already at deepest level
         } else {
-            showGroups(); // Channels -> Groups
+            showGroups(); // Channels -> Groups (Slides left to hide channels)
         }
       } else if (!bChannelSettingsOpened) {
         showChannelSettings(); // Open Settings
-      } else if (touchStartX > window.innerWidth - 50) {
-        // Swipe LTR from edge to open main panel
-        showNav(); 
       }
     }
   } else { // Vertical Swipe
@@ -333,7 +332,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
-// --- END: STABLE SWIPE LOGIC (REVERSED LEFT PANEL) ---
+// --- END: STABLE SWIPE LOGIC (FINALIZED) ---
 
 function handleSingleTapAction() {
   if (!isSessionActive) return;
@@ -1047,6 +1046,7 @@ function showNav() {
   bNavOpened = true;
   o.Nav.classList.add('visible');
   
+  // Assuming HTML order: [ChannelList] [GroupList]
   if (o.ListContainer) {
       o.ListContainer.classList.remove('groups-opened');
       bGroupsOpened = false;
@@ -1065,7 +1065,9 @@ function hideNav() {
 function showGroups() {
   if (bNavOpened && o.ListContainer) {
     bGroupsOpened = true;
-    o.ListContainer.classList.add('groups-opened'); // Slide to show Groups
+    // Assuming HTML order: [ChannelList] [GroupList]
+    // To show GroupList (Element 2), we shift the container LEFT by 50%
+    o.ListContainer.classList.add('groups-opened'); 
     updateSelectedGroupInNav();
   }
 }
@@ -1073,7 +1075,9 @@ function showGroups() {
 function hideGroups() {
   bGroupsOpened = false;
   if (o.ListContainer) {
-      o.ListContainer.classList.remove('groups-opened'); // Slide back to Channel List
+      // Assuming HTML order: [ChannelList] [GroupList]
+      // To show ChannelList (Element 1), we shift the container RIGHT back to 0%
+      o.ListContainer.classList.remove('groups-opened'); 
   }
 }
 
@@ -1366,7 +1370,7 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
-// --- START: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH REVERSED NAV/GROUP ARROW LOGIC) ---
+// --- START: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH CORRECTED NAV/GROUP ARROW LOGIC) ---
 document.addEventListener('keydown', (e) => {
 
   // Ignore all input if the SearchField is focused
@@ -1421,7 +1425,6 @@ document.addEventListener('keydown', (e) => {
               else if (action === 'subtitle_off') {
                   window.setSubtitles(null, false);
               } else if (action === 'subtitle_on') {
-                  // Must use the correct window function that triggers the original onclick logic
                   const track = JSON.parse(selectedItem.dataset.track.replace(/\\u003c/g, '<'));
                   window.setSubtitles(track, true);
               } else if (action === 'audio') {
@@ -1442,7 +1445,7 @@ document.addEventListener('keydown', (e) => {
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
-      // GROUP LIST (Leftmost Drill)
+      // GROUP LIST (Currently visible)
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
       const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
 
@@ -1455,14 +1458,14 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'Enter') { 
           groupItems[iGroupListIndex]?.click();
       } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // <-- GO BACK
-          hideGroups(); // Go back to Channel List
-      } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN/SELECT (Same as Enter)
+          hideGroups(); // Groups -> Channels (slide left)
+      } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN/SELECT
            groupItems[iGroupListIndex]?.click(); 
       }
       updateSelectedGroupInNav();
 
     } else { 
-      // CHANNEL LIST (Main Left Panel)
+      // CHANNEL LIST (Currently visible)
       const channelItems = o.ChannelList.querySelectorAll('li.channel-item');
       const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
       if (!ARROW_KEYS.includes(e.key)) return;
@@ -1488,7 +1491,7 @@ document.addEventListener('keydown', (e) => {
           }
       } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN (Open Groups)
           if (iCurrentChannel !== -1) { 
-              showGroups(); 
+              showGroups(); // Channel List slides right to reveal Groups
           }
       } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // <-- GO BACK
           hideNav(); // Close the entire panel
@@ -1563,7 +1566,7 @@ document.addEventListener('keydown', (e) => {
     case 'Escape': clearUi(); break;
   }
 });
-// --- END: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH REVERSED NAV/GROUP ARROW LOGIC) ---
+// --- END: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH CORRECTED NAV/GROUP ARROW LOGIC) ---
 
 
 /**
