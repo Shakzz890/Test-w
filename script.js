@@ -293,30 +293,33 @@ function setupControls() {
   });
 }
 
-// --- START: STABLE SWIPE LOGIC ---
+// --- START: STABLE SWIPE LOGIC (REVERSED LEFT PANEL) ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
-    if (deltaX > 0) { // Swipe Right (Open Nav / Go Back)
+    if (deltaX > 0) { // Swipe Right (Go Back / Close)
       if (bChannelSettingsOpened) {
         hideChannelSettings(); 
       } else if (bGroupsOpened) {
-        hideGroups(); 
-      } else if (!bNavOpened && touchStartX < 50) {
-        showNav(); // Open Nav from left edge
+        hideGroups(); // Groups -> Channels
+      } else if (bNavOpened) {
+        hideNav(); // Channels -> Closed
       }
-    } else if (deltaX < 0) { // Swipe Left (Close Nav / Drill Down into Groups/Settings)
+    } else if (deltaX < 0) { // Swipe Left (Drill Down / Open)
       if (bNavOpened) {
         if (bGroupsOpened) {
-            hideNav(); // Close entire panel from deepest level
+            // Do nothing, already at deepest level
         } else {
-            showGroups(); // Drill down to groups
+            showGroups(); // Channels -> Groups
         }
       } else if (!bChannelSettingsOpened) {
         showChannelSettings(); // Open Settings
+      } else if (touchStartX > window.innerWidth - 50) {
+        // Swipe LTR from edge to open main panel
+        showNav(); 
       }
     }
   } else { // Vertical Swipe
@@ -330,7 +333,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
-// --- END: STABLE SWIPE LOGIC ---
+// --- END: STABLE SWIPE LOGIC (REVERSED LEFT PANEL) ---
 
 function handleSingleTapAction() {
   if (!isSessionActive) return;
@@ -1116,8 +1119,8 @@ function renderGuideContent() {
       <li><kbd>E</kbd> - EPG</li>
       <li><kbd>H</kbd> - User Manual (Guide)</li>
       <li><kbd>↑</kbd>/<kbd>↓</kbd> - Change channel</li>
-      <li><kbd>←</kbd> - Go Back / Close Panel</li>
-      <li><kbd>→</kbd> - Open Panel / Drill Down</li>
+      <li><kbd>←</kbd> - Drill Down (Open Panel/Groups)</li>
+      <li><kbd>→</kbd> - Go Back / Close Panel</li>
       <li><kbd>OK</kbd>/<kbd>Enter</kbd> - Show Channel Info / Select Item</li>
       <li><kbd>ESC</kbd> - Close All</li>
       <li><kbd>Double Tap/Click</kbd> - Toggle Fullscreen</li>
@@ -1300,7 +1303,7 @@ function updateSettingsModalSelection() {
                 }
             }
         } else {
-             // Handle wrapping around (e.g., if index is out of bounds due to calculation)
+             // Handle wrapping around 
              if (iSettingsModalIndex < 0) iSettingsModalIndex = 0;
              else if (iSettingsModalIndex >= itemsCount) iSettingsModalIndex = itemsCount - 1;
              
@@ -1410,17 +1413,21 @@ document.addEventListener('keydown', (e) => {
           
           if (selectedItem.tagName === 'LI') {
               const action = selectedItem.dataset.action;
+              // For list items with radio buttons (Quality), Enter/Right confirms the selection and applies it
               if (action === 'radio') {
-                  // Quality List: Enter/Right confirms the radio selection and applies it
                   window.applyQualitySetting();
-              } else if (action === 'subtitle_off') {
+              } 
+              // For subtitle/audio list items, Enter/Right clicks the item to set it
+              else if (action === 'subtitle_off') {
                   window.setSubtitles(null, false);
               } else if (action === 'subtitle_on') {
+                  // Must use the correct window function that triggers the original onclick logic
                   const track = JSON.parse(selectedItem.dataset.track.replace(/\\u003c/g, '<'));
                   window.setSubtitles(track, true);
               } else if (action === 'audio') {
                   window.setAudio(selectedItem.dataset.lang);
               }
+              
           } else if (selectedItem.tagName === 'BUTTON') {
               selectedItem.click(); // Trigger button action
           }
@@ -1449,8 +1456,8 @@ document.addEventListener('keydown', (e) => {
           groupItems[iGroupListIndex]?.click();
       } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // <-- GO BACK
           hideGroups(); // Go back to Channel List
-      } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN/SELECT
-           groupItems[iGroupListIndex]?.click(); // Or do nothing, as it's the end of the drill
+      } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN/SELECT (Same as Enter)
+           groupItems[iGroupListIndex]?.click(); 
       }
       updateSelectedGroupInNav();
 
