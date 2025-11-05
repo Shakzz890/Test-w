@@ -163,11 +163,21 @@ body.modal-open {
     justify-content:center;
     background:var(--bg-primary);
     z-index:7;
+    /* FIX: New background image */
+    background-image: url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg');
+    background-size: cover;
+    background-position: center;
 }
 
 .idle-branding {
     text-align:center;
-    margin-bottom:40px;
+    /* FIX: Position branding centrally */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.8);
 }
 
 .idle-branding h1 {
@@ -194,6 +204,12 @@ body.modal-open {
     justify-content:center;
     cursor:pointer;
     transition:transform .2s, background .2s;
+    /* FIX: Position play button relative to the branding/container, slightly below center */
+    position: absolute;
+    top: calc(50% + 120px); 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 8;
 }
 
 #PlayButton svg {
@@ -247,7 +263,7 @@ body.modal-open {
 #brand-header {
     display:flex;
     align-items:center;
-    padding:15px 20px;
+    padding:15px 25px; /* FIX: Consistent horizontal padding */
     height:64px;
     border-bottom:1px solid var(--border-color);
     flex-shrink:0;
@@ -266,14 +282,14 @@ body.modal-open {
 
 /* --- FIX: Search bar alignment --- */
 #search_item_wrapper {
-    padding:15px 20px;
+    padding:15px 25px; /* FIX: Consistent horizontal padding */
     border-bottom:1px solid var(--border-color);
     flex-shrink:0;
 }
 
 #SearchField {
     width:100%;
-    padding:12px 15px;
+    padding:10px 15px; /* FIX: Adjusted padding for input consistency */
     background:var(--bg-secondary);
     border:1px solid var(--border-color);
     color:var(--text-primary);
@@ -287,7 +303,7 @@ body.modal-open {
     box-shadow: 0 0 5px var(--bg-focus);
 }
 
-/* --- Slide Containers --- */
+/* --- Slide Containers (CSS assumes [ChannelList] [GroupList]) --- */
 #list_container_scrollarea {
     flex-grow:1;
     min-height:0;
@@ -298,18 +314,18 @@ body.modal-open {
     display:flex;
     width:200%; 
     height:100%;
-    transform: translateX(-50%); 
+    transform: translateX(0); /* ChannelList visible by default */
     transition: transform var(--anim-time-fast) ease-out;
 }
 
 #list_container.groups-opened {
-    transform: translateX(0); 
+    transform: translateX(-50%); /* Slides ChannelList LEFT, showing GroupList (Element 2) */
 }
 
 #GroupList, #ChannelList {
     width:50%; 
     height:100%;
-    padding:10px 0;
+    padding:10px 0; /* Vertical padding around lists */
     flex-shrink: 0; 
 }
 
@@ -355,19 +371,19 @@ body.modal-open {
 }
 
 #main_nav li, #DynamicGroupsList li {
-    padding:15px 25px;
+    padding:15px 25px; /* FIX: Consistent horizontal padding, increased vertical padding */
     font-size:1rem;
     font-weight:500;
     cursor:pointer;
     transition:background .2s;
     border-radius:5px;
-    margin:3px 8px;
+    margin:3px 8px; /* FIX: Margin adjustment */
 }
 
 .list_headline {
     font-size:0.9rem;
     color:var(--text-secondary);
-    padding:12px 25px;
+    padding:12px 25px; /* FIX: Consistent horizontal padding */
     text-transform:uppercase;
     cursor: pointer; 
 }
@@ -618,24 +634,12 @@ body.modal-open {
     background:var(--bg-hover);
 }
 
-/* --- Highlight for Cancel button --- */
+/* --- Highlight for modal buttons (FIX) --- */
 .popup-buttons button:focus-visible,
-.popup-buttons button:focus,
 .popup-buttons button.selected {
     outline: 2px solid var(--bg-focus);
     outline-offset: 2px;
     box-shadow: 0 0 8px var(--bg-focus);
-}
-
-.popup-buttons button.cancel-button:focus-visible,
-.popup-buttons button.cancel-button.selected {
-    background: var(--bg-selected);
-    border-color: var(--bg-focus);
-}
-
-.popup-buttons button.cancel-button:hover {
-    background: var(--bg-hover);
-    border-color: var(--bg-focus);
 }
 
 .edit-modal-field {
