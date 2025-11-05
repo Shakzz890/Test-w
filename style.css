@@ -163,11 +163,22 @@ body.modal-open {
     justify-content:center;
     background:var(--bg-primary);
     z-index:7;
+    /* FIX: Set new background image */
+    background-image: url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg');
+    background-size: cover;
+    background-position: center;
 }
 
 .idle-branding {
     text-align:center;
     margin-bottom:40px;
+    /* FIX: Position branding for visibility */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.8);
 }
 
 .idle-branding h1 {
@@ -194,6 +205,12 @@ body.modal-open {
     justify-content:center;
     cursor:pointer;
     transition:transform .2s, background .2s;
+    /* FIX: Reposition PlayButton slightly below center if branding is central */
+    position: absolute;
+    top: calc(50% + 100px); 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 8;
 }
 
 #PlayButton svg {
@@ -297,20 +314,21 @@ body.modal-open {
     display:flex;
     width:200%; 
     height:100%;
-    /* FIX: Initial position. If GroupList is FIRST, shift left by 50% to show ChannelList (Element 2) */
-    transform: translateX(-50%); 
+    /* FIX: Initial position. If ChannelList is FIRST, shift left by 50% to show ChannelList (Element 1) */
+    transform:translateX(0); 
     transition: transform var(--anim-time-fast) ease-out;
 }
 
 #list_container.groups-opened {
-    /* FIX: Slide RIGHT to show GroupList (Element 1) */
-    transform: translateX(0); 
+    /* FIX: Slides LEFT by 50% to show the second list item (GroupList) */
+    transform: translateX(-50%); 
 }
 
 #GroupList, #ChannelList {
     width:50%; 
     height:100%;
-    padding:10px 0;
+    /* FIX: Reduced padding for tighter spacing */
+    padding:5px 0; 
     flex-shrink: 0; 
 }
 
@@ -356,7 +374,7 @@ body.modal-open {
 }
 
 #main_nav li, #DynamicGroupsList li {
-    padding:15px 20px;
+    padding:10px 20px; /* FIX: Adjusted padding for better spacing */
     font-size:1rem;
     font-weight:500;
     cursor:pointer;
@@ -389,7 +407,7 @@ body.modal-open {
     margin:2px 5px;
 }
 
-/* --- FIX: Styles for the Channel Logo (from HTML .nav_logo) --- */
+/* --- Channel Logo Styles --- */
 .nav_logo {
     width:40px; 
     height:40px; 
@@ -406,7 +424,7 @@ body.modal-open {
     max-height: 100%;
     object-fit: contain; 
 }
-/* --- END FIX: Channel Logo Styles --- */
+/* --- End Channel Logo Styles --- */
 
 .fav-star {
     width:20px;
@@ -459,7 +477,16 @@ body.modal-open {
     font-weight:600;
 }
 
-#SearchField:focus, #main_nav li:focus-visible, #DynamicGroupsList li:focus-visible, .channel-item:focus-visible, .settings-item:focus-visible, .modal-selectable:focus-visible, .close-button:focus-visible, #PlayButton:focus-visible {
+/* FIX: Ensure modal buttons show clear focus/selection */
+#SearchField:focus, 
+#main_nav li:focus-visible, 
+#DynamicGroupsList li:focus-visible, 
+.channel-item:focus-visible, 
+.settings-item:focus-visible, 
+.modal-selectable:focus-visible, 
+.popup-buttons button:focus-visible, /* TARGET BUTTONS */
+.close-button:focus-visible, 
+#PlayButton:focus-visible {
     outline: 2px solid var(--bg-focus);
     outline-offset: -2px;
     box-shadow: 0 0 10px var(--bg-focus);
@@ -626,6 +653,14 @@ body.modal-open {
 .popup-buttons button:hover {
     background:var(--bg-hover);
 }
+
+/* FIX: Apply focus/selection color to buttons in modals */
+.popup-buttons button.selected,
+.popup-buttons button:focus-visible {
+    border-color: var(--bg-focus);
+    box-shadow: 0 0 5px var(--bg-focus);
+}
+
 
 .edit-modal-field {
     width:100%;
