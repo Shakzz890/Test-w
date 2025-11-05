@@ -41,9 +41,9 @@ let channels = {
     aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
     sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
-    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
+    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://iimgur.com/SkpFpW4.png", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
-    nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
+    nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://iimgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
     nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://iimgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
     pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f7f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://iimgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
@@ -756,7 +756,7 @@ function renderVideoFormatMenu() {
         <div class="settings-item-header">Video Format</div>
         <div class="settings-item">
           <span>Video format</span>
-          <select onchange="setAspectRatio(this.value)">
+          <select id="video_format_select" onchange="setAspectRatio(this.value)">
             <option value="original">Original</option>
             <option value="16:9">16:9</option>
             <option value="stretch">Stretch</option>
@@ -765,6 +765,16 @@ function renderVideoFormatMenu() {
         </div>
         <div class="settings-item" onclick="showSettingsModal('quality')">Video track</div>
       `;
+      // FIX: Set the selected option based on the current aspect ratio
+      const currentFormat = getAspectRatio();
+      const selectEl = getEl('video_format_select');
+      if (selectEl) {
+          Array.from(selectEl.options).forEach(option => {
+              if (option.value.toLowerCase() === currentFormat.toLowerCase()) {
+                  option.selected = true;
+              }
+          });
+      }
       updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
   } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
@@ -805,7 +815,9 @@ function setAspectRatio(format) {
       formatName = 'Original';
   }
   localStorage.setItem('iptvAspectRatio', formatName);
-  renderVideoFormatMenu();
+  // Re-render to ensure the <select> reflects the change (or rely on browser default selection)
+  // For safety, re-render is removed, as we rely on the direct setting of the select element.
+  // renderVideoFormatMenu();
 }
 
 function togglePlaybackControls() {
@@ -847,15 +859,15 @@ function renderModalContent(type) {
 
       if (type === 'quality') {
         const tracks = [...new Map((player.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a,b)=>b.height-a.height);
-        // Added class 'modal-selectable' to LI for keyboard control
+        // Removed OK button, will auto-apply on selection (Enter/Right)
         let itemsHtml = `<li class="modal-selectable" data-action="radio" data-key="quality" data-value="auto">Auto <input type="radio" name="quality" value="auto" ${player.getConfiguration()?.abr?.enabled ? 'checked' : ''}></li>`;
         tracks.forEach(track => {
           const bps = track.bandwidth > 1000000 ? `${(track.bandwidth/1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth/1e3)} Kbps`;
           const isChecked = track.active && !player.getConfiguration()?.abr?.enabled;
           itemsHtml += `<li class="modal-selectable" data-action="radio" data-key="quality" data-value='${track.id}'>${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
         });
-        // Added class 'modal-selectable' to Button for keyboard control
-        contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="cancel" onclick="hideSettingsModal()">CANCEL</button><button class="modal-selectable" data-action="ok" onclick="applyQualitySetting()">OK</button></div>`;
+        // Removed OK button from quality modal
+        contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="cancel" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
       } else if (type === 'subtitles') {
         const textTracks = player.getTextTracks() || [];
@@ -1491,7 +1503,7 @@ document.addEventListener('keydown', (e) => {
           }
       } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN (Open Groups)
           if (iCurrentChannel !== -1) { 
-              showGroups(); // Channel List slides right to reveal Groups
+              showGroups(); // Channel List slides left to reveal Groups
           }
       } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // <-- GO BACK
           hideNav(); // Close the entire panel
