@@ -58,6 +58,12 @@ body.modal-open {
     transition: opacity 0.3s ease-in-out;
 }
 
+/* FIX: Remove Shaka UI controls container fade transition */
+.shaka-controls-container {
+    transition: none !important;
+}
+
+
 /* ------------------------- UTILITY CLASSES ------------------------- */
 .fullscreen {
     position: fixed;
@@ -350,19 +356,41 @@ body.modal-open {
 }
 
 /* ------------------------- LISTS & ITEMS ------------------------- */
-#main_nav, #DynamicGroupsList {
+#main_nav {
     list-style:none;
     padding:0;
+    /* FIX: Ensure GUIDE/EPG buttons align horizontally */
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
 }
 
-#main_nav li, #DynamicGroupsList li {
+#main_nav li {
     padding:15px 20px;
     font-size:1rem;
     font-weight:500;
     cursor:pointer;
     transition:background .2s;
     border-radius:5px;
-    margin:2px 5px;
+    /* FIX: Keep margins consistent, remove block display override */
+    margin:2px 5px; 
+}
+
+#DynamicGroupsList {
+    list-style:none;
+    padding:0;
+    display: block; 
+}
+
+#DynamicGroupsList li {
+    padding:15px 20px;
+    font-size:1rem;
+    font-weight:500;
+    cursor:pointer;
+    transition:background .2s;
+    border-radius:5px;
+    margin:2px 5px; 
+    display: block; 
 }
 
 .list_headline {
@@ -460,6 +488,13 @@ body.modal-open {
 }
 
 #SearchField:focus, #main_nav li:focus-visible, #DynamicGroupsList li:focus-visible, .channel-item:focus-visible, .settings-item:focus-visible, .modal-selectable:focus-visible, .close-button:focus-visible, #PlayButton:focus-visible {
+    outline: 2px solid var(--bg-focus);
+    outline-offset: -2px;
+    box-shadow: 0 0 10px var(--bg-focus);
+}
+
+/* Focus outline for modal buttons (CANCEL/SAVE/CLOSE) */
+.popup-buttons button.modal-selectable.selected {
     outline: 2px solid var(--bg-focus);
     outline-offset: -2px;
     box-shadow: 0 0 10px var(--bg-focus);
@@ -664,4 +699,9 @@ body.modal-open {
 #TempMessageOverlay.visible {
     opacity:1;
     visibility:visible;
+}
+
+/* FIX: Remove Shaka UI controls container fade transition */
+.shaka-controls-container {
+    transition: none !important;
 }
