@@ -39,13 +39,13 @@ let channels = {
     Teletubbies: { name: "Teletubbies", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258003/hls/master.m3u8?ads.xumo_channelId=88258003", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/5a/Teletubbies_Logo.png/330px-Teletubbies_Logo.png", group: ["cartoons & animations"] },
     anione: { name: "Ani One", type: "hls", manifestUri: "https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", group: ["cartoons & animations"] },
     aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
-    sinemanila: { name: "SineManila", type: "hls", manifestUri: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
+    sinemanila: { name: "SineManila", type: "hls", manifestUri: "https.live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
     animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
     nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
-    nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "https://iimgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
-    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f7f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "https://iimgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
+    nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "httpscontent://iimgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
+    pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f7f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "httpscontent://iimgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
     zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
     mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://example.com/placeholder.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
@@ -126,7 +126,7 @@ async function initPlayer() {
   player = new shaka.Player();
   // SHAKA UI CUSTOMIZATION (PIP ONLY)
   ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
-  
+ 
   ui.configure({
     controlPanelElements: ['pip'], // ONLY PIP is kept
     overflowMenuButtons: [], // Hide all overflow buttons
@@ -135,7 +135,7 @@ async function initPlayer() {
     showBuffering: true,
     clickToPlay: false
   });
-  
+ 
   player.attach(o.AvPlayer);
 
   player.configure({
@@ -229,7 +229,7 @@ function setupControls() {
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
       return;
     }
-    
+   
     if (targetElement && targetElement.closest('#PlayButton')) {
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
       return;
@@ -261,13 +261,13 @@ function setupControls() {
         lastTapTime = currentTime;
       }
     }
-    
+   
     touchStartX = touchStartY = touchEndX = touchEndY = 0;
   }, { passive: false });
 
   playerContainer.addEventListener('click', e => {
     if (e.target && e.target.closest('#PlayButton')) return;
-    
+   
     if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay'))) {
       return;
     }
@@ -296,7 +296,7 @@ function setupControls() {
 // --- START: STABLE SWIPE LOGIC (FINALIZED) ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
-  
+ 
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
@@ -383,7 +383,7 @@ function loadInitialChannel() {
 
   const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
   iCurrentChannel = (initialIndex >= 0 ? initialIndex : 0); 
-  
+ 
   loadChannel(iCurrentChannel, { isInitialLoad: true });
 }
 
@@ -399,7 +399,7 @@ async function loadChannel(index, options = {}) {
   }
 
   iCurrentChannel = (index < 0) ? aFilteredChannelKeys.length - 1 : index % aFilteredChannelKeys.length; 
-  
+ 
 
   const newChannelKey = aFilteredChannelKeys[iCurrentChannel]; 
   const newChannel = channels[newChannelKey];
@@ -408,6 +408,30 @@ async function loadChannel(index, options = {}) {
       showIdleAnimation(true);
       return;
   }
+
+  // --- NEW: Load-on-Click Logic ---
+  // If this is the initial load, AND the user hasn't clicked "Play" yet,
+  // just set the UI and show the play button, but DO NOT load the stream.
+  if (options.isInitialLoad && !isSessionActive) {
+      console.log("Initial load: Setting channel but not loading stream.");
+      localStorage.setItem('iptvLastWatched', newChannelKey);
+      
+      if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
+      
+      if (o.ChannelLoader) { // Ensure loader is hidden
+          clearTimeout(loaderFadeTimeout);
+          o.ChannelLoader.classList.add('HIDDEN');
+          o.ChannelLoader.style.opacity = '1';
+          o.ChannelLoader.classList.remove('fade-out');
+      }
+      
+      hideChannelName();
+      updateSelectedChannelInNav(); // Update nav selection
+      showIdleAnimation(true); // Show play button
+      return; // Exit before loading
+  }
+  // --- End: Load-on-Click Logic ---
+
 
   if (!player) {
       console.error("Player not initialized before loading channel.");
@@ -450,9 +474,8 @@ async function loadChannel(index, options = {}) {
           o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented.", e));
       }
       showChannelName();
-    } else if (options.isInitialLoad) {
-        showIdleAnimation(true);
     }
+    // Removed 'else if (options.isInitialLoad)' block as it's now handled by the early return
   } catch (error) {
     console.error(`Error loading channel "${newChannel?.name}":`, error);
     showIdleAnimation(true);
@@ -478,7 +501,7 @@ function setupMainMenuControls() {
   else console.warn("guide_button not found.");
   if (epgBtn) epgBtn.onclick = showEpg;
   else console.warn("epg_button not found.");
-  
+ 
   if (listHeadline) {
       listHeadline.onclick = showGroups; 
   }
@@ -645,7 +668,7 @@ function buildNav() {
     };
 
     const fav = ch.favorite ? `<span class="fav-star">⭐</span>` : '';
-    
+   
     // Logo Fix
     const logoHtml = ch.logo
         ? `<div class="nav_logo"><img src="${ch.logo}" alt="" onerror="this.style.display='none'; this.onerror=null;"></div>`
@@ -828,7 +851,7 @@ function showSettingsModal(type) {
       o.SettingsModalContent.innerHTML = '<p>Error loading content.</p>';
   }
   o.SettingsModal.classList.remove('HIDDEN');
-  
+ 
   // Force focus and select the first item for keyboard control
   setTimeout(() => updateSettingsModalSelection(), 50); 
 }
@@ -973,7 +996,7 @@ function showTempChannelSwitchMessage(logoUrl, name, number) {
     const safeLogoUrl = (logoUrl || 'https://via.placeholder.com/80x80?text=No+Logo').replace(/"/g, '&quot;');
     const safeName = (name || 'Unknown Channel').replace(/</g, '&lt;');
     const safeNumber = number || '?';
-    
+   
     o.TempMessageOverlay.innerHTML = `
         <div style="display: flex; align-items: center; gap: 15px;">
             <div style="width: 80px; height: 80px; flex-shrink: 0;">
@@ -985,7 +1008,7 @@ function showTempChannelSwitchMessage(logoUrl, name, number) {
             </div>
         </div>
     `;
-    
+   
     o.TempMessageOverlay.classList.remove('HIDDEN');
     o.TempMessageOverlay.classList.add('visible');
 
@@ -1032,7 +1055,7 @@ function clearUi(exclude) {
   if (exclude !== 'channelName') hideChannelName();
   if (exclude !== 'settingsModal') window.hideSettingsModal();
   if (exclude !== 'epg') hideEpg();
-  
+ 
   if (o.TempMessageOverlay && !o.TempMessageOverlay.classList.contains('HIDDEN')) {
       clearTimeout(tempMessageTimeout);
       o.TempMessageOverlay.classList.remove('visible');
@@ -1045,7 +1068,7 @@ function showNav() {
   if (!o.Nav) return;
   bNavOpened = true;
   o.Nav.classList.add('visible');
-  
+ 
   // Assuming HTML order: [ChannelList] [GroupList]
   if (o.ListContainer) {
       o.ListContainer.classList.remove('groups-opened');
@@ -1235,8 +1258,8 @@ function loadFavoritesFromStorage() {
 function saveFavoritesToStorage() {
   try {
     const favs = Object.entries(channels)
-                        .filter(([,ch]) => ch && ch.favorite)
-                        .map(([key]) => key);
+                      .filter(([,ch]) => ch && ch.favorite)
+                      .map(([key]) => key);
     localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs));
   } catch(e) { console.error("Error saving favorites:", e); }
 }
@@ -1293,7 +1316,7 @@ function updateSettingsModalSelection() {
         // Use a broader selector to include both <li> and <button> in the modal
         const items = o.SettingsModalContent.querySelectorAll('.modal-selectable');
         const itemsCount = items.length;
-        
+       
         if (items && iSettingsModalIndex >= 0 && iSettingsModalIndex < itemsCount) {
             const item = items[iSettingsModalIndex];
             if (item) {
@@ -1411,10 +1434,10 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'ArrowDown') {
           iSettingsModalIndex = Math.min(itemsCount - 1, iSettingsModalIndex + 1);
           updateSettingsModalSelection();
-      } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
+      } else if (e.key === 'Enter') { // --- MODIFICATION: Removed ArrowRight ---
           const selectedItem = items[iSettingsModalIndex];
           if (!selectedItem) return;
-          
+         
           if (selectedItem.tagName === 'LI') {
               const action = selectedItem.dataset.action;
               // For list items with radio buttons (Quality), Enter/Right confirms the selection and applies it
@@ -1430,7 +1453,7 @@ document.addEventListener('keydown', (e) => {
               } else if (action === 'audio') {
                   window.setAudio(selectedItem.dataset.lang);
               }
-              
+             
           } else if (selectedItem.tagName === 'BUTTON') {
               selectedItem.click(); // Trigger button action
           }
@@ -1440,7 +1463,7 @@ document.addEventListener('keydown', (e) => {
       return;
   }
   // --- END MODAL NAVIGATION FIX ---
-  
+ 
   // Logic inside NAV PANEL (Left)
   if (bNavOpened) {
     e.preventDefault();
@@ -1469,7 +1492,7 @@ document.addEventListener('keydown', (e) => {
       const channelItems = o.ChannelList.querySelectorAll('li.channel-item');
       const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
       if (!ARROW_KEYS.includes(e.key)) return;
-      
+     
       if (e.key === 'ArrowUp') {
           if (iCurrentChannel === 0 && o.SearchField) { 
               o.SearchField.focus();
@@ -1500,13 +1523,13 @@ document.addEventListener('keydown', (e) => {
     }
     return;
   }
-  
+ 
   // Logic inside CHANNEL SETTINGS PANEL (Right)
   if (bChannelSettingsOpened) {
     e.preventDefault();
     const isSubmenu = o.SettingsContainer?.classList.contains('submenu-visible');
     const ARROW_KEYS = ['Escape', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight'];
-    
+   
     if (!ARROW_KEYS.includes(e.key)) return;
 
     if (isSubmenu) {
@@ -1514,7 +1537,7 @@ document.addEventListener('keydown', (e) => {
         const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        else if (e.key === 'Enter' || e.key === 'ArrowRight') { // <-- DRILL DOWN/SELECT
+        else if (e.key === 'Enter') { // <-- MODIFICATION: Removed ArrowRight
             submenuItems[iVideoSettingsIndex]?.click();
         }
         else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- GO BACK
@@ -1575,7 +1598,7 @@ document.addEventListener('keydown', (e) => {
 function updateStreamInfo() {
   const infoOverlay = o.CodecInfo; 
   if (!infoOverlay) return; 
-  
+ 
   if (!player) {
     infoOverlay.textContent = 'Player Info: N/A';
     return;
@@ -1595,7 +1618,7 @@ function updateStreamInfo() {
     const bandwidth = (stats.estimatedBandwidth / 1000000).toFixed(2); 
 
     infoOverlay.textContent = `Video: ${resolution} (${codecs}) | Bandwidth: ${bandwidth} Mbit/s`;
-  
+ 
   } catch (error) {
     console.warn("Could not get stream info:", error);
     infoOverlay.textContent = 'Player Info: Error';
