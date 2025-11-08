@@ -1,16 +1,12 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Shakzz TV Player</title>
+<html><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Shakzz TV Player v2</title>
 
-  <!-- Shaka Player dependencies (kept as external links) -->
-  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/shaka-player.ui.js" defer></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/controls.css" />
-
-  <!-- Consolidated Styles -->
-  <style>
+  <!-- Shaka Player (kept as before) -->
+  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/shaka-player.ui.js" defer=""></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/controls.css">
+<style>
 /* ------------------------- ROOT & VARIABLES ------------------------- */
 :root {
     --bg-primary: #000;
@@ -175,13 +171,20 @@ body.modal-open {
     100% { transform: rotate(360deg);}
 }
 
+/* --- FIX: Restored original centering styles AND background --- */
 #IdleAnimation {
+    /* These 4 lines are your original centering styles */
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    background:var(--bg-primary);
+    
+    /* This makes the ::before pseudo-element visible */
+    background:transparent;
     z-index:7;
+    
+    /* This is needed for the ::before element */
+    position: fixed; 
 }
 
 .idle-branding {
@@ -221,6 +224,42 @@ body.modal-open {
     fill:white;
     margin-left:8px;
 }
+
+/* --- PATCH: This is the background image element --- */
+#IdleAnimation::before {
+  content: '';
+  /* --- FIX: Use position: absolute to stay inside the parent --- */
+  position: absolute; 
+  top: 0; left: 0; width: 100%; height: 100%;
+  
+  background-image: url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg');
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-primary); /* Fallback color */
+  
+  opacity: 0;
+  transition: opacity 0.8s ease-in;
+  
+  /* --- FIX: Use z-index: 1 --- */
+  z-index: 1; 
+  
+  /* --- FIX: Prevent the background from catching clicks --- */
+  pointer-events: none;
+}
+
+/* --- FIX: Give content a higher z-index to appear on top --- */
+.idle-branding,
+#PlayButton {
+    position: relative; /* Create stacking context */
+    z-index: 2; /* Higher than the ::before's z-index: 1 */
+}
+
+/* When IdleAnimation is visible, fade in the background */
+#IdleAnimation:not(.HIDDEN)::before {
+  opacity: 1;
+}
+/* --- END OF IDLE SCREEN PATCH --- */
+
 
 /* ------------------------- PANELS (NAV & SETTINGS) - overlay slide-out panels ------------------------- */
 #nav, #ChannelSettings {
@@ -513,6 +552,13 @@ body.modal-open {
     box-shadow: 0 0 10px var(--bg-focus);
 }
 
+/* --- PATCH: Added rule for selected input fields --- */
+.edit-modal-field.modal-selectable.selected {
+    outline: 2px solid var(--bg-focus);
+    outline-offset: -2px;
+    box-shadow: 0 0 10px var(--bg-focus);
+}
+
 .channel-item.playing {
     border-left:3px solid var(--text-primary);
     padding-left:7px;
@@ -719,126 +765,128 @@ body.modal-open {
     transition: none !important;
 }
 </style>
-  <meta name="theme-color" content="#000000" />
+
+  <meta name="theme-color" content="#000000">
 </head>
 <body>
-  <!-- PLAYER CONTAINER -->
-  <div id="playerContainer" tabindex="-1" aria-label="Video Player Container">
-    <video id="avplayer" autoplay muted playsinline></video>
+  <!-- PLAYER CONTAINER -->
+  <div id="playerContainer" tabindex="-1" aria-label="Video Player Container">
+    <video id="avplayer" autoplay="" muted="" playsinline=""></video>
 
-    <div id="StreamInfoOverlay" class="HIDDEN" aria-hidden="true"></div>
+    <div id="StreamInfoOverlay" class="HIDDEN" aria-hidden="true"></div>
 
-    <div id="ChannelLoader" class="HIDDEN" role="status" aria-live="polite">
-      <div class="loader-content">
-        <div class="loading-spinner" aria-hidden="true"></div>
-        <span class="loading-text">Loading Channel...</span>
-      </div>
-    </div>
-  </div>
+    <div id="ChannelLoader" class="HIDDEN" role="status" aria-live="polite">
+      <div class="loader-content">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <span class="loading-text">Loading Channel...</span>
+      </div>
+    </div>
+  </div>
 
-  <!-- Global overlays -->
-  <div id="BlurOverlay" class="fullscreen" aria-hidden="true"></div>
-  <div id="TempMessageOverlay" class="HIDDEN" aria-hidden="true"></div>
+  <!-- Global overlays -->
+  <div id="BlurOverlay" class="fullscreen" aria-hidden="true"></div>
+  <div id="TempMessageOverlay" class="HIDDEN" aria-hidden="true"></div>
 
-  <!-- UI ELEMENTS (panels / modals / sidebars) -->
-  <div id="ui_elements">
-    <!-- Idle / Home state -->
-    <div id="IdleAnimation" class="fullscreen" aria-hidden="false">
-      <div class="idle-branding" role="presentation">
-        <h1>SHAKZZ TV</h1>
-        <p>FOR FREE</p>
-      </div>
+  <!-- UI ELEMENTS (panels / modals / sidebars) -->
+  <div id="ui_elements">
+    <!-- Idle / Home state -->
+    <div id="IdleAnimation" class="fullscreen" aria-hidden="false">
+      <div class="idle-branding" role="presentation">
+        <h1>SHAKZZ TV</h1>
+        <p>FOR FREE</p>
+      </div>
 
-      <div id="PlayButton" title="Play" role="button" tabindex="0" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
-        </svg>
-      </div>
-    </div>
+      <div id="PlayButton" title="Play" role="button" tabindex="0" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+        </svg>
+      </div>
+    </div>
 
-    <!-- LEFT NAV: slide-out panel -->
-    <nav id="nav" aria-label="Main Navigation" role="navigation">
-      <div id="brand-header">
-        <svg viewBox="0 0 24 24" fill="white" aria-hidden="true">
-          <path d="M21,3H3C1.89,3,1,3.89,1,5V17C1,18.11,1.89,19,3,19H8V21H16V19H21
-                   C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17
-                   M16,11L11,15V7L16,11Z"></path>
-        </svg>
-        <span>Shakzz TV</span>
-      </div>
+    <!-- LEFT NAV: slide-out panel -->
+    <nav id="nav" aria-label="Main Navigation" role="navigation">
+      <div id="brand-header">
+        <svg viewBox="0 0 24 24" fill="white" aria-hidden="true">
+          <path d="M21,3H3C1.89,3,1,3.89,1,5V17C1,18.11,1.89,19,3,19H8V21H16V19H21
+                  C22.11,19,23,18.11,23,17V5C23,3.89,22.11,3,21,3M21,17H3V5H21V17
+                  M16,11L11,15V7L16,11Z"></path>
+        </svg>
+        <span>Shakzz TV</span>
+      </div>
 
-      <div id="search_item_wrapper">
-        <input id="SearchField" type="search" placeholder="Search" aria-label="Search Channels" />
-      </div>
+      <div id="search_item_wrapper">
+        <input id="SearchField" type="search" placeholder="Search" aria-label="Search Channels">
+      </div>
 
-      <div id="list_container_scrollarea" role="region" aria-label="Channels and Groups">
-        <div id="list_container">
-          <!-- GroupList (left pane of the slide container) -->
-          <section id="GroupList" class="custom-scrollbar" tabindex="0" aria-label="Group List">
-            <ul id="main_nav" role="tablist" aria-label="Main Tabs">
-              <li id="guide_button" role="tab" tabindex="-1" aria-selected="false">GUIDE</li>
-              <li id="epg_button" role="tab" class="selected" tabindex="0" aria-selected="true">EPG</li>
-            </ul>
+      <div id="list_container_scrollarea" role="region" aria-label="Channels and Groups">
+        <div id="list_container">
+          <!-- GroupList (left pane of the slide container) -->
+          <section id="GroupList" class="custom-scrollbar" tabindex="0" aria-label="Group List">
+            <ul id="main_nav" role="tablist" aria-label="Main Tabs">
+              <li id="guide_button" role="tab" tabindex="-1" aria-selected="false">GUIDE</li>
+              <li id="epg_button" role="tab" class="selected" tabindex="0" aria-selected="true">EPG</li>
+            </ul>
 
-            <div class="HR" aria-hidden="true"></div>
+            <div class="HR" aria-hidden="true"></div>
 
-            <h2 class="list_headline">CATEGORIES</h2>
+            <h2 class="list_headline">CATEGORIES</h2>
 
-            <ul id="DynamicGroupsList" role="list" aria-label="Channel Categories">
-              <!-- Categories populated dynamically by script -->
-            </ul>
-          </section>
+            <ul id="DynamicGroupsList" role="list" aria-label="Channel Categories">
+              <!-- Categories populated dynamically by script -->
+            </ul>
+          </section>
 
-          <!-- ChannelList (right pane of the slide container) -->
-          <section id="ChannelList" class="custom-scrollbar" tabindex="0" aria-label="Channel List">
-            <!-- Channel items populated dynamically by script -->
-          </section>
-        </div>
-      </div>
-    </nav>
+          <!-- ChannelList (right pane of the slide container) -->
+          <section id="ChannelList" class="custom-scrollbar" tabindex="0" aria-label="Channel List">
+            <!-- Channel items populated dynamically by script -->
+          </section>
+        </div>
+      </div>
+    </nav>
 
-    <!-- RIGHT PANEL: Channel Settings -->
-    <aside id="ChannelSettings" aria-label="Channel Settings" role="complementary">
-      <div id="settings_container">
-        <div id="SettingsMainMenu" class="custom-scrollbar" role="region" aria-label="Settings Main Menu"></div>
-        <div id="SettingsVideoFormatMenu" class="custom-scrollbar" role="region" aria-label="Video Format Menu"></div>
-      </div>
-    </aside>
+    <!-- RIGHT PANEL: Channel Settings -->
+    <aside id="ChannelSettings" aria-label="Channel Settings" role="complementary">
+      <div id="settings_container">
+        <div id="SettingsMainMenu" class="custom-scrollbar" role="region" aria-label="Settings Main Menu"></div>
+        <div id="SettingsVideoFormatMenu" class="custom-scrollbar" role="region" aria-label="Video Format Menu"></div>
+      </div>
+    </aside>
 
-    <!-- CHANNEL INFO floating box -->
-    <div id="ChannelInfo" aria-hidden="true" role="status">
-      <div id="ch_logo" aria-hidden="true"></div>
-      <div id="channel_text_container">
-        <div id="channel_name"></div>
-        <div id="channel_epg"></div>
-      </div>
-    </div>
+    <!-- CHANNEL INFO floating box -->
+    <div id="ChannelInfo" aria-hidden="true" role="status">
+      <div id="ch_logo" aria-hidden="true"></div>
+      <div id="channel_text_container">
+        <div id="channel_name"></div>
+        <div id="channel_epg"></div>
+      </div>
+    </div>
 
-    <!-- GUIDE Modal (centered popup) -->
-    <div id="Guide" class="fullscreen HIDDEN" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="guide-title">
-      <div class="fullscreen-popup" role="document">
-        <button class="close-button" onclick="hideGuide()" aria-label="Close Guide" type="button"></button>
-        <div id="GuideContent" role="region" aria-live="polite"></div>
-      </div>
-    </div>
+    <!-- GUIDE Modal (centered popup) -->
+    <div id="Guide" class="fullscreen HIDDEN" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <div class="fullscreen-popup" role="document">
+        <button class="close-button" onclick="hideGuide()" aria-label="Close Guide" type="button"></button>
+        <div id="GuideContent" role="region" aria-live="polite"></div>
+      </div>
+    </div>
 
-    <!-- EPG Overlay (grid layout) -->
-    <div id="EpgOverlay" class="fullscreen HIDDEN" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="epg-title">
-      <div id="EpgChannels" class="custom-scrollbar" role="region" aria-label="EPG Channels"></div>
-      <div id="EpgTimeline" class="custom-scrollbar" role="region" aria-label="EPG Timeline"></div>
-    </div>
+    <!-- EPG Overlay (grid layout) -->
+    <div id="EpgOverlay" class="fullscreen HIDDEN" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="epg-title">
+      <div id="EpgChannels" class="custom-scrollbar" role="region" aria-label="EPG Channels"></div>
+      <div id="EpgTimeline" class="custom-scrollbar" role="region" aria-label="EPG Timeline"></div>
+    </div>
 
-    <!-- Settings Modal (centered popup) -->
-    <div id="SettingsModal" class="fullscreen HIDDEN" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <div class="fullscreen-popup" role="document">
-        <button class="close-button" onclick="hideSettingsModal()" aria-label="Close Settings" type="button"></button>
-        <div id="SettingsModalContent" role="region"></div>
-      </div>
-    </div>
-  </div>
+    <!-- Settings Modal (centered popup) -->
+    <div id="SettingsModal" class="fullscreen HIDDEN" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="fullscreen-popup" role="document">
+        <!-- **** FIX: Changed onclick to hideSettingsModal() **** -->
+        <button class="close-button" onclick="hideSettingsModal()" aria-label="Close Settings" type="button"></button>
+        <div id="SettingsModalContent" role="region"></div>
+      </div>
+    </div>
+  </div>
 
-  <!-- Consolidated Script -->
-  <script>
+  <!-- Your scripts -->
+  <script>
 let player = null;
 let ui = null;
 const o = {
@@ -1011,6 +1059,10 @@ async function initPlayer() {
   player.addEventListener('streaming', updateStreamInfo);
 
   setupControls();
+
+  // --- FIX: The 4 lines that showed the loader here were a bug and have been removed ---
+  // (The lines that were here are GONE)
+  
   showIdleAnimation(true);
   loadInitialChannel();
 }
@@ -1134,36 +1186,36 @@ function setupControls() {
   });
 }
 
-// --- START: STABLE SWIPE LOGIC (FINALIZED) ---
+// --- START: NEW SWIPE LOGIC (Replaces old handleSwipeGesture) ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
  
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
-    if (deltaX > 0) { // Swipe Right (Go Back / Close)
+    if (deltaX > 0) { // Swipe Left-to-Right (Go Back / Drill Out)
       if (bChannelSettingsOpened) {
-        hideChannelSettings(); 
-      } else if (bGroupsOpened) {
-        hideGroups(); // Groups -> Channels (Slides right to show channels)
-      } else if (bNavOpened) {
-        hideNav(); // Channels -> Closed
-      } else if (!bNavOpened) {
-        showNav(); // Open Nav from left edge
+        hideChannelSettings(); // Close right panel
+      } else if (bNavOpened && bGroupsOpened) {
+        hideGroups(); // 3. GroupList -> ChannelList
+      } else if (bNavOpened && !bGroupsOpened) {
+        hideNav(); // 2. ChannelList -> Closed
+      } else {
+        // 1. Already closed, do nothing on L-R
       }
-    } else if (deltaX < 0) { // Swipe Left (Drill Down / Open)
-      if (bNavOpened) {
-        if (bGroupsOpened) {
-            // Do nothing, already at deepest level
-        } else {
-            showGroups(); // Channels -> Groups (Slides left to hide channels)
-        }
-      } else if (!bChannelSettingsOpened) {
-        showChannelSettings(); // Open Settings
+    } else if (deltaX < 0) { // Swipe Right-to-Left (Drill Down / Open)
+      if (bNavOpened && !bGroupsOpened) {
+        showGroups(); // 2. ChannelList -> GroupList
+      } else if (!bNavOpened && !bChannelSettingsOpened) {
+        // 1. Start from closed state
+        // Per your request, R-L opens the *Right* panel first
+        showChannelSettings();
+      } else if (bNavOpened && bGroupsOpened) {
+        // 3. Already at deepest level (GroupList), do nothing
       }
     }
   } else { // Vertical Swipe
-    // Channel switching
+    // Channel switching (unchanged)
     if (!bNavOpened && !bChannelSettingsOpened) {
       if (deltaY > 0) {
         loadChannel(iCurrentChannel + 1);
@@ -1173,7 +1225,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
     }
   }
 }
-// --- END: STABLE SWIPE LOGIC (FINALIZED) ---
+// --- END: NEW SWIPE LOGIC ---
 
 function handleSingleTapAction() {
   if (!isSessionActive) return;
@@ -1256,16 +1308,17 @@ async function loadChannel(index, options = {}) {
   if (options.isInitialLoad && !isSessionActive) {
       console.log("Initial load: Setting channel but not loading stream.");
       localStorage.setItem('iptvLastWatched', newChannelKey);
-      
+     
       if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
-      
+     
+      // --- FIX: This is the correct logic ---
       if (o.ChannelLoader) { // Ensure loader is hidden
           clearTimeout(loaderFadeTimeout);
           o.ChannelLoader.classList.add('HIDDEN');
           o.ChannelLoader.style.opacity = '1';
           o.ChannelLoader.classList.remove('fade-out');
       }
-      
+     
       hideChannelName();
       updateSelectedChannelInNav(); // Update nav selection
       showIdleAnimation(true); // Show play button
@@ -1585,12 +1638,14 @@ function renderChannelSettings() {
   if (!currentChannel) return;
 
   if (o.SettingsMainMenu) {
+      // --- PATCH START: Restored original menu structure ---
       o.SettingsMainMenu.innerHTML = `
         <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
         <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
         <div class="settings-item" onclick="showSettingsModal('edit')">Edit Channel Info</div>
       `;
+      // --- PATCH END ---
       updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
   } else { console.error("SettingsMainMenu element not found"); }
 }
@@ -1606,7 +1661,7 @@ function showVideoFormatMenu() {
 function hideVideoFormatMenu() {
   if (o.SettingsContainer) {
       o.SettingsContainer.classList.remove('submenu-visible');
-      iChannelSettingsIndex = 1;
+      iChannelSettingsIndex = 1; // --- FIX: This index should be 1 (for "Video / Format") ---
       if (o.SettingsMainMenu) {
           updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
       } else { console.error("SettingsMainMenu element not found for focus update."); }
@@ -1615,6 +1670,7 @@ function hideVideoFormatMenu() {
 
 function renderVideoFormatMenu() {
   if (o.SettingsVideoFormatMenu) {
+      // --- PATCH START: Added 'Video Quality' back into submenu ---
       o.SettingsVideoFormatMenu.innerHTML = `
         <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
         <div class="settings-item-header">Video Format</div>
@@ -1627,8 +1683,9 @@ function renderVideoFormatMenu() {
             <option value="zoom">Zoom</option>
           </select>
         </div>
-        <div class="settings-item" onclick="showSettingsModal('quality')">Video track</div>
+        <div class="settings-item" onclick="showSettingsModal('quality')">Video Quality</div>
       `;
+      // --- PATCH END ---
       updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
   } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
@@ -1711,15 +1768,14 @@ function renderModalContent(type) {
 
       if (type === 'quality') {
         const tracks = [...new Map((player.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a,b)=>b.height-a.height);
-        // Added class 'modal-selectable' to LI for keyboard control
         let itemsHtml = `<li class="modal-selectable" data-action="radio" data-key="quality" data-value="auto">Auto <input type="radio" name="quality" value="auto" ${player.getConfiguration()?.abr?.enabled ? 'checked' : ''}></li>`;
         tracks.forEach(track => {
           const bps = track.bandwidth > 1000000 ? `${(track.bandwidth/1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth/1e3)} Kbps`;
           const isChecked = track.active && !player.getConfiguration()?.abr?.enabled;
           itemsHtml += `<li class="modal-selectable" data-action="radio" data-key="quality" data-value='${track.id}'>${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
         });
-        // Added class 'modal-selectable' to Button for keyboard control
-        contentHtml = `<h2>Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="cancel" onclick="hideSettingsModal()">CANCEL</button><button class="modal-selectable" data-action="ok" onclick="applyQualitySetting()">OK</button></div>`;
+        // --- PATCH: Title is correct, matches button name ---
+        contentHtml = `<h2>Video Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="cancel" onclick="hideSettingsModal()">CANCEL</button><button class="modal-selectable" data-action="ok" onclick="applyQualitySetting()">OK</button></div>`;
 
       } else if (type === 'subtitles') {
         const textTracks = player.getTextTracks() || [];
@@ -1731,6 +1787,7 @@ function renderModalContent(type) {
           subItemsHtml += `<li class="modal-selectable" data-action="subtitle_on" data-track='${safeTrack}'>${track.label || track.language}</li>`;
         });
         let audioItemsHtml = audioTracks.map(track => `<li class="modal-selectable" data-action="audio" data-lang="${track.language}">${track.language} (Audio)</li>`).join('');
+        // --- PATCH: Restored H2 title ---
         contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
       } else if (type === 'edit') {
@@ -1739,9 +1796,11 @@ function renderModalContent(type) {
         if (!currentChannel) return '<p>Channel data missing.</p>';
         const safeName = (currentChannel.name || '').replace(/"/g, '&quot;');
         const safeLogo = (currentChannel.logo || '').replace(/"/g, '&quot;');
+        
+        // --- PATCH: Added 'modal-selectable' to input fields ---
         contentHtml = `<h2>Edit Channel</h2><div style="padding: 15px 25px;">
-          <label>Name</label><br><input type="text" id="edit_ch_name" class="edit-modal-field" value="${safeName}"><br>
-          <label>Logo URL</label><br><input type="text" id="edit_ch_logo" class="edit-modal-field" value="${safeLogo}">
+          <label>Name</label><br><input type="text" id="edit_ch_name" class="edit-modal-field modal-selectable" value="${safeName}"><br>
+          <label>Logo URL</label><br><input type="text" id="edit_ch_logo" class="edit-modal-field modal-selectable" value="${safeLogo}">
         </div><div class="popup-buttons"><button class="modal-selectable" data-action="cancel" onclick="hideSettingsModal()">CANCEL</button><button class="modal-selectable" data-action="save" onclick="applyChannelEdit()">SAVE</button></div>`;
       }
   } catch (error) {
@@ -2099,8 +2158,8 @@ function loadFavoritesFromStorage() {
 function saveFavoritesToStorage() {
   try {
     const favs = Object.entries(channels)
-                      .filter(([,ch]) => ch && ch.favorite)
-                      .map(([key]) => key);
+                         .filter(([,ch]) => ch && ch.favorite)
+                         .map(([key]) => key);
     localStorage.setItem("iptvFavoriteChannels", JSON.stringify(favs));
   } catch(e) { console.error("Error saving favorites:", e); }
 }
@@ -2154,7 +2213,7 @@ function updateSettingsModalSelection() {
         const currentSelected = o.SettingsModalContent.querySelector('.selected');
         if (currentSelected) currentSelected.classList.remove('selected');
 
-        // Use a broader selector to include both <li> and <button> in the modal
+        // Use a broader selector to include <li>, <input>, and <button>
         const items = o.SettingsModalContent.querySelectorAll('.modal-selectable');
         const itemsCount = items.length;
        
@@ -2237,17 +2296,19 @@ if (o.SearchField) {
 // --- START: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH CORRECTED NAV/GROUP ARROW LOGIC) ---
 document.addEventListener('keydown', (e) => {
 
-  // Ignore all input if the SearchField is focused
-  if (document.activeElement === o.SearchField) {
-      if (e.key === 'ArrowDown' || e.key === 'Enter') { // Exit search field
+  // --- PATCH: Added edit_ch_name and edit_ch_logo to the activeElement check ---
+  if (document.activeElement === o.SearchField ||
+      document.activeElement === getEl('edit_ch_name') ||
+      document.activeElement === getEl('edit_ch_logo')) {
+      
+      if (e.key === 'Escape') {
           e.preventDefault();
-          if(o.SearchField) o.SearchField.blur();
-          iCurrentChannel = 0; 
-          updateSelectedChannelInNav();
-      } else if (e.key === 'Escape') {
+          if (document.activeElement) document.activeElement.blur();
+      } else if (e.key === 'Enter') {
           e.preventDefault();
-          if(o.SearchField) o.SearchField.blur();
+          if (document.activeElement) document.activeElement.blur();
       }
+      // Allow all other keys (like typing)
       return;
   }
 
@@ -2275,11 +2336,15 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'ArrowDown') {
           iSettingsModalIndex = Math.min(itemsCount - 1, iSettingsModalIndex + 1);
           updateSettingsModalSelection();
-      } else if (e.key === 'Enter') { // --- MODIFICATION: Removed ArrowRight ---
+      } else if (e.key === 'Enter') { 
           const selectedItem = items[iSettingsModalIndex];
           if (!selectedItem) return;
          
-          if (selectedItem.tagName === 'LI') {
+          // --- PATCH: Added logic to FOCUS input fields ---
+          if (selectedItem.tagName === 'INPUT') {
+              selectedItem.focus(); // Focus the input field
+          }
+          else if (selectedItem.tagName === 'LI') {
               const action = selectedItem.dataset.action;
               // For list items with radio buttons (Quality), Enter/Right confirms the selection and applies it
               if (action === 'radio') {
@@ -2301,6 +2366,7 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
           window.hideSettingsModal();
       }
+      // --- FIX: Left/Right arrows do nothing else in modals ---
       return;
   }
   // --- END MODAL NAVIGATION FIX ---
@@ -2309,24 +2375,24 @@ document.addEventListener('keydown', (e) => {
   if (bNavOpened) {
     e.preventDefault();
     if (bGroupsOpened) {
-      // GROUP LIST (Currently visible)
+      // --- PATCH START: Updated Group List keyboard logic ---
       const groupItems = o.GroupList?.querySelectorAll('li') ?? [];
-      const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight', 'Escape', 'ArrowLeft'];
-
-      if (!ARROW_KEYS.includes(e.key)) return;
+      const selectedItem = groupItems[iGroupListIndex];
 
       if (e.key === 'ArrowUp') {
           iGroupListIndex = Math.max(0, iGroupListIndex - 1);
       } else if (e.key === 'ArrowDown') {
           iGroupListIndex = Math.min(groupItems.length - 1, iGroupListIndex + 1);
       } else if (e.key === 'Enter') { 
-          groupItems[iGroupListIndex]?.click();
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // <-- GO BACK
-          hideGroups(); // Groups -> Channels (slide left)
-      } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN/SELECT
-           groupItems[iGroupListIndex]?.click(); 
+          // --- FIX: 'Enter' is the only key that selects ---
+          selectedItem?.click(); 
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // 'Right' is GO BACK
+          hideGroups(); // Groups -> Channels
+      } else if (e.key === 'ArrowLeft') { // 'Left' is DRILL DOWN
+          // --- FIX: Does nothing, as requested ---
       }
       updateSelectedGroupInNav();
+      // --- PATCH END ---
 
     } else { 
       // CHANNEL LIST (Currently visible)
@@ -2337,7 +2403,9 @@ document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowUp') {
           if (iCurrentChannel === 0 && o.SearchField) { 
               o.SearchField.focus();
-              channelItems[iCurrentChannel].classList.remove('selected');
+              if (channelItems[iCurrentChannel]) { // Add check
+                channelItems[iCurrentChannel].classList.remove('selected');
+              }
           } else if (iCurrentChannel > 0) { 
               iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length; 
           }
@@ -2353,11 +2421,9 @@ document.addEventListener('keydown', (e) => {
               loadChannel(iCurrentChannel); 
               hideNav();
           }
-      } else if (e.key === 'ArrowLeft') { // <-- DRILL DOWN (Open Groups)
-          if (iCurrentChannel !== -1) { 
-              showGroups(); // Channel List slides right to reveal Groups
-          }
-      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // <-- GO BACK
+      } else if (e.key === 'ArrowLeft') { // 'Left' is DRILL DOWN
+          showGroups(); // Channel List -> Groups
+      } else if (e.key === 'ArrowRight' || e.key === 'Escape') { // 'Right' is GO BACK
           hideNav(); // Close the entire panel
       }
       updateSelectedChannelInNav();
@@ -2369,41 +2435,43 @@ document.addEventListener('keydown', (e) => {
   if (bChannelSettingsOpened) {
     e.preventDefault();
     const isSubmenu = o.SettingsContainer?.classList.contains('submenu-visible');
-    const ARROW_KEYS = ['Escape', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight'];
    
-    if (!ARROW_KEYS.includes(e.key)) return;
-
     if (isSubmenu) {
-        // Submenu List
+        // --- PATCH START: Submenu logic fixed ---
         const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
-        if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
-        else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        else if (e.key === 'Enter') { // <-- MODIFICATION: Removed ArrowRight
+        if (e.key === 'ArrowUp') {
+            iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
+        } else if (e.key === 'ArrowDown') {
+            iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
+        } else if (e.key === 'Enter') { // --- FIX: 'Enter' is for selection ---
             submenuItems[iVideoSettingsIndex]?.click();
-        }
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- GO BACK
+        } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // 'Left' is GO BACK
             hideVideoFormatMenu(); // Slide back to Main Settings Menu
         }
+        // 'ArrowRight' does nothing here
         updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+        // --- PATCH END ---
     } else { 
-        // Main Settings Menu
+        // --- PATCH START: Main Settings Menu logic fixed ---
         const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
-        if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
-        else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
-        else if (e.key === 'Enter') {
+        if (e.key === 'ArrowUp') {
+            iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
+        } else if (e.key === 'ArrowDown') {
+            iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
+        } else if (e.key === 'Enter') { // --- FIX: 'Enter' is for selection ---
             mainItems[iChannelSettingsIndex]?.click();
-        }
-        else if (e.key === 'ArrowRight') { // <-- DRILL DOWN
-            if (iChannelSettingsIndex === 1) { // Item 1 is 'Video / Format'
+        } else if (e.key === 'ArrowRight') { // --- FIX: 'Right' is for navigation ONLY ---
+            // Only drill down if it's the 'Video / Format' button (index 1)
+            if (iChannelSettingsIndex === 1) {
                 mainItems[iChannelSettingsIndex]?.click();
-            } else {
-                 mainItems[iChannelSettingsIndex]?.click();
             }
+            // Otherwise, 'ArrowRight' does nothing (e.g., on 'Subtitle / Audio')
         }
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- GO BACK
+        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // 'Left' is GO BACK
              hideChannelSettings(); // Close the entire Settings panel
         }
         updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+        // --- PATCH END ---
     }
     return;
   }
@@ -2467,6 +2535,7 @@ function updateStreamInfo() {
 }
 
 document.addEventListener('DOMContentLoaded', initPlayer);
-  </script>
-</body>
-</html>
+
+</script>
+
+</body></html>
