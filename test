@@ -718,7 +718,7 @@ body.modal-open {
 .shaka-controls-container {
     transition: none !important;
 }
-  </style>
+</style>
   <meta name="theme-color" content="#000000" />
 </head>
 <body>
