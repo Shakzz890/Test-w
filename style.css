@@ -40,54 +40,6 @@ body.modal-open {
     overflow: hidden;
 }
 
-/* ------------------------- NEW: MOBILE LANDSCAPE LOCK ------------------------- */
-#orientation-blocker {
-    display: none; /* Hidden by default */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: #000;
-    z-index: 9999;
-}
-
-.blocker-message {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    text-align: center;
-    padding: 20px;
-    font-size: 1.2rem;
-    color: var(--text-primary);
-}
-
-.blocker-message p {
-    margin-top: 15px;
-}
-
-/* This is the container for your *actual* app */
-#app-content {
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-/* Media query to show blocker on portrait mobile */
-@media only screen and (max-width: 768px) and (orientation: portrait) {
-    #app-content {
-        display: none; /* Hide the app */
-    }
-    #orientation-blocker {
-        display: flex; /* Show the blocker */
-    }
-}
-/* ------------------------- END: MOBILE LANDSCAPE LOCK ------------------------- */
-
-
 #playerContainer {
     width: 100%;
     height: 100%;
@@ -210,31 +162,14 @@ body.modal-open {
     100% { transform: rotate(360deg);}
 }
 
-/* ----------------------------------------------
-    Idle Screen Anime Background (Full Screen)
----------------------------------------------- */
 #IdleAnimation {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: url("https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg") no-repeat center center;
-    background-size: cover;
-    /* FIX: Added positioning to center the idle content */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:var(--bg-primary);
+    z-index:7;
 }
-
-/* Optional slight dark overlay for better text visibility */
-#IdleAnimation::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    pointer-events: none;
-}
-
 
 .idle-branding {
     text-align:center;
@@ -272,12 +207,6 @@ body.modal-open {
     height:50px;
     fill:white;
     margin-left:8px;
-}
-
-/* --- NEW: Hover/Focus for PlayButton --- */
-#PlayButton:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
 }
 
 /* ------------------------- PANELS (NAV & SETTINGS) - overlay slide-out panels ------------------------- */
@@ -427,14 +356,13 @@ body.modal-open {
 }
 
 /* ------------------------- LISTS & ITEMS ------------------------- */
-
-/* --- 4. ALIGNMENT FIX: Make GUIDE/EPG buttons stack vertically --- */
 #main_nav {
     list-style:none;
-    padding: 0 10px; /* Add horizontal padding to match lists */
-    display: flex; /* Use flex */
-    flex-direction: column; /* Stack vertically */
-    gap: 5px; /* Add spacing between buttons */
+    padding:0;
+    /* FIX: Ensure GUIDE/EPG buttons align horizontally */
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
 }
 
 #main_nav li {
@@ -444,11 +372,9 @@ body.modal-open {
     cursor:pointer;
     transition:background .2s;
     border-radius:5px;
-    margin: 0; /* Remove old margins */
-    text-align: center; /* Center the text */
+    /* FIX: Keep margins consistent, remove block display override */
+    margin:2px 5px; 
 }
-/* --- END: ALIGNMENT FIX --- */
-
 
 #DynamicGroupsList {
     list-style:none;
@@ -561,20 +487,11 @@ body.modal-open {
     font-weight:600;
 }
 
-/* --- 2. KEYBOARD NAV PREP: Changed :focus-visible to :focus --- */
-#SearchField:focus, 
-#main_nav li:focus, 
-#DynamicGroupsList li:focus, 
-.channel-item:focus, 
-.settings-item:focus, 
-.modal-selectable:focus, 
-.close-button:focus, 
-#PlayButton:focus {
+#SearchField:focus, #main_nav li:focus-visible, #DynamicGroupsList li:focus-visible, .channel-item:focus-visible, .settings-item:focus-visible, .modal-selectable:focus-visible, .close-button:focus-visible, #PlayButton:focus-visible {
     outline: 2px solid var(--bg-focus);
     outline-offset: -2px;
     box-shadow: 0 0 10px var(--bg-focus);
 }
-
 
 /* Focus outline for modal buttons (CANCEL/SAVE/CLOSE) */
 .popup-buttons button.modal-selectable.selected {
