@@ -6,7 +6,8 @@
   <!-- Shaka Player (kept as before) -->
   <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/shaka-player.ui.js" defer=""></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/controls.css">
-<style>
+
+  <style>
 /* ------------------------- ROOT & VARIABLES ------------------------- */
 :root {
     --bg-primary: #000;
@@ -2535,7 +2536,6 @@ function updateStreamInfo() {
 }
 
 document.addEventListener('DOMContentLoaded', initPlayer);
-
 </script>
 
 </body></html>
