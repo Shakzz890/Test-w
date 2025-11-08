@@ -162,13 +162,17 @@ body.modal-open {
     100% { transform: rotate(360deg);}
 }
 
+/* --- FIX: Restored original flex properties for centering --- */
 #IdleAnimation {
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    background:var(--bg-primary);
+    /* --- FIX: Changed background to transparent to see ::before --- */
+    background:transparent;
     z-index:7;
+    /* --- FIX: Added position: relative for z-index stacking --- */
+    position: relative;
 }
 
 .idle-branding {
@@ -706,19 +710,13 @@ body.modal-open {
     transition: none !important;
 }
 
-/* --- PATCH: Idle Screen Background --- */
-#IdleAnimation {
-  /* Use position: relative to layer the ::before pseudo-element */
-  position: relative;
-  background-color: var(--bg-primary);
-  /* Ensure content stays on top */
-  z-index: 7; 
-}
+/* --- PATCH: Idle Screen Background (FIXED) --- */
 
 /* This pseudo-element IS the background, and it fades in */
 #IdleAnimation::before {
   content: '';
-  position: absolute;
+  /* This will be positioned relative to #IdleAnimation (which has position: fixed from .fullscreen) */
+  position: absolute; 
   top: 0; left: 0; width: 100%; height: 100%;
   
   /* Your requested background image */
@@ -729,18 +727,12 @@ body.modal-open {
   opacity: 0;
   /* Add a transition for the fade-in */
   transition: opacity 0.8s ease-in;
-  /* Place it behind the content (z-index: 1) */
-  z-index: 1; 
+  
+  /* --- FIX: Set z-index to -1 to place it BEHIND the flex content --- */
+  z-index: -1; 
 }
 
 /* When IdleAnimation is visible, fade in the background */
 #IdleAnimation:not(.HIDDEN)::before {
   opacity: 1;
-}
-
-/* Force the logo and button to be on top of the background */
-.idle-branding, 
-#PlayButton {
-  position: relative;
-  z-index: 2; /* This z-index is relative to #IdleAnimation */
 }
