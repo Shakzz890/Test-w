@@ -38,19 +38,19 @@ let channels = {
     SuperMario: { name: "Super Mario", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258005/hls/master.m3u8?ads.xumo_channelId=88258005", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFkMkkUmZBGslGWGZMN2er5emlnqGCCU49wg&s", group: ["cartoons & animations"] },
     Teletubbies: { name: "Teletubbies", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258003/hls/master.m3u8?ads.xumo_channelId=88258003", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/5a/Teletubbies_Logo.png/330px-Teletubbies_Logo.png", group: ["cartoons & animations"] },
     anione: { name: "Ani One", type: "hls", manifestUri: "https://amg19223-amg19223c9-amgplt0019.playout.now3.amagi.tv/playlist/amg19223-amg19223c9-amgplt0019/playlist.m3u8", logo: "https://www.medialink.com.hk/img/ani-one-logo.jpg", group: ["cartoons & animations"] },
-    aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
+    aniplus: { name: "Aniplus", type: "hls", manifestUri: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "httpsD(string):"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"] },
     sinemanila: { name: "SineManila", type: "hls", manifestUri: "https.live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "https://is5-ssl.mzstatic.com/image/thumb/Purple112/v4/64/72/72/64727284-ad63-33a7-59a6-7975c742c038/AppIcon-0-0-1x_U007emarketing-0-0-0-5-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/512x512bb.jpg", group: ["movies", "entertainment"] },
     pbarush: { name: "PBA Rush", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/cg_pbarush_hd1/default/index.mpd", keyId: "76dc29dd87a244aeab9e8b7c5da1e5f3", key: "95b2f2ffd4e14073620506213b62ac82", logo: "https://static.wikia.nocookie.net/logopedia/images/0/00/PBA_Rush_Logo_2016.png", group: ["entertainment"] },
-    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
+    animalplanet: { name: "Animal Planet", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/cg_animal_planet_sd/default/index.mpd", keyId: "436b69f987924fcbbc06d40a69c2799a", key: "c63d5b0d7e52335b61aeba4f6537d54d", logo: "httpsD(string):"https://i.imgur.com/SkpFpW4.png", group: ["documentary"] },
     discoverychannel: { name: "Discovery Channel", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/discovery/default/index.mpd", keyId: "d9ac48f5131641a789328257e778ad3a", key: "b6e67c37239901980c6e37e0607ceee6", logo: "https://placehold.co/100x100/000/fff?text=Discovery", group: ["documentary"] },
-    nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
+    nickelodeon: { name: "Nickelodeon", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickelodeon/default/index.mpd", keyId: "9ce58f37576b416381b6514a809bfd8b", key: "f0fbb758cdeeaddfa3eae538856b4d72", logo: "httpsD(string):"https://i.imgur.com/4o5dNZA.png", group: ["cartoons & animations"] },
     nickjr: { name: "Nick Jr", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/dr_nickjr/default/index.mpd", keyId: "bab5c11178b646749fbae87962bf5113", key: "0ac679aad3b9d619ac39ad634ec76bc8", logo: "httpscontent://iimgur.com/iIVYdZP.png", group: ["cartoons & animations"] },
     pbo: { name: "PBO", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/pbo_sd/default/index.mpd", keyId: "dcbdaaa6662d4188bdf97f7f0ca5e830", key: "31e752b441bd2972f2b98a4b1bc1c7a1", logo: "httpscontent://iimgur.com/550RYpJ.png", group: ["movies", "entertainment"] },
     angrybirds: { name: "Angry Birds", type: "hls", manifestUri: "https://stream-us-east-1.getpublica.com/playlist.m3u8?network_id=547", logo: "https://www.pikpng.com/pngl/m/83-834869_angry-birds-theme-angry-birds-game-logo-png.png", group: ["cartoons & animations"] },
-    zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
+    zoomooasia: { name: "Zoo Moo Asia", type: "hls", manifestUri: "https://zoomoo-samsungau.amagi.tv/playlist.m3u8", logo: "httpsD(string):"https://ia803207.us.archive.org/32/items/zoo-moo-kids-2020_202006/ZooMoo-Kids-2020.png", group: ["cartoons & animations", "entertainment"] },
     mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUri: "https://example.com/placeholder.m3u8", logo: "https://placehold.co/100x100/000/fff?text=Mr+Bean", group: ["entertainment"] },
     iQIYI: { name: "iQIYI", type: "clearkey", manifestUri: "https://linearjitp-playback.astro.com.my/dash-wv/linear/1006/default_ott.mpd", keyId: "placeholder", key: "placeholder", logo: "https://placehold.co/100x100/000/fff?text=iQIYI", group: ["entertainment"] },
-    tv5: { name: "TV 5 HD", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/tv5_hd/default1/index.mpd", keyId: "2615129ef2c846a9bbd43a641c7303ef", key: "07c7f996b1734ea288641a68e1cfdc4d", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/TV5_logo.svg/1200px-TV5_logo.svg.png", group: ["news", "entertainment"] },
+    tv5: { name: "TV 5 HD", type: "clearkey", manifestUri: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/tv5_hd/default1/index.mpd", keyId: "2615129ef2c846a9bbd43a641c7303ef", key: "07c7f996b1734ea288641a68e1cfdc4d", logo: "httpsD(string):"https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/TV5_logo.svg/1200px-TV5_logo.svg.png", group: ["news", "entertainment"] },
     kapamilya: { name: "Kapamilya Channel HD", type: "clearkey", manifestUri: "https://d1uf7s78uqso1e.cloudfront.net/out/v1/efa01372657648be830e7c23ff68bea2/index.mpd", keyId: "bd17afb5dc9648a39be79ee3634dd4b8", key: "3ecf305d54a7729299b93a3d69c02ea5", logo: "https://placehold.co/100x100/000/fff?text=Kapamilya", group: ["entertainment"] },
 };
 
@@ -753,10 +753,9 @@ function renderChannelSettings() {
   if (!currentChannel) return;
 
   if (o.SettingsMainMenu) {
-      // --- PATCH START: Updated Settings Menu ---
+      // --- PATCH START: Restored original menu structure ---
       o.SettingsMainMenu.innerHTML = `
-        <div class="settings-item" onclick="showSettingsModal('subtitles')">🎞 Video Track</div>
-        <div class="settings-item" onclick="showSettingsModal('quality')">⚙️ Video Quality</div>
+        <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
         <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
         <div class="settings-item" onclick="showSettingsModal('edit')">Edit Channel Info</div>
@@ -777,7 +776,7 @@ function showVideoFormatMenu() {
 function hideVideoFormatMenu() {
   if (o.SettingsContainer) {
       o.SettingsContainer.classList.remove('submenu-visible');
-      iChannelSettingsIndex = 1;
+      iChannelSettingsIndex = 1; // --- FIX: This index should be 1 (for "Video / Format") ---
       if (o.SettingsMainMenu) {
           updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
       } else { console.error("SettingsMainMenu element not found for focus update."); }
@@ -786,6 +785,7 @@ function hideVideoFormatMenu() {
 
 function renderVideoFormatMenu() {
   if (o.SettingsVideoFormatMenu) {
+      // --- PATCH START: Added 'Video Quality' back into submenu ---
       o.SettingsVideoFormatMenu.innerHTML = `
         <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
         <div class="settings-item-header">Video Format</div>
@@ -798,8 +798,9 @@ function renderVideoFormatMenu() {
             <option value="zoom">Zoom</option>
           </select>
         </div>
-        <!-- PATCH: Removed "Video track" item -->
+        <div class="settings-item" onclick="showSettingsModal('quality')">Video Quality</div>
       `;
+      // --- PATCH END ---
       updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
   } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
@@ -882,15 +883,13 @@ function renderModalContent(type) {
 
       if (type === 'quality') {
         const tracks = [...new Map((player.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a,b)=>b.height-a.height);
-        // Added class 'modal-selectable' to LI for keyboard control
         let itemsHtml = `<li class="modal-selectable" data-action="radio" data-key="quality" data-value="auto">Auto <input type="radio" name="quality" value="auto" ${player.getConfiguration()?.abr?.enabled ? 'checked' : ''}></li>`;
         tracks.forEach(track => {
           const bps = track.bandwidth > 1000000 ? `${(track.bandwidth/1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth/1e3)} Kbps`;
           const isChecked = track.active && !player.getConfiguration()?.abr?.enabled;
           itemsHtml += `<li class="modal-selectable" data-action="radio" data-key="quality" data-value='${track.id}'>${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
         });
-        // Added class 'modal-selectable' to Button for keyboard control
-        // --- PATCH: Updated H2 title ---
+        // --- PATCH: Title is correct, matches button name ---
         contentHtml = `<h2>Video Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="cancel" onclick="hideSettingsModal()">CANCEL</button><button class="modal-selectable" data-action="ok" onclick="applyQualitySetting()">OK</button></div>`;
 
       } else if (type === 'subtitles') {
@@ -903,8 +902,8 @@ function renderModalContent(type) {
           subItemsHtml += `<li class="modal-selectable" data-action="subtitle_on" data-track='${safeTrack}'>${track.label || track.language}</li>`;
         });
         let audioItemsHtml = audioTracks.map(track => `<li class="modal-selectable" data-action="audio" data-lang="${track.language}">${track.language} (Audio)</li>`).join('');
-        // --- PATCH: Updated H2 title ---
-        contentHtml = `<h2>Video Track</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
+        // --- PATCH: Restored H2 title ---
+        contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
       } else if (type === 'edit') {
         if (!aFilteredChannelKeys || iCurrentChannel >= aFilteredChannelKeys.length) return '<p>No channel selected.</p>'; 
@@ -912,9 +911,11 @@ function renderModalContent(type) {
         if (!currentChannel) return '<p>Channel data missing.</p>';
         const safeName = (currentChannel.name || '').replace(/"/g, '&quot;');
         const safeLogo = (currentChannel.logo || '').replace(/"/g, '&quot;');
+        
+        // --- PATCH: Added 'modal-selectable' to input fields ---
         contentHtml = `<h2>Edit Channel</h2><div style="padding: 15px 25px;">
-          <label>Name</label><br><input type="text" id="edit_ch_name" class="edit-modal-field" value="${safeName}"><br>
-          <label>Logo URL</label><br><input type="text" id="edit_ch_logo" class="edit-modal-field" value="${safeLogo}">
+          <label>Name</label><br><input type="text" id="edit_ch_name" class="edit-modal-field modal-selectable" value="${safeName}"><br>
+          <label>Logo URL</label><br><input type="text" id="edit_ch_logo" class="edit-modal-field modal-selectable" value="${safeLogo}">
         </div><div class="popup-buttons"><button class="modal-selectable" data-action="cancel" onclick="hideSettingsModal()">CANCEL</button><button class="modal-selectable" data-action="save" onclick="applyChannelEdit()">SAVE</button></div>`;
       }
   } catch (error) {
@@ -1327,7 +1328,7 @@ function updateSettingsModalSelection() {
         const currentSelected = o.SettingsModalContent.querySelector('.selected');
         if (currentSelected) currentSelected.classList.remove('selected');
 
-        // Use a broader selector to include both <li> and <button> in the modal
+        // Use a broader selector to include <li>, <input>, and <button>
         const items = o.SettingsModalContent.querySelectorAll('.modal-selectable');
         const itemsCount = items.length;
        
@@ -1410,17 +1411,19 @@ if (o.SearchField) {
 // --- START: TV REMOTE KEYDOWN LOGIC (FINAL STABLE VERSION WITH CORRECTED NAV/GROUP ARROW LOGIC) ---
 document.addEventListener('keydown', (e) => {
 
-  // Ignore all input if the SearchField is focused
-  if (document.activeElement === o.SearchField) {
-      if (e.key === 'ArrowDown' || e.key === 'Enter') { // Exit search field
+  // --- PATCH: Added edit_ch_name and edit_ch_logo to the activeElement check ---
+  if (document.activeElement === o.SearchField ||
+      document.activeElement === getEl('edit_ch_name') ||
+      document.activeElement === getEl('edit_ch_logo')) {
+      
+      if (e.key === 'Escape') {
           e.preventDefault();
-          if(o.SearchField) o.SearchField.blur();
-          iCurrentChannel = 0; 
-          updateSelectedChannelInNav();
-      } else if (e.key === 'Escape') {
+          if (document.activeElement) document.activeElement.blur();
+      } else if (e.key === 'Enter') {
           e.preventDefault();
-          if(o.SearchField) o.SearchField.blur();
+          if (document.activeElement) document.activeElement.blur();
       }
+      // Allow all other keys (like typing)
       return;
   }
 
@@ -1448,11 +1451,15 @@ document.addEventListener('keydown', (e) => {
       } else if (e.key === 'ArrowDown') {
           iSettingsModalIndex = Math.min(itemsCount - 1, iSettingsModalIndex + 1);
           updateSettingsModalSelection();
-      } else if (e.key === 'Enter') { // --- MODIFICATION: Removed ArrowRight ---
+      } else if (e.key === 'Enter') { 
           const selectedItem = items[iSettingsModalIndex];
           if (!selectedItem) return;
          
-          if (selectedItem.tagName === 'LI') {
+          // --- PATCH: Added logic to FOCUS input fields ---
+          if (selectedItem.tagName === 'INPUT') {
+              selectedItem.focus(); // Focus the input field
+          }
+          else if (selectedItem.tagName === 'LI') {
               const action = selectedItem.dataset.action;
               // For list items with radio buttons (Quality), Enter/Right confirms the selection and applies it
               if (action === 'radio') {
@@ -1510,7 +1517,9 @@ document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowUp') {
           if (iCurrentChannel === 0 && o.SearchField) { 
               o.SearchField.focus();
-              channelItems[iCurrentChannel].classList.remove('selected');
+              if (channelItems[iCurrentChannel]) { // Add check
+                channelItems[iCurrentChannel].classList.remove('selected');
+              }
           } else if (iCurrentChannel > 0) { 
               iCurrentChannel = (iCurrentChannel - 1 + aFilteredChannelKeys.length) % aFilteredChannelKeys.length; 
           }
@@ -1551,7 +1560,7 @@ document.addEventListener('keydown', (e) => {
         const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        else if (e.key === 'Enter') { // <-- MODIFICATION: Removed ArrowRight
+        else if (e.key === 'Enter' || e.key === 'ArrowRight') { // <-- Use Enter OR Right to click/drill
             submenuItems[iVideoSettingsIndex]?.click();
         }
         else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- GO BACK
@@ -1563,15 +1572,8 @@ document.addEventListener('keydown', (e) => {
         const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
         if (e.key === 'ArrowUp') iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
         else if (e.key === 'ArrowDown') iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
-        else if (e.key === 'Enter') {
+        else if (e.key === 'Enter' || e.key === 'ArrowRight') { // <-- Use Enter OR Right to click/drill
             mainItems[iChannelSettingsIndex]?.click();
-        }
-        else if (e.key === 'ArrowRight') { // <-- DRILL DOWN
-            if (iChannelSettingsIndex === 1) { // Item 1 is 'Video / Format'
-                mainItems[iChannelSettingsIndex]?.click();
-            } else {
-                 mainItems[iChannelSettingsIndex]?.click();
-            }
         }
         else if (e.key === 'ArrowLeft' || e.key === 'Escape') { // <-- GO BACK
              hideChannelSettings(); // Close the entire Settings panel
