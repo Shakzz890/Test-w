@@ -162,26 +162,14 @@ body.modal-open {
     100% { transform: rotate(360deg);}
 }
 
-/* ----------------------------------------------
-   Idle Screen Anime Background (Full Screen)
----------------------------------------------- */
 #IdleAnimation {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: url("https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg") no-repeat center center;
-    background-size: cover;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:var(--bg-primary);
+    z-index:7;
 }
-
-/* Optional slight dark overlay for better text visibility */
-#IdleAnimation::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    pointer-events: none;
-}
-
 
 .idle-branding {
     text-align:center;
