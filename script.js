@@ -157,9 +157,12 @@
       player.attach(o.AvPlayer);
 
       player.configure({
-        abr: { defaultBandwidthEstimate: 500000 },
-        streaming: { rebufferingGoal: 2, bufferingGoal: 3 }
-      });
+        abr: { defaultBandwidthEstimate: 3000000 }, 
+        streaming: {
+          rebufferingGoal: 5, 
+          bufferingGoal: 10  
+        }
+      });
 
      player.addEventListener('error', e => {
         console.error('Shaka Error:', e.detail);
