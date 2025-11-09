@@ -956,6 +956,9 @@
                 <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('16:9')">
                     16:9 ${currentFormat === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
                 </li>
+                <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('fill')">
+                    Fill ${currentFormat === 'Fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                </li>
                 <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('stretch')">
                     Stretch ${currentFormat === 'Stretch' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
                 </li>
