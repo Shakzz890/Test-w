@@ -9,7 +9,8 @@ const o = {
   DynamicGroupsList: document.getElementById('DynamicGroupsList'),
   ListContainer: document.getElementById('list_container'),
   ChannelList: document.getElementById('ChannelList'),
-  // REMOVED: ChannelLoader
+  // RESTORED: ChannelLoader
+  ChannelLoader: document.getElementById('ChannelLoader'),
   IdleAnimation: document.getElementById('IdleAnimation'),
   PlayButton: document.getElementById('PlayButton'),
   BlurOverlay: document.getElementById('BlurOverlay'),
@@ -134,9 +135,10 @@ async function initPlayer() {
       // --- ADD JWPLAYER EVENT LISTENERS ---
       player.on('error', e => {
           console.error('JW Player Error:', e.message || e);
-          // Removed: ChannelLoader hide logic
           if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
           showIdleAnimation(true);
+          // Aggressive loader hide on error (in case it was still visible)
+          hideLoaderAndShowVideo(); 
       });
       
       player.on('levels', renderChannelSettings);
@@ -163,18 +165,18 @@ async function initPlayer() {
   loadInitialChannel();
 }
 
-// --- Simplified handleBuffering (Removed loader logic) ---
+// --- Simplified handleBuffering ---
 function handleBuffering(event) {
   clearTimeout(loaderFadeTimeout);
   if (!event.buffer) {
-    // When buffering stops, ensure video visibility
+    // When buffering stops, video should be showing.
     hideLoaderAndShowVideo(); 
   }
 }
 
-// --- Simplified handlePlaying (Removed loader logic) ---
+// --- Simplified handlePlaying ---
 function handlePlaying() {
-  // When playback starts, ensure video visibility
+  // When playback starts, video is confirmed.
   if (isSessionActive) {
       hideLoaderAndShowVideo(); 
   }
@@ -189,7 +191,14 @@ function hideLoaderAndShowVideo() {
 
       hideIdleAnimation(); 
 
-      // REMOVED: All ChannelLoader cleanup logic
+      if (o.ChannelLoader) {
+          // 2. Clear all classes and immediately set display/visibility to HIDDEN.
+          o.ChannelLoader.classList.remove('fade-out');
+          o.ChannelLoader.classList.add('HIDDEN');
+          
+          // 3. Reset opacity for next load cycle (HIDDEN sets opacity:0 in CSS)
+          // Note: Since .HIDDEN already sets display:none, this ensures the loader is gone.
+      }
 }
 // --- END Aggressive function ---
 
@@ -376,7 +385,7 @@ function loadInitialChannel() {
 }
 
 
-// --- Rewritten loadChannel for JWPlayer ---
+// --- Reconstructed loadChannel for JWPlayer ---
 async function loadChannel(index, options = {}) {
   clearTimeout(loaderFadeTimeout);
 
@@ -408,7 +417,7 @@ async function loadChannel(index, options = {}) {
       const jwVideoElement = o.JwPlayerContainer.querySelector('video');
       if (jwVideoElement) jwVideoElement.style.opacity = '0';
      
-      // Removed: ChannelLoader hide logic
+      hideLoaderAndShowVideo(); // Ensure loader is hidden from previous session
      
       hideChannelName();
       updateSelectedChannelInNav(); 
@@ -416,9 +425,25 @@ async function loadChannel(index, options = {}) {
       return;
   }
 
+  // --- START Loading Visuals ---
   if (isSessionActive) {
       hideIdleAnimation();
+      
+      // SHOW LOADER (Restored visual feedback)
+      if (o.ChannelLoader) {
+        const loaderText = document.getElementById('loading-channel-name');
+        if (loaderText) {
+          loaderText.textContent = `Loading ${newChannel.name}...`;
+        }
+        o.ChannelLoader.classList.remove('HIDDEN');
+        o.ChannelLoader.classList.remove('fade-out');
+        o.ChannelLoader.style.opacity = '1';
+      }
+      
+      showTempChannelSwitchMessage(newChannel.logo, newChannel.name, newChannel.number);
   }
+  // --- END Loading Visuals ---
+
 
   if (!player) {
       console.error("Player not initialized before loading channel.");
@@ -427,14 +452,9 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', newChannelKey);
 
-  showTempChannelSwitchMessage(newChannel.logo, newChannel.name, newChannel.number);
-
   const jwVideoElement = o.JwPlayerContainer.querySelector('video');
   if (jwVideoElement) jwVideoElement.style.opacity = '0';
 
-
-  // Removed: ChannelLoader show logic
-  // if (o.ChannelLoader) { ... }
 
   hideChannelName();
   updateSelectedChannelInNav();
@@ -466,7 +486,8 @@ async function loadChannel(index, options = {}) {
         autostart: isSessionActive, 
         width: "100%",
         aspectratio: "16:9",
-        stretching: "exactfit",
+        // REMOVED: stretching: "exactfit",
+        // We rely on CSS/setAspectRatio now for accurate fit, keeping JW's default is safest.
     });
     // --- END CORE JW PLAYER SETUP LOGIC ---
     
@@ -479,9 +500,9 @@ async function loadChannel(index, options = {}) {
             if (currentState === 'buffering' || currentState === 'paused' || currentState === 'idle') {
                 player.play(true);
             }
-            // Aggressive cleanup after forced play
+            // Aggressive cleanup after forced play/buffer
             hideLoaderAndShowVideo(); 
-        }, 500); 
+        }, 500); // 500ms delay
         
         showChannelName();
     }
@@ -490,7 +511,8 @@ async function loadChannel(index, options = {}) {
   } catch (error) {
     console.error(`Error loading channel "${newChannel?.name}":`, error);
     showIdleAnimation(true);
-    // Removed: ChannelLoader error cleanup
+    // Aggressive cleanup on fail
+    hideLoaderAndShowVideo(); 
     if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1'; 
   }
 }
