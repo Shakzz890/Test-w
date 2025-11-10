@@ -2,8 +2,9 @@ let player = null; // This will now hold the JWPlayer instance
     let ui = null; // No longer used for JWPlayer, but kept for minimal disruption
     const o = {
       PlayerContainer: document.getElementById('playerContainer'),
-      // --- CHANGE: Renamed AvPlayer to JwPlayer for clarity ---
-      JwPlayerContainer: document.getElementById('video'), // Assuming the container is ID="video"
+      // --- CHANGE THIS LINE ---
+      JwPlayerContainer: document.getElementById('jwplayer-container'), // NOW MATCHES HTML ID
+      // ------------------------
       Nav: document.getElementById('nav'),
       GroupList: document.getElementById('GroupList'),
       DynamicGroupsList: document.getElementById('DynamicGroupsList'),
