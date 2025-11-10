@@ -489,9 +489,20 @@ async function loadChannel(index, options = {}) {
     });
     // --- END CORE JW PLAYER SETUP LOGIC ---
     
+    // --- BUFFERRING FIX: Enforce playback right after setup ---
     if (isSessionActive) {
-      showChannelName();
+        // Use a short delay to ensure JW Player has processed the manifest
+        setTimeout(() => {
+            const currentState = player.getState();
+            // If the player is 'buffering' or 'paused' but isSessionActive is true, force play.
+            if (currentState === 'buffering' || currentState === 'paused' || currentState === 'idle') {
+                player.play(true);
+            }
+        }, 500); // 500ms delay
+        
+        showChannelName();
     }
+    // --- END BUFFERRING FIX ---
 
   } catch (error) {
     console.error(`Error loading channel "${newChannel?.name}":`, error);
