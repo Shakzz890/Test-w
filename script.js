@@ -9,7 +9,7 @@ const o = {
   DynamicGroupsList: document.getElementById('DynamicGroupsList'),
   ListContainer: document.getElementById('list_container'),
   ChannelList: document.getElementById('ChannelList'),
-  ChannelLoader: document.getElementById('ChannelLoader'),
+  // REMOVED: ChannelLoader
   IdleAnimation: document.getElementById('IdleAnimation'),
   PlayButton: document.getElementById('PlayButton'),
   BlurOverlay: document.getElementById('BlurOverlay'),
@@ -134,12 +134,7 @@ async function initPlayer() {
       // --- ADD JWPLAYER EVENT LISTENERS ---
       player.on('error', e => {
           console.error('JW Player Error:', e.message || e);
-          if (o.ChannelLoader) {
-              clearTimeout(loaderFadeTimeout);
-              o.ChannelLoader.classList.add('HIDDEN');
-              o.ChannelLoader.style.opacity = '1';
-              o.ChannelLoader.classList.remove('fade-out');
-          }
+          // Removed: ChannelLoader hide logic
           if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
           showIdleAnimation(true);
       });
@@ -168,41 +163,35 @@ async function initPlayer() {
   loadInitialChannel();
 }
 
-// --- Updated for JWPlayer buffering event ---
+// --- Simplified handleBuffering (Removed loader logic) ---
 function handleBuffering(event) {
   clearTimeout(loaderFadeTimeout);
   if (!event.buffer) {
-    // When buffering stops, video should be showing. Use forceHide=true.
-    hideLoaderAndShowVideo(true); 
+    // When buffering stops, ensure video visibility
+    hideLoaderAndShowVideo(); 
   }
 }
 
-// --- Updated for JWPlayer play event ---
+// --- Simplified handlePlaying (Removed loader logic) ---
 function handlePlaying() {
-  // When playback starts, video is confirmed. Use forceHide=true.
-  hideLoaderAndShowVideo(true); 
+  // When playback starts, ensure video visibility
+  if (isSessionActive) {
+      hideLoaderAndShowVideo(); 
+  }
 }
 
-// --- MODIFIED hideLoaderAndShowVideo function for immediate cleanup ---
-function hideLoaderAndShowVideo(forceHide = false) { 
+// --- Aggressive and Simplified hideLoaderAndShowVideo function ---
+function hideLoaderAndShowVideo() { 
       clearTimeout(loaderFadeTimeout);
       
+      // 1. Ensure player area visibility
       if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
 
       hideIdleAnimation(); 
 
-      if (o.ChannelLoader) {
-          // 1. Ensure any fade-out transition is removed/completed immediately.
-          o.ChannelLoader.classList.remove('fade-out');
-          
-          // 2. Hide it using the HIDDEN class immediately.
-          o.ChannelLoader.classList.add('HIDDEN');
-          
-          // 3. Reset opacity for the next load cycle (since HIDDEN sets opacity:0)
-          o.ChannelLoader.style.opacity = '1'; 
-      }
+      // REMOVED: All ChannelLoader cleanup logic
 }
-// --- END MODIFIED function ---
+// --- END Aggressive function ---
 
 function setupControls() {
   const playerContainer = o.PlayerContainer;
@@ -419,12 +408,7 @@ async function loadChannel(index, options = {}) {
       const jwVideoElement = o.JwPlayerContainer.querySelector('video');
       if (jwVideoElement) jwVideoElement.style.opacity = '0';
      
-      if (o.ChannelLoader) { 
-          clearTimeout(loaderFadeTimeout);
-          o.ChannelLoader.classList.add('HIDDEN');
-          o.ChannelLoader.style.opacity = '1';
-          o.ChannelLoader.classList.remove('fade-out');
-      }
+      // Removed: ChannelLoader hide logic
      
       hideChannelName();
       updateSelectedChannelInNav(); 
@@ -449,15 +433,8 @@ async function loadChannel(index, options = {}) {
   if (jwVideoElement) jwVideoElement.style.opacity = '0';
 
 
-  if (o.ChannelLoader) {
-    const loaderText = document.getElementById('loading-channel-name');
-    if (loaderText) {
-      loaderText.textContent = `Loading ${newChannel.name}...`;
-    }
-    o.ChannelLoader.classList.remove('fade-out');
-    o.ChannelLoader.style.opacity = '1';
-    o.ChannelLoader.classList.remove('HIDDEN');
-  }
+  // Removed: ChannelLoader show logic
+  // if (o.ChannelLoader) { ... }
 
   hideChannelName();
   updateSelectedChannelInNav();
@@ -502,7 +479,9 @@ async function loadChannel(index, options = {}) {
             if (currentState === 'buffering' || currentState === 'paused' || currentState === 'idle') {
                 player.play(true);
             }
-        }, 500); // 500ms delay
+            // Aggressive cleanup after forced play
+            hideLoaderAndShowVideo(); 
+        }, 500); 
         
         showChannelName();
     }
@@ -511,12 +490,7 @@ async function loadChannel(index, options = {}) {
   } catch (error) {
     console.error(`Error loading channel "${newChannel?.name}":`, error);
     showIdleAnimation(true);
-    if (o.ChannelLoader) {
-      clearTimeout(loaderFadeTimeout);
-      o.ChannelLoader.classList.add('HIDDEN');
-      o.ChannelLoader.style.opacity = '1';
-      o.ChannelLoader.classList.remove('fade-out');
-    }
+    // Removed: ChannelLoader error cleanup
     if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1'; 
   }
 }
