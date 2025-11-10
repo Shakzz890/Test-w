@@ -316,22 +316,26 @@ awsn: { name: "AWSN", type: "hls", manifestUri: "https://amg02188-amg02188c2-jun
       hideLoaderAndShowVideo();
     }
 
-    function hideLoaderAndShowVideo() {
-      clearTimeout(loaderFadeTimeout);
-      if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
+function hideLoaderAndShowVideo() {
+      clearTimeout(loaderFadeTimeout);
+      if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
 
-      if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
-        o.ChannelLoader.classList.add('fade-out');
+      // --- FIX: Hides the idle background when video starts ---
+      hideIdleAnimation(); 
+      // --- END FIX ---
 
-        loaderFadeTimeout = setTimeout(() => {
-          if (o.ChannelLoader) {
-            o.ChannelLoader.classList.add('HIDDEN');
-            o.ChannelLoader.style.opacity = '1';
-            o.ChannelLoader.classList.remove('fade-out');
-          }
-        }, 500); // Match fade-out duration
-      }
-    }
+      if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
+        o.ChannelLoader.classList.add('fade-out');
+
+        loaderFadeTimeout = setTimeout(() => {
+          if (o.ChannelLoader) {
+            o.ChannelLoader.classList.add('HIDDEN');
+            o.ChannelLoader.style.opacity = '1';
+            o.ChannelLoader.classList.remove('fade-out');
+          }
+        }, 500); // Match fade-out duration
+      }
+    }
 
     function setupControls() {
       const playerContainer = o.PlayerContainer;
@@ -424,46 +428,54 @@ awsn: { name: "AWSN", type: "hls", manifestUri: "https://amg02188-amg02188c2-jun
       });
     }
 
-    // --- START: NEW SWIPE LOGIC (Replaces old handleSwipeGesture) ---
-    function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
-      const isHorizontal = absDeltaX > absDeltaY;
-     
-      if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
+// --- START: NEW SWIPE LOGIC (Replaces old handleSwipeGesture) ---
+    function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
+      const isHorizontal = absDeltaX > absDeltaY;
+     
+      if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
-      if (isHorizontal) {
-        if (deltaX > 0) { // Swipe Left-to-Right (Go Back / Drill Out)
-          if (bChannelSettingsOpened) {
-            hideChannelSettings(); // Close right panel
-          } else if (bNavOpened && bGroupsOpened) {
-            hideGroups(); // 3. GroupList -> ChannelList
-          } else if (bNavOpened && !bGroupsOpened) {
-            hideNav(); // 2. ChannelList -> Closed
-          } else {
-            // 1. Already closed, do nothing on L-R
-          }
-        } else if (deltaX < 0) { // Swipe Right-to-Left (Drill Down / Open)
-          if (bNavOpened && !bGroupsOpened) {
-            showGroups(); // 2. ChannelList -> GroupList
-          } else if (!bNavOpened && !bChannelSettingsOpened) {
-            // 1. Start from closed state
-            // Per your request, R-L opens the *Right* panel first
-            showChannelSettings();
-          } else if (bNavOpened && bGroupsOpened) {
-            // 3. Already at deepest level (GroupList), do nothing
-          }
-        }
-      } else { // Vertical Swipe
-        // Channel switching (unchanged)
-        if (!bNavOpened && !bChannelSettingsOpened) {
-          if (deltaY > 0) {
-            loadChannel(iCurrentChannel + 1);
-          } else {
-            loadChannel(iCurrentChannel - 1);
-          }
-        }
-      }
-    }
-    // --- END: NEW SWIPE LOGIC ---
+      if (isHorizontal) {
+        if (deltaX > 0) { // Swipe Left-to-Right (Go Back / Drill Out)
+          if (bChannelSettingsOpened) {
+              hideChannelSettings(); // Close right panel
+          } else if (bNavOpened && bGroupsOpened) {
+              hideGroups(); // 3. GroupList -> ChannelList
+          } else if (bNavOpened && !bGroupsOpened) {
+              hideNav(); // 2. ChannelList -> Closed
+          
+          // --- FIX: Added this block to open left panel from closed state ---
+          } else if (!bNavOpened && !bChannelSettingsOpened) { 
+              showNav(); // 1. Already closed, L-R opens Left Panel
+          }
+          // --- END FIX ---
+
+        } else if (deltaX < 0) { // Swipe Right-to-Left (Drill Down / Open)
+          
+          // --- FIX: Removed stray 'create.' text that was here ---
+          if (bNavOpened && !bGroupsOpened) {
+              showGroups(); // 2. ChannelList -> GroupList
+          } else if (!bNavOpened && !bChannelSettingsOpened) {
+              // 1. Start from closed state
+              // R-L opens the *Right* panel first
+              showChannelSettings();
+          } else if (bNavOpened && bGroupsOpened) {
+              // 3. Already at deepest level (GroupList), do nothing
+  T         }
+        }
+        // --- FIX: Removed duplicated 'else if (deltaX < 0)' block that was here ---
+
+      } else { // Vertical Swipe
+        // Channel switching (unchanged)
+        if (!bNavOpened && !bChannelSettingsOpened) {
+          if (deltaY > 0) {
+            loadChannel(iCurrentChannel + 1);
+          } else {
+            loadChannel(iCurrentChannel - 1);
+T         }
+        }
+      }
+    }
+    // --- END: NEW SWIPE LOGIC ---
 
     function handleSingleTapAction() {
       if (!isSessionActive) return;
