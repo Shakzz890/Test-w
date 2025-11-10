@@ -5,16 +5,23 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Shakzz TV Player v2</title>
 
-  <!-- Shaka Player -->
-  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/shaka-player.ui.js" defer></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.13/dist/controls.css" />
- <link rel="stylesheet" href="style.css" />
+  <!-- JWPlayer -->
+  <script src="https://ssl.p.jwpcdn.com/player/v/8.36.6/jwplayer.js"></script>
+  <script>jwplayer.key = "ITWMv7t88JGzI0xPwW8I0+LveiXX9SWbfdmt0ArUSyc="</script>
+
+  <!-- Removed Shaka Player JS and CSS -->
+
+  <link rel="stylesheet" href="style.css" />
   <meta name="theme-color" content="#000000" />
 </head>
 <body>
   <!-- PLAYER CONTAINER -->
   <div id="playerContainer" tabindex="-1" aria-label="Video Player Container">
-    <video id="avplayer" autoplay muted playsinline></video>
+    <!-- 
+      This is the new container for JWPlayer. 
+      The <video> tag has been replaced.
+    -->
+    <div id="jwplayer-container"></div>
 
     <div id="StreamInfoOverlay" class="HIDDEN" aria-hidden="true"></div>
 
@@ -64,7 +71,7 @@
       <div id="list_container_scrollarea" role="region" aria-label="Channels and Groups">
         <div id="list_container">
           <section id="GroupList" class="custom-scrollbar" tabindex="0" aria-label="Group List">
-            <!-- 
+            <!-- 
               FIX: This is the user's requested order: GUIDE, EPG, then CATEGORIES.
             -->
             <ul id="main_nav" role="tablist" aria-label="Main Tabs">
@@ -90,7 +97,7 @@
 
     <!-- RIGHT PANEL: Channel Settings -->
     <aside id="ChannelSettings" aria-label="Channel Settings" role="complementary">
-      <!-- 
+      <!-- 
         FIX: Restored the original slide-out container structure
       -->
       <div id="settings_container">
@@ -130,6 +137,6 @@
       </div>
     </div>
   </div>
- <script src="script.js" defer></script>
-  </body>
+  <script src="script.js" defer></script>
+</body>
 </html>
