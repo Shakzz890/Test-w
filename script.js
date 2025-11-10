@@ -183,34 +183,26 @@ function handlePlaying() {
   hideLoaderAndShowVideo(true); 
 }
 
+// --- MODIFIED hideLoaderAndShowVideo function for immediate cleanup ---
 function hideLoaderAndShowVideo(forceHide = false) { 
       clearTimeout(loaderFadeTimeout);
+      
       if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
 
       hideIdleAnimation(); 
 
-      if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
-        
-        if (forceHide) {
-             // Force hiding the loader immediately, bypassing the fade-out
-             o.ChannelLoader.classList.add('HIDDEN');
-             o.ChannelLoader.style.opacity = '1'; // Reset opacity for next load
-             o.ChannelLoader.classList.remove('fade-out');
-             return;
-        }
-
-        // Standard fade-out logic (used if not explicitly forced hidden)
-        o.ChannelLoader.classList.add('fade-out');
-
-        loaderFadeTimeout = setTimeout(() => {
-          if (o.ChannelLoader) {
-            o.ChannelLoader.classList.add('HIDDEN');
-            o.ChannelLoader.style.opacity = '1';
-            o.ChannelLoader.classList.remove('fade-out');
-          }
-        }, 500); 
+      if (o.ChannelLoader) {
+          // 1. Ensure any fade-out transition is removed/completed immediately.
+          o.ChannelLoader.classList.remove('fade-out');
+          
+          // 2. Hide it using the HIDDEN class immediately.
+          o.ChannelLoader.classList.add('HIDDEN');
+          
+          // 3. Reset opacity for the next load cycle (since HIDDEN sets opacity:0)
+          o.ChannelLoader.style.opacity = '1'; 
       }
 }
+// --- END MODIFIED function ---
 
 function setupControls() {
   const playerContainer = o.PlayerContainer;
