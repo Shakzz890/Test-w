@@ -424,34 +424,23 @@ awsn: { name: "AWSN", type: "hls", manifestUri: "https://amg02188-amg02188c2-jun
       });
     }
 
-// --- START: NEW SWIPE LOGIC (Replaces old handleSwipeGesture) ---
-    function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
-      const isHorizontal = absDeltaX > absDeltaY;
-     
-      if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
+    // --- START: NEW SWIPE LOGIC (Replaces old handleSwipeGesture) ---
+    function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
+      const isHorizontal = absDeltaX > absDeltaY;
+     
+      if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
-      if (isHorizontal) {
-        if (deltaX > 0) { // Swipe Left-to-Right (Go Back / Drill Out)
-          if (bChannelSettingsOpened) {
-              hideChannelSettings(); // Close right panel
-          } else if (bNavOpened && bGroupsOpened) {
-              hideGroups(); // 3. GroupList -> ChannelList
-          } else if (bNavOpened && !bGroupsOpened) {
-              hideNav(); // 2. ChannelList -> Closed
-          } else {
-              // 1. Already closed, do nothing on L-R
-          }
-        } else if (deltaX < 0) { // Swipe Right-to-Left (Drill Down / Open)
-          if (bNavOpened && !bGroupsOpened) {
-  create.            showGroups(); // 2. ChannelList -> GroupList
-          } else if (!bNavOpened && !bChannelSettingsOpened) {
-              // 1. Start from closed state
-              // Per your request, R-L opens the *Right* panel first
-              showChannelSettings();
-          } else if (bNavOpened && bGroupsOpened) {
-              // 3. Already at deepest level (GroupList), do nothing
-          }
-        }
+      if (isHorizontal) {
+        if (deltaX > 0) { // Swipe Left-to-Right (Go Back / Drill Out)
+          if (bChannelSettingsOpened) {
+            hideChannelSettings(); // Close right panel
+          } else if (bNavOpened && bGroupsOpened) {
+            hideGroups(); // 3. GroupList -> ChannelList
+          } else if (bNavOpened && !bGroupsOpened) {
+            hideNav(); // 2. ChannelList -> Closed
+          } else {
+            // 1. Already closed, do nothing on L-R
+          }
         } else if (deltaX < 0) { // Swipe Right-to-Left (Drill Down / Open)
           if (bNavOpened && !bGroupsOpened) {
             showGroups(); // 2. ChannelList -> GroupList
