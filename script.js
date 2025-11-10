@@ -137,7 +137,6 @@ async function initPlayer() {
           console.error('JW Player Error:', e.message || e);
           if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
           showIdleAnimation(true);
-          // Aggressive loader hide on error (in case it was still visible)
           hideLoaderAndShowVideo(); 
       });
       
@@ -146,13 +145,13 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // Force play if the player attempts to pause (Simulating no pause in a live stream environment)
+      // --- FIX: Disable Pause Button on Taps/Clicks ---
       player.on('pause', () => { 
         if (player.getState() !== 'idle' && player.getState() !== 'complete') {
             player.play(true);
         }
       });
-      // --- END JWPLAYER EVENT LISTENERS ---
+      // --- END FIX ---
 
   } else {
       console.error("JWPlayer library not loaded.");
@@ -169,20 +168,18 @@ async function initPlayer() {
 function handleBuffering(event) {
   clearTimeout(loaderFadeTimeout);
   if (!event.buffer) {
-    // When buffering stops, video should be showing.
     hideLoaderAndShowVideo(); 
   }
 }
 
-// --- Simplified handlePlaying ---
+// --- Simplified handlePlaying (Triggered when video starts playing) ---
 function handlePlaying() {
-  // When playback starts, video is confirmed.
   if (isSessionActive) {
       hideLoaderAndShowVideo(); 
   }
 }
 
-// --- Aggressive and Simplified hideLoaderAndShowVideo function ---
+// --- Aggressive Loader Hide Logic (Restored and fixed) ---
 function hideLoaderAndShowVideo() { 
       clearTimeout(loaderFadeTimeout);
       
@@ -196,8 +193,7 @@ function hideLoaderAndShowVideo() {
           o.ChannelLoader.classList.remove('fade-out');
           o.ChannelLoader.classList.add('HIDDEN');
           
-          // 3. Reset opacity for next load cycle (HIDDEN sets opacity:0 in CSS)
-          // Note: Since .HIDDEN already sets display:none, this ensures the loader is gone.
+          // 3. Reset opacity for next load cycle
       }
 }
 // --- END Aggressive function ---
@@ -425,7 +421,7 @@ async function loadChannel(index, options = {}) {
       return;
   }
 
-  // --- START Loading Visuals ---
+  // --- START Loading Visuals (Restored) ---
   if (isSessionActive) {
       hideIdleAnimation();
       
@@ -486,8 +482,8 @@ async function loadChannel(index, options = {}) {
         autostart: isSessionActive, 
         width: "100%",
         aspectratio: "16:9",
-        // REMOVED: stretching: "exactfit",
-        // We rely on CSS/setAspectRatio now for accurate fit, keeping JW's default is safest.
+        // FIX for Aspect Ratio: Removed the stretching property to ensure CSS/JS takes precedence.
+        // The default JWPlayer behavior is 'stretch' which is often overridden by CSS object-fit.
     });
     // --- END CORE JW PLAYER SETUP LOGIC ---
     
@@ -860,6 +856,7 @@ function setAspectRatio(format) {
         formatName = 'Zoom';
         break;
       default:
+        // Set back to the default 'contain' to honor the original aspect ratio
         jwVideoElement.style.objectFit = 'contain';
         formatName = 'Original';
     }
