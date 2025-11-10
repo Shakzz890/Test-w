@@ -337,7 +337,34 @@ function handleSingleTapAction() {
 }
 
 function handleDoubleTapAction() {
-  toggleFullScreen();
+    // FIX: Clear panels before toggling fullscreen
+    clearUi(); 
+    
+    const elem = document.documentElement;
+
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.mozRequestFullScreen) {
+            elem.mozRequestFullScreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        } else {
+            console.warn("Fullscreen API is not supported by this browser.");
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(err => console.error(`Error attempting to disable full-screen mode: ${err.message} (${err.name})`));
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
 }
 
 
@@ -482,8 +509,7 @@ async function loadChannel(index, options = {}) {
         autostart: isSessionActive, 
         width: "100%",
         aspectratio: "16:9",
-        // FIX for Aspect Ratio: Removed the stretching property to ensure CSS/JS takes precedence.
-        // The default JWPlayer behavior is 'stretch' which is often overridden by CSS object-fit.
+        // FIX for Aspect Ratio: Removed 'stretching' so CSS/JS controls the fit (Original/Contain).
     });
     // --- END CORE JW PLAYER SETUP LOGIC ---
     
@@ -1418,6 +1444,9 @@ function updateSettingsModalSelection() {
 }
 
 function toggleFullScreen() {
+    // FIX: Clear panels before toggling fullscreen
+    clearUi(); 
+    
     const elem = document.documentElement;
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
