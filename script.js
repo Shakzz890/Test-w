@@ -12,10 +12,12 @@
 let channels = {
     discoveryscience: { name: "Discovery Science", type: "clearkey", manifestUri: "https://d1g8wgjurz8via.cloudfront.net/bpk-tv/Discoveryscience2/default/manifest.mpd", keyId: "5458f45efedb4d6f8aa6ac76c85b621b", key: "dbf8a0a306a64525ba3012fd225370c0", logo: "  https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSkA_8vr9UZUhtkaFi6AshM83zQwhPWBGWX-Q&s", group: ["documentary"], },
     KidoodleTV: { name: "Kidoodle TV", type: "hls", manifestUri: "https://amg07653-apmc-amg07653c5-samsung-ph-8539.playouts.now.amagi.tv/playlist.m3u8", logo: "https://d1iiooxwdowqwr.cloudfront.net/pub/appsubmissions/20201230211817_FullLogoColor4x.png", group: ["cartoons & animations"], },
-    // --- FIX: Replaced broken .PNG URL with a working HLS test stream ---
-    StrawberryShortcake: { name: "Strawberry Shortcake (Test Stream 1)", type: "hls", manifestUri: "https://cph-p-2.ov.otto.de/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"], },
-    // --- FIX: Replaced protected/broken stream with a working DASH test stream ---
-    SonictheHedgehog: { name: "Sonic the Hedgehog (Test Stream 2)", type: "dash", manifestUri: "https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Sonic_The_Hedgehog.svg/1200px-Sonic_The_Hedgehog.svg.png", group: ["cartoons & animations"], },
+    // --- FIX: This URL is a .PNG IMAGE, not a video. It will NOT work. ---
+    // --- PASTE YOUR WORKING URL from your old project here. ---
+    StrawberryShortcake: { name: "Strawberry Shortcake", type: "hls", manifestUri: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", logo: "https://upload.wikimedia.org/wikipedia/en/f/ff/Strawberry_Shortcake_2003_Logo.png", group: ["cartoons & animations"], },
+    // --- FIX: This URL is protected or broken (Error 102630). ---
+    // --- PASTE YOUR WORKING URL from your old project here. ---
+    SonictheHedgehog: { name: "Sonic the Hedgehog", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258004/hls/master.m3u8?ads.xumo_channelId=88258004", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Sonic_The_Hedgehog.svg/1200px-Sonic_The_Hedgehog.svg.png", group: ["cartoons & animations"], },
     SuperMario: { name: "Super Mario", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258005/hls/master.m3u8?ads.xumo_channelId=88258005", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFkMkkUmZBGslGWGZMN2er5emlnqGCCU49wg&s", group: ["cartoons & animations"], },
     Teletubbies: { name: "Teletubbies", type: "hls", manifestUri: "https://d1si3n1st4nkgb.cloudfront.net/10000/88258003/hls/master.m3u8?ads.xumo_channelId=88258003", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/5a/Teletubbies_Logo.png/330px-Teletubbies_Logo.png", group: ["cartoons & animations"], },
     // --- FIX: Corrected typo 'httpsM://' to 'https://' ---
