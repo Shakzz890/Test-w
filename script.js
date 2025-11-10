@@ -1,15 +1,3 @@
-ph
-/* ======= BEGIN AUTO-PATCHED WRAPPER =======
-   This wrapper preserves your original script then applies:
-   - force 'contain' aspect ratio for JWPlayer video
-   - disable pause toggle on click/tap while not breaking double-tap fullscreen
-   - override pause() to no-op and auto-resume on pause
-   - ChannelLoader show/fade behavior on channel switch and when playback starts
-   NOTE: Keep original script below. Wrapper attaches after DOMContentLoaded.
-   ======= END WRAPPER ======= */
-
-(function(){
-
 /* --- Preserve original script --- */
 let player = null; 
 let ui = null; 
