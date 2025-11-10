@@ -172,22 +172,34 @@ async function initPlayer() {
 function handleBuffering(event) {
   clearTimeout(loaderFadeTimeout);
   if (!event.buffer) {
-    hideLoaderAndShowVideo();
+    // When buffering stops, video should be showing. Use forceHide=true.
+    hideLoaderAndShowVideo(true); 
   }
 }
 
 // --- Updated for JWPlayer play event ---
 function handlePlaying() {
-  hideLoaderAndShowVideo();
+  // When playback starts, video is confirmed. Use forceHide=true.
+  hideLoaderAndShowVideo(true); 
 }
 
-function hideLoaderAndShowVideo() {
+function hideLoaderAndShowVideo(forceHide = false) { 
       clearTimeout(loaderFadeTimeout);
       if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
 
       hideIdleAnimation(); 
 
       if (o.ChannelLoader && !o.ChannelLoader.classList.contains('HIDDEN')) {
+        
+        if (forceHide) {
+             // Force hiding the loader immediately, bypassing the fade-out
+             o.ChannelLoader.classList.add('HIDDEN');
+             o.ChannelLoader.style.opacity = '1'; // Reset opacity for next load
+             o.ChannelLoader.classList.remove('fade-out');
+             return;
+        }
+
+        // Standard fade-out logic (used if not explicitly forced hidden)
         o.ChannelLoader.classList.add('fade-out');
 
         loaderFadeTimeout = setTimeout(() => {
