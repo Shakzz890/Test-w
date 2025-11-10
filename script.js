@@ -435,43 +435,42 @@ function hideLoaderAndShowVideo() {
       if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
       if (isHorizontal) {
-        if (deltaX > 0) { // Swipe Left-to-Right (Go Back / Drill Out)
+        if (deltaX > 0) { // --- Swipe Left-to-Right ---
+          
           if (bChannelSettingsOpened) {
-              hideChannelSettings(); // Close right panel
-          } else if (bNavOpened && bGroupsOpened) {
-              hideGroups(); // 3. GroupList -> ChannelList
+            // 1. If Right panel is open, L-R closes it.
+            hideChannelSettings();
           } else if (bNavOpened && !bGroupsOpened) {
-              hideNav(); // 2. ChannelList -> Closed
-          
-          // --- FIX: Added this block to open left panel from closed state ---
-          } else if (!bNavOpened && !bChannelSettingsOpened) { 
-              showNav(); // 1. Already closed, L-R opens Left Panel
+            // 2. If Channel List is open, L-R drills IN to Groups. (This is the fix)
+            showGroups(); 
+          } else if (!bNavOpened) {
+            // 3. If all panels are closed, L-R opens the Channel List.
+            showNav();
           }
-          // --- END FIX ---
+          // 4. (Implicit) If Group List is open, L-R does nothing (at deepest level).
 
-        } else if (deltaX < 0) { // Swipe Right-to-Left (Drill Down / Open)
+        } else if (deltaX < 0) { // --- Swipe Right-to-Left ---
           
-          // --- FIX: Removed stray 'create.' text that was here ---
-          if (bNavOpened && !bGroupsOpened) {
-              showGroups(); // 2. ChannelList -> GroupList
+          if (bNavOpened && bGroupsOpened) {
+            // 1. If Group List is open, R-L goes BACK to Channel List.
+            hideGroups();
+          } else if (bNavOpened && !bGroupsOpened) {
+            // 2. If Channel List is open, R-L CLOSES it.
+            hideNav();
           } else if (!bNavOpened && !bChannelSettingsOpened) {
-              // 1. Start from closed state
-              // R-L opens the *Right* panel first
-              showChannelSettings();
-          } else if (bNavOpened && bGroupsOpened) {
-              // 3. Already at deepest level (GroupList), do nothing
-  T         }
+            // 3. If all panels are closed, R-L opens the Right (Settings) panel.
+            showChannelSettings();
+          }
+          // 4. (Implicit) If Right (Settings) panel is open, R-L does nothing (at deepest level).
         }
-        // --- FIX: Removed duplicated 'else if (deltaX < 0)' block that was here ---
-
-      } else { // Vertical Swipe
-        // Channel switching (unchanged)
+      
+      } else { // Vertical Swipe (Unchanged)
         if (!bNavOpened && !bChannelSettingsOpened) {
-          if (deltaY > 0) {
+         if (deltaY > 0) {
             loadChannel(iCurrentChannel + 1);
           } else {
             loadChannel(iCurrentChannel - 1);
-T         }
+          }
         }
       }
     }
