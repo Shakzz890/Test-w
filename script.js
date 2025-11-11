@@ -1,3 +1,15 @@
+/* ======= BEGIN AUTO-PATCHED WRAPPER =======
+   This wrapper preserves your original script then applies:
+   - force 'contain' aspect ratio for JWPlayer video
+   - disable pause toggle on click/tap while not breaking double-tap fullscreen
+   - override pause() to no-op and auto-resume on pause
+   - ChannelLoader show/fade behavior on channel switch and when playback starts
+   NOTE: Keep original script below. Wrapper attaches after DOMContentLoaded.
+   ======= END WRAPPER ======= */
+
+(function(){
+
+/* --- Preserve original script --- */
 let player = null; 
 let ui = null; 
 const o = {
@@ -83,6 +95,9 @@ let lastTapTime = 0;
 let loaderFadeTimeout = null; 
 let tempMessageTimeout = null; 
 
+// Track the mute state, which is separate from player.getMute() for the PlayButton logic
+let isMuted = true; 
+
 /* -------------------------
     Utilities
     ------------------------- */
@@ -145,12 +160,17 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // --- FIX: Disable Pause Button on Taps/Clicks ---
+      // ISSUE 1 FIX: Disable Pause Button on Taps/Clicks by re-enforcing play state
       player.on('pause', () => { 
         if (player.getState() !== 'idle' && player.getState() !== 'complete') {
             player.play(true);
         }
       });
+      // Set the player's initial mute state (unmuted)
+      player.setMute(false);
+      isMuted = false;
+      // ISSUE 3 FIX: Ensure play button is visible on initial load
+      o.PlayButton.classList.remove('HIDDEN'); 
       // --- END FIX ---
 
   } else {
@@ -176,6 +196,8 @@ function handleBuffering(event) {
 function handlePlaying() {
   if (isSessionActive) {
       hideLoaderAndShowVideo(); 
+      // ISSUE 3 FIX: Hide play button once playback starts
+      o.PlayButton.classList.add('HIDDEN'); 
   }
 }
 
@@ -270,9 +292,11 @@ function setupControls() {
     const isFromTap = (currentTime - lastTapTime) < 350;
 
     if (isFromTap) {
+      // Allow single tap to show channel info or clear UI
       handleSingleTapAction();
     } else {
       if (currentTime - lastTapTime < 300) {
+        // Double-tap handled by dblclick/touchend logic
       } else {
         handleSingleTapAction();
         lastTapTime = currentTime;
@@ -283,6 +307,22 @@ function setupControls() {
   playerContainer.addEventListener('dblclick', e => {
     e.preventDefault();
     handleDoubleTapAction();
+  });
+  
+  // ISSUE 4 FIX: Click on player area unmutes the stream if it's muted
+  playerContainer.addEventListener('click', e => {
+      // Check if the click is on the PlayButton, which has its own handler
+      if (e.target.closest('#PlayButton')) return;
+      
+      // Check if the click is inside any panel, if so, we clear UI, not unmute
+      if (bNavOpened || bChannelSettingsOpened || bGuideOpened || bEpgOpened || bSettingsModalOpened) {
+          return;
+      }
+      
+      // If the stream is playing and muted, unmute it
+      if (isSessionActive && isMuted) {
+          unmuteStream();
+      }
   });
 }
 
@@ -434,7 +474,7 @@ async function loadChannel(index, options = {}) {
   }
 
   if (options.isInitialLoad && !isSessionActive) {
-      console.log("Initial load: Setting channel but not loading stream.");
+      console.log("Initial load: Setting channel but not loading stream. Waiting for user input.");
       localStorage.setItem('iptvLastWatched', newChannelKey);
      
       const jwVideoElement = o.JwPlayerContainer.querySelector('video');
@@ -445,6 +485,9 @@ async function loadChannel(index, options = {}) {
       hideChannelName();
       updateSelectedChannelInNav(); 
       showIdleAnimation(true); 
+      
+      // ISSUE 3 FIX: Ensure play button is visible
+      if (o.PlayButton) o.PlayButton.classList.remove('HIDDEN'); 
       return;
   }
 
@@ -502,13 +545,18 @@ async function loadChannel(index, options = {}) {
         playerType = "dash";
     }
 
+    // Set autostart based on session state
+    const autoPlay = isSessionActive; 
+    
+    // Maintain the *current* mute state when setting up the new source.
     player.setup({
         file: newChannel.manifestUrl,
         type: playerType,
         drm: Object.keys(drmConfig).length ? drmConfig : undefined,
-        autostart: isSessionActive, 
+        autostart: autoPlay, 
         width: "100%",
         aspectratio: "16:9",
+        mute: isMuted, // Apply the current mute state
         // FIX for Aspect Ratio: Removed 'stretching' so CSS/JS controls the fit (Original/Contain).
     });
     // --- END CORE JW PLAYER SETUP LOGIC ---
@@ -541,6 +589,27 @@ async function loadChannel(index, options = {}) {
 // --- END loadChannel ---
 
 /* -------------------------
+    Mute/Unmute Functions
+    ------------------------- */
+function muteStream() {
+    if (player) {
+        player.setMute(true);
+        isMuted = true;
+    }
+    // ISSUE 2 FIX: Black screen effect on settings open
+    if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '0'; 
+}
+
+function unmuteStream() {
+    if (player) {
+        player.setMute(false);
+        isMuted = false;
+    }
+    // ISSUE 2 FIX: Restore video visibility on settings close/unmute
+    if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
+}
+
+/* -------------------------
     UI and Navigation
     ------------------------- */
 function setupMainMenuControls() {
@@ -560,9 +629,22 @@ function setupMainMenuControls() {
   if (o.PlayButton) {
       o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
       o.PlayButton.addEventListener('mousedown', handleFirstPlay);
+      
+      // ISSUE 5 FIX: Play button now calls handleFirstPlay (start stream) or unmutes the stream
+      o.PlayButton.removeEventListener('click', handlePlayButtonClick); 
+      o.PlayButton.addEventListener('click', handlePlayButtonClick);
   } else {
       console.error("PlayButton element not found.");
   }
+}
+
+function handlePlayButtonClick(e) {
+    e.preventDefault();
+    if (!isSessionActive) {
+        handleFirstPlay(); // Start the session and load the stream
+    } else if (isMuted) {
+        unmuteStream(); // If session is active but stream is muted, unmute it.
+    }
 }
 
 function buildDynamicGroupNav() {
@@ -1142,6 +1224,7 @@ function showTempMessage(message) {
 function showIdleAnimation(showPlayButton = false) {
   if (o.IdleAnimation) o.IdleAnimation.classList.remove('HIDDEN');
   if (o.PlayButton) {
+      // ISSUE 3 FIX: Only show the play button if the session is not active (i.e., before the first play)
       if (showPlayButton && !isSessionActive) {
           o.PlayButton.classList.remove('HIDDEN');
       } else {
@@ -1208,6 +1291,11 @@ function hideGroups() {
 function showChannelSettings() {
   if (!o.ChannelSettings) return;
 
+  // ISSUE 2 FIX: Mute and black screen when opening settings panel
+  if (isSessionActive && player) {
+      muteStream();
+  }
+  
   clearUi('channelSettings');
   hideVideoFormatMenu(); 
   iChannelSettingsIndex = 0;
@@ -1218,6 +1306,11 @@ function showChannelSettings() {
 
 function hideChannelSettings() {
   if (!o.ChannelSettings) return;
+
+  // ISSUE 2 FIX: Unmute and restore screen when closing settings panel
+  if (isSessionActive && isMuted) {
+      unmuteStream();
+  }
 
   bChannelSettingsOpened = false;
   o.ChannelSettings.classList.remove('visible');
@@ -1371,9 +1464,20 @@ function saveFavoritesToStorage() {
     First Play handling
     ------------------------- */
 function handleFirstPlay() {
-  if (isSessionActive) return;
+  if (isSessionActive) {
+      // If the session is already active, this button click acts as an unmute toggle
+      if (isMuted) {
+          unmuteStream();
+      }
+      return;
+  }
+  
+  // Start the session
   isSessionActive = true;
 
+  // We set to unmuted when the session first starts
+  unmuteStream(); 
+  
   hideIdleAnimation();
 
   iPlayingChannelIndex = iCurrentChannel;
@@ -1479,6 +1583,7 @@ function toggleFullScreen() {
     Event Listeners
     ------------------------- */
 if (o.PlayButton) {
+    // Keep mousedown to handle the first play, but click handler will manage mute/unmute
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
 } else { console.error("PlayButton element not found."); }
 
@@ -1686,7 +1791,12 @@ function updateStreamInfo() {
 
   try {
     const stats = player.getStats();
-    const currentQuality = player.getQualityLevels()[player.getCurrentQuality() - 1]; 
+    // Use player.getQualityLevels() or default to empty array if undefined
+    const qualityLevels = player.getQualityLevels() || []; 
+    const currentQualityIndex = player.getCurrentQuality();
+    
+    // Quality index 0 is auto in some modes, 1 is the first track.
+    const currentQuality = qualityLevels[currentQualityIndex > 0 ? currentQualityIndex - 1 : 0]; 
     
     if (!stats || !currentQuality) {
         infoOverlay.textContent = 'Player Info: N/A';
@@ -1706,3 +1816,179 @@ function updateStreamInfo() {
 }
 
 document.addEventListener('DOMContentLoaded', initPlayer);
+
+
+/* --- Post-init patching: run after player is available and DOM ready --- */
+function applyPatchesToJW(playerId) {
+  try {
+    const player = jwplayer(playerId || "jwplayer-container");
+    if (!player) {
+      console.warn("JWPlayer instance not found for patching.");
+      return;
+    }
+
+    // 1) Ensure original aspect ratio is preserved:
+    // Use CSS on the player's video element container to use object-fit: contain
+    const container = player.getContainer();
+    if (container) {
+      // Apply container styles to style video element(s)
+      container.style.width = "100%";
+      container.style.height = "100%";
+      container.style.maxHeight = "100%";
+      container.style.overflow = "hidden";
+      // find video tag(s) inside container and set object-fit
+      const vids = container.querySelectorAll("video");
+      vids.forEach(v => {
+        v.style.objectFit = "contain";
+        v.style.width = "100%";
+        v.style.height = "100%";
+      });
+      // Also observe for later-added video elements (some JW builds re-create video nodes)
+      const mo = new MutationObserver((mutations) => {
+        mutations.forEach(m => {
+          m.addedNodes.forEach(node => {
+            if (node.tagName && node.tagName.toLowerCase() === "video") {
+              node.style.objectFit = "contain";
+              node.style.width = "100%";
+              node.style.height = "100%";
+            }
+          });
+        });
+      });
+      mo.observe(container, { childList: true, subtree: true });
+    }
+
+    // ISSUE 1 FIX: Disable pause via click/tap but keep touch events (double-tap) functional
+    // Intercept click in capture phase so JW's internal handlers don't toggle pause.
+    if (container) {
+      // Use a listener that only prevents the single-click toggle, but still allows other handlers.
+      const blockClickToggle = (e) => {
+        // Stop event from propagating to JW Player's internal click handler which toggles pause
+        e.stopImmediatePropagation();
+        // Allow the script's own click handler to run (for single tap/unmute logic)
+      };
+      // Listener is set in the CAPTURE phase (true) to run before the player's listeners
+      container.addEventListener("click", blockClickToggle, true);
+    }
+
+    // ISSUE 1 FIX: Override the player's pause API to be a no-op
+    if (typeof player.pause === "function") {
+      // Keep a reference to the original, though we won't use it for forcing play
+      // const originalPause = player.pause.bind(player);
+      player.pause = function() {
+        console.debug("pause() call blocked by patched script.");
+        // If the player is not IDLE, immediately force it to play again to prevent pause.
+        if (player.getState() !== 'idle' && player.getState() !== 'complete') {
+             try { player.play(true); } catch(e){}
+        }
+        // Return a Promise-like or false depending on JW version expectations:
+        return false;
+      };
+    }
+
+    // ISSUE 1 FIX: If player enters 'pause' state, immediately resume
+    player.on && player.on("pause", () => {
+      console.debug("Detected pause event - auto resuming playback.");
+      // Small timeout to avoid tight loops (already handled in initPlayer, but keep here for robustness)
+      setTimeout(() => {
+        if (player && typeof player.play === "function") try { player.play(true); } catch(e){console.warn(e)}
+      }, 80);
+    });
+
+    // 5) Channel loading visuals:
+    // Show #ChannelLoader when channel switch function (if you have one) calls `showChannelLoader()`.
+    // We'll expose helper functions: showChannelLoader(text) and hideChannelLoader()
+    const loader = document.getElementById("ChannelLoader");
+    const loadingText = document.getElementById("loading-channel-name");
+    if (loader) {
+      // Ensure loader is visible with center animation
+      loader.style.display = "flex";
+      loader.style.opacity = "0";
+      loader.style.transition = "opacity 0.6s ease";
+      loader.classList.add("HIDDEN"); // start hidden
+      // show/hide helpers
+      window.showChannelLoader = function(text) {
+        if (text && loadingText) loadingText.textContent = text;
+        loader.classList.remove("HIDDEN");
+        loader.style.opacity = "1";
+        loader.setAttribute("aria-hidden", "false");
+      };
+      window.hideChannelLoader = function() {
+        loader.style.opacity = "0";
+        loader.setAttribute("aria-hidden", "true");
+        setTimeout(() => {
+          loader.classList.add("HIDDEN");
+        }, 650);
+      };
+    }
+
+    // 6) When playback starts (play event), fade out loader and anime background (#IdleAnimation::before assumed)
+    player.on && player.on("play", () => {
+      console.debug("play event - hiding loaders and fade anime background.");
+      // hide channel loader
+      if (typeof window.hideChannelLoader === "function") window.hideChannelLoader();
+
+      // Fade out IdleAnimation background: set opacity via a helper class on body or IdleAnimation element
+      const idle = document.getElementById("IdleAnimation");
+      if (idle) {
+        idle.classList.remove("visible-idle");
+        // ensure ::before transitions by toggling a class on IdleAnimation
+        idle.style.setProperty('--idle-before-opacity','0');
+      }
+      // Also hide TempMessageOverlay and BlurOverlay if present
+      const temp = document.getElementById("TempMessageOverlay");
+      const blur = document.getElementById("BlurOverlay");
+      if (temp) temp.classList.add("HIDDEN");
+      if (blur) blur.classList.add("HIDDEN");
+      
+      // ISSUE 3 FIX: Ensure play button is hidden once playback starts
+      const playButton = document.getElementById('PlayButton');
+      if (playButton) playButton.classList.add('HIDDEN'); 
+    });
+
+    // 7) If switching channels via your existing function `switchChannel` or similar,
+    // the code should call window.showChannelLoader("Loading Channel...") before changing the source.
+    // We can monkey-patch a common function name if present.
+    if (window.switchChannel && typeof window.switchChannel === "function") {
+      const origSwitch = window.switchChannel.bind(window);
+      window.switchChannel = function() {
+        try { window.showChannelLoader && window.showChannelLoader("Loading Channel..."); } catch(e){}
+        // call the original (allow it to change player source)
+        const result = origSwitch.apply(this, arguments);
+        // after switching, try to play and let play handler hide loader
+        setTimeout(() => {
+          try { player.play(true); } catch(e){}
+        }, 200);
+        return result;
+      };
+    }
+
+    console.info("JWPlayer patches applied.");
+  } catch (err) {
+    console.error("Error applying JWPlayer patches:", err);
+  }
+}
+
+// Wait for DOMContentLoaded and then attempt to apply patches periodically until jwplayer is ready
+document.addEventListener("DOMContentLoaded", () => {
+  const tryApply = () => {
+    if (typeof jwplayer !== "function") return false;
+    try {
+      // If you have configured jwplayer with setup on page load, patch the ID used
+      applyPatchesToJW("jwplayer-container");
+      return true;
+    } catch(e) {
+      return false;
+    }
+  };
+  // Try immediately, then a few times in case player loads async
+  if (!tryApply()) {
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (tryApply() || attempts > 10) clearInterval(interval);
+    }, 400);
+  }
+});
+
+})();
