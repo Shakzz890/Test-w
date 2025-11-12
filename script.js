@@ -94,34 +94,36 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// FIX: Function to ensure the video element style matches the selected aspect ratio
+// FIX: Function to enforce the video element style (Aspect Ratio)
 function ensureVideoElementStyle() {
     const jwVideoElement = o.JwPlayerContainer.querySelector('video');
     if (!jwVideoElement) return;
 
-    const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
-    
-    // Reset properties first
-    jwVideoElement.style.transform = 'scale(1)';
-    jwVideoElement.style.objectFit = 'contain'; // Default: Original/16:9
+    // Use a short timeout to ensure JW Player has initialized the video tag
+    setTimeout(() => {
+        const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
+        
+        // Reset properties first
+        jwVideoElement.style.transform = 'scale(1)';
+        jwVideoElement.style.objectFit = 'contain'; // Default: Original/16:9
 
-    switch(currentFormat) {
-      case 'Stretch':
-        jwVideoElement.style.objectFit = 'fill';
-        break;
-      case 'Fill':
-        jwVideoElement.style.objectFit = 'cover';
-        break;
-      case 'Zoom':
-        jwVideoElement.style.objectFit = 'cover';
-        jwVideoElement.style.transform = 'scale(1.15)';
-        break;
-      case 'Original':
-      case '16:9':
-        jwVideoElement.style.objectFit = 'contain';
-        break;
-      // Note: 'contain' handles 16:9 and original aspect ratio correctly.
-    }
+        switch(currentFormat) {
+          case 'Stretch':
+            jwVideoElement.style.objectFit = 'fill';
+            break;
+          case 'Fill':
+            jwVideoElement.style.objectFit = 'cover';
+            break;
+          case 'Zoom':
+            jwVideoElement.style.objectFit = 'cover';
+            jwVideoElement.style.transform = 'scale(1.15)';
+            break;
+          case 'Original':
+          case '16:9':
+            jwVideoElement.style.objectFit = 'contain';
+            break;
+        }
+    }, 50); // Small delay to catch the video element after player setup
 }
 
 
@@ -199,10 +201,9 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // FIX: Use an aggressive interval to constantly resume playback (disables pause)
+      // FIX: Ensure aspect ratio is applied when the player is ready/reloaded
       player.on('ready', () => {
           if (isSessionActive) {
-              // FIX: Ensure aspect ratio is applied immediately after player is ready
               ensureVideoElementStyle(); 
               startContinuousPlayback();
           }
@@ -540,7 +541,7 @@ async function loadChannel(index, options = {}) {
         playerType = "dash";
     }
     
-    // FIX 1: Use controls: false to hide native controls (helps prevent accidental pause)
+    // Use controls: false to hide native controls (helps prevent accidental pause)
     player.setup({
         file: newChannel.manifestUrl,
         type: playerType,
@@ -560,8 +561,8 @@ async function loadChannel(index, options = {}) {
         // Ensure the continuous playback interval starts/runs
         startContinuousPlayback();
         
-        // FIX 3: Apply the user's last saved aspect ratio after setup
-        // The ready listener handles this after the first successful frame
+        // FIX: Apply custom aspect ratio immediately upon load
+        ensureVideoElementStyle(); 
         
         // Use a short delay to ensure JW Player has processed the manifest
         setTimeout(() => {
@@ -942,6 +943,9 @@ function setAspectRatio(format) {
     }
     localStorage.setItem('iptvAspectRatio', formatName);
     
+    // FIX: Apply style immediately
+    ensureVideoElementStyle();
+
     hideSettingsModal();
     renderVideoFormatMenu(); 
 }
@@ -1053,6 +1057,7 @@ function renderModalContent(type) {
         contentHtml = `<h2>Video Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
       } else if (type === 'subtitles') {
+        // FIX: Subtitle/Audio logic restored
         const textTracks = player.getCaptionList() || []; 
         const audioTracks = player.getAudioTracks() || [];
         const currentTextTrackIndex = player.getCurrentCaptions(); 
@@ -1073,7 +1078,7 @@ function renderModalContent(type) {
         }).join('');
         
         contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
-
+        // END FIX
       } else if (type === 'edit') {
         if (!aFilteredChannelKeys || iPlayingChannelIndex >= aFilteredChannelKeys.length || iPlayingChannelIndex < 0) return '<p>No channel selected.</p>'; 
         const currentChannel = channels[aFilteredChannelKeys[iPlayingChannelIndex]]; 
