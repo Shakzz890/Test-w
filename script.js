@@ -94,43 +94,39 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// --- Enforce Aspect Ratio ---
+// FIX: Function to enforce the video element style (Aspect Ratio)
 function ensureVideoElementStyle() {
-  const jwVideoElement = o.JwPlayerContainer.querySelector('video');
-  if (!jwVideoElement) return;
+    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+    if (!jwVideoElement) return;
 
-  const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
-  const style = jwVideoElement.style;
+    const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
+    
+    // We target the style property directly for high precedence
+    const style = jwVideoElement.style;
+    
+    // Reset properties first
+    style.setProperty('transform', 'scale(1)', 'important');
+    // Set to 'contain' initially, which correctly handles 'Original' and '16:9'
+    style.setProperty('object-fit', 'contain', 'important'); 
 
-  style.setProperty('transform', 'scale(1)', 'important');
-  style.setProperty('object-fit', 'contain', 'important');
-
-  switch(currentFormat) {
-    case 'Stretch':
-      style.setProperty('object-fit', 'fill', 'important');
-      break;
-    case 'Fill':
-      style.setProperty('object-fit', 'cover', 'important');
-      break;
-    case 'Zoom':
-      style.setProperty('object-fit', 'cover', 'important');
-      style.setProperty('transform', 'scale(1.15)', 'important');
-      break;
-  }
+    switch(currentFormat) {
+      case 'Stretch':
+        style.setProperty('object-fit', 'fill', 'important');
+        break;
+      case 'Fill':
+        style.setProperty('object-fit', 'cover', 'important');
+        break;
+      case 'Zoom':
+        style.setProperty('object-fit', 'cover', 'important');
+        style.setProperty('transform', 'scale(1.15)', 'important');
+        break;
+      case 'Original':
+      case '16:9':
+        // The default 'contain' is already set with !important
+        break;
+    }
 }
 
-// --- Attach to JWPlayer lifecycle ---
-o.JwPlayerInstance.on('ready', ensureVideoElementStyle);
-o.JwPlayerInstance.on('play', ensureVideoElementStyle);
-
-// --- When aspect format is changed manually ---
-function changeAspectFormat(format) {
-  localStorage.setItem('iptvAspectRatio', format);
-  ensureVideoElementStyle();
-}
-
-// --- Fullscreen reapply ---
-document.addEventListener('fullscreenchange', ensureVideoElementStyle);
 
 /* -------------------------
     Core Player Functions
@@ -208,8 +204,9 @@ async function initPlayer() {
       
       // FIX: Ensure aspect ratio is applied when the player is ready/reloaded
       player.on('ready', () => {
+          // Immediately apply aspect ratio after JWPlayer initializes the video tag
+          ensureVideoElementStyle(); 
           if (isSessionActive) {
-              ensureVideoElementStyle(); 
               startContinuousPlayback();
           }
       });
@@ -414,15 +411,15 @@ function handleDoubleTapAction() {
 
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
-  let initialChannelKey = Object.keys(channels).find(key => channels[key].name === "Kapamilya Channel HD") || 'kapamilya'; 
-  if (!channels[initialChannelKey]) {
-    initialChannelKey = Object.keys(channels)[0];
-    if (!initialChannelKey) {
-      console.error("No channels defined.");
-      return;
-    }
+  // FIX: Simplified initial channel key logic to ensure a key is found.
+  let initialChannelKey = Object.keys(channels)[0]; 
+  
+  if (!initialChannelKey) {
+    console.error("No channels defined.");
+    return;
   }
 
+  // Ensure initialChannelKey is in the filtered list if loaded later
   if (aFilteredChannelKeys.length === 0) {
     sSelectedGroup = '__all';
     buildNav();
@@ -432,16 +429,13 @@ function loadInitialChannel() {
     }
   }
 
+  // Use stored key only if it's currently in the filtered list
   if (storedLast && channels[storedLast] && aFilteredChannelKeys.includes(storedLast)) {
       initialChannelKey = storedLast;
   }
   else if (!aFilteredChannelKeys.includes(initialChannelKey)) {
+      // Fallback to the first filtered channel
       initialChannelKey = aFilteredChannelKeys[0];
-  }
-
-  if (!initialChannelKey || !aFilteredChannelKeys.includes(initialChannelKey)) {
-      console.error("Could not determine a valid initial channel from filtered list.");
-      return;
   }
 
   const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
@@ -478,21 +472,18 @@ async function loadChannel(index, options = {}) {
   }
 
   if (options.isInitialLoad && !isSessionActive) {
+      // FIX: THIS IS THE KEY POINT. When not active, we just update the UI, not the player.
       console.log("Initial load: Setting channel but not loading stream.");
       localStorage.setItem('iptvLastWatched', newChannelKey);
      
-      const jwVideoElement = o.JwPlayerContainer.querySelector('video');
-      if (jwVideoElement) jwVideoElement.style.opacity = '0';
-     
-      hideLoaderAndShowVideo(); // Ensure loader is hidden from previous session
-     
+      hideLoaderAndShowVideo();
       hideChannelName();
       updateSelectedChannelInNav(); 
       showIdleAnimation(true); 
       return;
   }
 
-  // --- START Loading Visuals ---
+  // --- START Loading Visuals (Only runs if isSessionActive is true) ---
   if (isSessionActive) {
       hideIdleAnimation();
       
@@ -560,14 +551,14 @@ async function loadChannel(index, options = {}) {
     
     // --- BUFFERRING FIX: Enforce playback right after setup ---
     if (isSessionActive) {
+        // FIX: Re-enforce style immediately after setup, when video tag exists
+        ensureVideoElementStyle(); 
+        
         // FIX 2: Explicitly UNMUTE the player when starting a new stream
         player.setMute(false); 
 
         // Ensure the continuous playback interval starts/runs
         startContinuousPlayback();
-        
-        // FIX: Apply custom aspect ratio immediately upon load
-        ensureVideoElementStyle(); 
         
         // Use a short delay to ensure JW Player has processed the manifest
         setTimeout(() => {
@@ -907,9 +898,9 @@ function getAspectRatio() {
     if (!jwVideoElement) return 'Original';
     // Instead of relying on JW's internal state, we read the CSS style we applied manually
     const style = jwVideoElement.style;
-    if (style.objectFit === 'fill') return 'Stretch';
-    if (style.objectFit === 'cover' && style.transform === 'scale(1.15)') return 'Zoom';
-    if (style.objectFit === 'cover') return 'Fill';
+    if (style.getPropertyValue('object-fit') === 'fill') return 'Stretch';
+    if (style.getPropertyValue('object-fit') === 'cover' && style.getPropertyValue('transform') === 'scale(1.15)') return 'Zoom';
+    if (style.getPropertyValue('object-fit') === 'cover') return 'Fill';
     // Fallback to what's stored or 'Original' if CSS is not set (i.e., contain)
     return localStorage.getItem('iptvAspectRatio') || 'Original';
 }
