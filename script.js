@@ -146,8 +146,14 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // FIX 2: Removed player.on('pause') logic entirely.
-      // The stream will now obey the standard pause command (if any) and won't auto-unpause.
+      // FIX 2: Re-implementing logic to disable pausing and force continuous playback
+      // The stream will now immediately resume if paused for any reason, fulfilling the "no pause anymore" request.
+      player.on('pause', () => { 
+        if (isSessionActive && player.getState() !== 'idle' && player.getState() !== 'complete') {
+            // Force play immediately to disable the pause function
+            player.play(true);
+        }
+      });
       
       // --- END JWPLAYER EVENT LISTENERS ---
 
@@ -176,6 +182,7 @@ function handlePlaying() {
   // When playback starts, video is confirmed.
   if (isSessionActive) {
       // FIX 1: Removed player.setMute(false) here to resolve the conflict when opening panels.
+      // Unmuting is now handled explicitly in loadChannel after setup.
       hideLoaderAndShowVideo(); 
   }
 }
@@ -492,6 +499,9 @@ async function loadChannel(index, options = {}) {
     
     // --- BUFFERRING FIX: Enforce playback right after setup ---
     if (isSessionActive) {
+        // FIX 1: Explicitly unmute the player after user interaction (first play or channel switch)
+        player.setMute(false); 
+
         // Use a short delay to ensure JW Player has processed the manifest
         setTimeout(() => {
             const currentState = player.getState();
@@ -1623,7 +1633,7 @@ document.addEventListener('keydown', (e) => {
 
 
   // DEFAULT PLAYER KEYS (Panels are closed)
-  const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
+  const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm', ' '];
   if (!PLAYER_KEYS.includes(e.key)) return;
 
   e.preventDefault();
@@ -1634,7 +1644,14 @@ document.addEventListener('keydown', (e) => {
     case 'ArrowRight': 
         showChannelSettings();
         break;
-    case 'Enter': showChannelName(); break;
+    case 'Enter': 
+    case ' ': // Spacebar often acts as pause/play too
+        if (isSessionActive && player && player.getState() === 'paused') {
+            // Force resume if paused by Enter/Space (uninterruptible playback)
+            player.play(true); 
+        }
+        showChannelName(); // Still show channel name on tap/enter
+        break;
     case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
     case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
     case 'h': window.showGuide(); break;
