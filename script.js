@@ -94,6 +94,37 @@ function scrollToListItem(oListItem) {
     }
 }
 
+// FIX: Function to ensure the video element style matches the selected aspect ratio
+function ensureVideoElementStyle() {
+    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+    if (!jwVideoElement) return;
+
+    const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
+    
+    // Reset properties first
+    jwVideoElement.style.transform = 'scale(1)';
+    jwVideoElement.style.objectFit = 'contain'; // Default: Original/16:9
+
+    switch(currentFormat) {
+      case 'Stretch':
+        jwVideoElement.style.objectFit = 'fill';
+        break;
+      case 'Fill':
+        jwVideoElement.style.objectFit = 'cover';
+        break;
+      case 'Zoom':
+        jwVideoElement.style.objectFit = 'cover';
+        jwVideoElement.style.transform = 'scale(1.15)';
+        break;
+      case 'Original':
+      case '16:9':
+        jwVideoElement.style.objectFit = 'contain';
+        break;
+      // Note: 'contain' handles 16:9 and original aspect ratio correctly.
+    }
+}
+
+
 /* -------------------------
     Core Player Functions
     ------------------------- */
@@ -171,6 +202,8 @@ async function initPlayer() {
       // FIX: Use an aggressive interval to constantly resume playback (disables pause)
       player.on('ready', () => {
           if (isSessionActive) {
+              // FIX: Ensure aspect ratio is applied immediately after player is ready
+              ensureVideoElementStyle(); 
               startContinuousPlayback();
           }
       });
@@ -497,8 +530,6 @@ async function loadChannel(index, options = {}) {
         playerType = "dash";
     } else if (newChannel.type === "clearkey") {
         if (newChannel.keyId && newChannel.key) {
-            // Note: JW Player expects clearkey config directly in the file block for clear streams
-            // We'll set it up as generic DRM for compliance, though JW typically handles clear keys via `license` property.
             drmConfig.clearkey = {
                 keyId: newChannel.keyId, 
                 key: newChannel.key      
@@ -528,6 +559,9 @@ async function loadChannel(index, options = {}) {
 
         // Ensure the continuous playback interval starts/runs
         startContinuousPlayback();
+        
+        // FIX 3: Apply the user's last saved aspect ratio after setup
+        // The ready listener handles this after the first successful frame
         
         // Use a short delay to ensure JW Player has processed the manifest
         setTimeout(() => {
@@ -865,18 +899,25 @@ function renderVideoFormatMenu() {
 function getAspectRatio() {
     const jwVideoElement = o.JwPlayerContainer.querySelector('video');
     if (!jwVideoElement) return 'Original';
+    // Instead of relying on JW's internal state, we read the CSS style we applied manually
     const style = jwVideoElement.style;
     if (style.objectFit === 'fill') return 'Stretch';
     if (style.objectFit === 'cover' && style.transform === 'scale(1.15)') return 'Zoom';
     if (style.objectFit === 'cover') return 'Fill';
+    // Fallback to what's stored or 'Original' if CSS is not set (i.e., contain)
     return localStorage.getItem('iptvAspectRatio') || 'Original';
 }
 
 function setAspectRatio(format) {
     const jwVideoElement = o.JwPlayerContainer.querySelector('video');
     if (!jwVideoElement) return;
-    jwVideoElement.style.transform = 'scale(1)';
+    
     let formatName = 'Original';
+    
+    // Reset properties
+    jwVideoElement.style.transform = 'scale(1)';
+    jwVideoElement.style.objectFit = 'contain';
+
     switch(format) {
       case 'stretch':
         jwVideoElement.style.objectFit = 'fill';
@@ -896,7 +937,7 @@ function setAspectRatio(format) {
         formatName = 'Zoom';
         break;
       default:
-        jwVideoElement.style.objectFit = 'contain';
+        // Already set to contain above
         formatName = 'Original';
     }
     localStorage.setItem('iptvAspectRatio', formatName);
@@ -973,10 +1014,10 @@ function renderModalContent(type) {
           const currentFormat = getAspectRatio();
           let itemsHtml = `
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('original')">
-                Original ${currentFormat === 'Original' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Original ${currentFormat === 'Original' || currentFormat === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('16:9')">
-                16:9 ${currentFormat === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                16:9 (Default) ${currentFormat === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('fill')">
                 Fill ${currentFormat === 'Fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
