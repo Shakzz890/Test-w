@@ -50,22 +50,39 @@
             z-index: 1; 
         }
 
-        /* --- FIX: Target the JW Player container and the video element inside it --- */
-        #jwplayer-container, 
-        #jwplayer-container video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            opacity: 1;
-            transition: opacity 0.3s ease-in-out;
-        }
-        
-        /* --- FIX: Force hide JW Player default controls --- */
-        .jw-controls {
-            display: none !important;
-            pointer-events: none !important;
-        }
-        /* --- END FIX --- */
+        /* --- FIXED JWPlayer container + video styles --- */
+#jwplayer-container {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9; /* fallback shape before playback starts */
+  position: relative;
+  overflow: hidden;
+  background: #000; /* prevents white background flashes */
+}
+
+/* Let JWPlayer and your JS manage sizing dynamically */
+#jwplayer-container video {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  transition: opacity 0.3s ease-in-out;
+  opacity: 1;
+}
+
+/* Hide JWPlayer’s default controls (since you use custom UI) */
+.jw-controls {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Optional: ensure fullscreen behaves correctly */
+:fullscreen #jwplayer-container video,
+#jwplayer-container:fullscreen video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 
         /* ------------------------- UTILITY CLASSES ------------------------- */
         .fullscreen {
