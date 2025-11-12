@@ -50,7 +50,7 @@
             z-index: 1; 
         }
 
-        /* --- JWPLAYER CONTAINER BASE --- */
+/* --- JWPLAYER CONTAINER BASE --- */
 #jwplayer-container {
   width: 100%;
   max-width: 100%;
@@ -107,6 +107,12 @@
     height: auto;
     max-height: 50vh;
   }
+
+  #jwplayer-container video {
+    object-fit: contain;
+  }
+} 
+
 
   #jwplayer-container video {
     object-fit: contain;
