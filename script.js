@@ -105,24 +105,24 @@ function ensureVideoElementStyle() {
     const style = jwVideoElement.style;
     
     // Reset properties first
-    style.transform = 'scale(1)';
+    style.setProperty('transform', 'scale(1)', 'important');
     // Set to 'contain' initially, which correctly handles 'Original' and '16:9'
-    style.objectFit = 'contain'; 
+    style.setProperty('object-fit', 'contain', 'important'); 
 
     switch(currentFormat) {
       case 'Stretch':
-        style.objectFit = 'fill';
+        style.setProperty('object-fit', 'fill', 'important');
         break;
       case 'Fill':
-        style.objectFit = 'cover';
+        style.setProperty('object-fit', 'cover', 'important');
         break;
       case 'Zoom':
-        style.objectFit = 'cover';
-        style.transform = 'scale(1.15)';
+        style.setProperty('object-fit', 'cover', 'important');
+        style.setProperty('transform', 'scale(1.15)', 'important');
         break;
       case 'Original':
       case '16:9':
-        // Already set to contain above
+        // The default 'contain' is already set with !important
         break;
     }
 }
@@ -916,35 +916,37 @@ function setAspectRatio(format) {
     
     let formatName = 'Original';
     
-    // Reset properties
-    jwVideoElement.style.transform = 'scale(1)';
-    jwVideoElement.style.objectFit = 'contain';
-
+    // Apply style using setProperty('...', '...','!important') for maximum CSS priority
     switch(format) {
       case 'stretch':
-        jwVideoElement.style.objectFit = 'fill';
+        jwVideoElement.style.setProperty('object-fit', 'fill', 'important');
+        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
         formatName = 'Stretch';
         break;
       case '16:9':
-        jwVideoElement.style.objectFit = 'contain';
+        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
+        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
         formatName = '16:9';
         break;
       case 'fill':
-        jwVideoElement.style.objectFit = 'cover';
+        jwVideoElement.style.setProperty('object-fit', 'cover', 'important');
+        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
         formatName = 'Fill';
         break;
       case 'zoom':
-        jwVideoElement.style.objectFit = 'cover';
-        jwVideoElement.style.transform = 'scale(1.15)';
+        jwVideoElement.style.setProperty('object-fit', 'cover', 'important');
+        jwVideoElement.style.setProperty('transform', 'scale(1.15)', 'important');
         formatName = 'Zoom';
         break;
       default:
-        // Already set to contain above
+        // Original: uses contain, no transform
+        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
+        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
         formatName = 'Original';
     }
     localStorage.setItem('iptvAspectRatio', formatName);
     
-    // FIX: Apply style immediately
+    // Call the enforcer explicitly just in case
     ensureVideoElementStyle();
 
     hideSettingsModal();
