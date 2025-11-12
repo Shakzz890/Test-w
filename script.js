@@ -99,28 +99,30 @@ function ensureVideoElementStyle() {
     const jwVideoElement = o.JwPlayerContainer.querySelector('video');
     if (!jwVideoElement) return;
 
-    // We apply the style directly, without a delay, and rely on the lifecycle hooks
-    // (ready, loadChannel, setAspectRatio) to call this function at the right time.
     const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
     
+    // We target the style property directly for high precedence
+    const style = jwVideoElement.style;
+    
     // Reset properties first
-    jwVideoElement.style.transform = 'scale(1)';
-    jwVideoElement.style.objectFit = 'contain'; // Default: Original/16:9
+    style.transform = 'scale(1)';
+    // Set to 'contain' initially, which correctly handles 'Original' and '16:9'
+    style.objectFit = 'contain'; 
 
     switch(currentFormat) {
       case 'Stretch':
-        jwVideoElement.style.objectFit = 'fill';
+        style.objectFit = 'fill';
         break;
       case 'Fill':
-        jwVideoElement.style.objectFit = 'cover';
+        style.objectFit = 'cover';
         break;
       case 'Zoom':
-        jwVideoElement.style.objectFit = 'cover';
-        jwVideoElement.style.transform = 'scale(1.15)';
+        style.objectFit = 'cover';
+        style.transform = 'scale(1.15)';
         break;
       case 'Original':
       case '16:9':
-        jwVideoElement.style.objectFit = 'contain';
+        // Already set to contain above
         break;
     }
 }
