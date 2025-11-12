@@ -146,12 +146,9 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // Force play if the player attempts to pause (Simulating no pause in a live stream environment)
-      player.on('pause', () => { 
-        if (player.getState() !== 'idle' && player.getState() !== 'complete') {
-            player.play(true);
-        }
-      });
+      // FIX 2: Removed player.on('pause') logic entirely.
+      // The stream will now obey the standard pause command (if any) and won't auto-unpause.
+      
       // --- END JWPLAYER EVENT LISTENERS ---
 
   } else {
@@ -178,6 +175,7 @@ function handleBuffering(event) {
 function handlePlaying() {
   // When playback starts, video is confirmed.
   if (isSessionActive) {
+      // FIX 1: Removed player.setMute(false) here to resolve the conflict when opening panels.
       hideLoaderAndShowVideo(); 
   }
 }
@@ -253,7 +251,7 @@ function setupControls() {
       const currentTime = new Date().getTime();
       if (currentTime - lastTapTime < 300) {
         e.preventDefault();
-        handleDoubleTapAction();
+        // Removed double-tap action as requested
         lastTapTime = 0;
       } else {
         lastTapTime = currentTime;
@@ -277,6 +275,7 @@ function setupControls() {
       handleSingleTapAction();
     } else {
       if (currentTime - lastTapTime < 300) {
+        // Double click was here, now disabled.
       } else {
         handleSingleTapAction();
         lastTapTime = currentTime;
@@ -286,7 +285,7 @@ function setupControls() {
 
   playerContainer.addEventListener('dblclick', e => {
     e.preventDefault();
-    handleDoubleTapAction();
+    // Removed double-tap action as requested
   });
 }
 
