@@ -1,11 +1,12 @@
 let player = null; 
 let ui = null; 
-// Removed continuousPlayInterval since the native video listener is more reliable
+// Added to maintain consistent state tracking outside of JW Player controls
+let continuousPlayInterval = null; 
 
 const o = {
   PlayerContainer: document.getElementById('playerContainer'),
-  // Using AvPlayer for the HTML5 video element container (Shaka player)
-  AvPlayer: document.getElementById('avplayer'), 
+  // Correctly mapping to the HTML ID: jwplayer-container
+  JwPlayerContainer: document.getElementById('jwplayer-container'), 
   Nav: document.getElementById('nav'),
   GroupList: document.getElementById('GroupList'),
   DynamicGroupsList: document.getElementById('DynamicGroupsList'),
@@ -96,6 +97,27 @@ function scrollToListItem(oListItem) {
 /* -------------------------
     Core Player Functions
     ------------------------- */
+
+// Function to force continuous playback (FIX: Disables all pausing)
+function startContinuousPlayback() {
+    // Clear any previous interval just in case
+    if (continuousPlayInterval) clearInterval(continuousPlayInterval);
+    
+    // Check and force play every 200ms if the player is paused
+    continuousPlayInterval = setInterval(() => {
+        if (player && isSessionActive && player.getState() === 'paused') {
+            player.play(true);
+        }
+    }, 200); 
+}
+
+function stopContinuousPlayback() {
+    if (continuousPlayInterval) {
+        clearInterval(continuousPlayInterval);
+        continuousPlayInterval = null;
+    }
+}
+
 async function initPlayer() {
   Object.keys(channels).forEach((key, i) => {
     channels[key].number = i + 1;
@@ -127,62 +149,41 @@ async function initPlayer() {
   buildNav();
   updateSelectedGroupInNav();
 
-  await shaka.polyfill.installAll();
-  if (!shaka.Player.isBrowserSupported()) {
-    console.error("Browser not supported");
-    return;
+  // --- JWPLAYER INITIALIZATION ---
+  if (typeof jwplayer !== 'undefined') {
+      player = jwplayer(o.JwPlayerContainer); 
+
+      // --- ADD JWPLAYER EVENT LISTENERS ---
+      player.on('error', e => {
+          console.error('JW Player Error:', e.message || e);
+          if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
+          showIdleAnimation(true);
+          // Aggressive loader hide on error (in case it was still visible)
+          hideLoaderAndShowVideo(); 
+          stopContinuousPlayback(); // Stop aggressive playback on error
+      });
+      
+      player.on('levels', renderChannelSettings);
+      player.on('bufferChange', handleBuffering);
+      player.on('play', handlePlaying); 
+      player.on('levelsChanged', updateStreamInfo);
+      
+      // FIX: Use an aggressive interval to constantly resume playback (disables pause)
+      player.on('ready', () => {
+          if (isSessionActive) {
+              startContinuousPlayback();
+          }
+      });
+
+      player.on('remove', () => {
+          stopContinuousPlayback();
+      });
+      // --- END JWPLAYER EVENT LISTENERS ---
+
+  } else {
+      console.error("JWPlayer library not loaded.");
+      return;
   }
-
-  player = new shaka.Player();
-  // SHAKA UI CUSTOMIZATION (PIP ONLY)
-  ui = new shaka.ui.Overlay(player, o.PlayerContainer, o.AvPlayer);
-  
-  ui.configure({
-    controlPanelElements: ['pip'], // Only show PIP button
-    overflowMenuButtons: [], 
-    addSeekBar: false,
-    addBigPlayButton: false,
-    showBuffering: true,
-    clickToPlay: false, 
-    enableControlsFade: false // Hard disable fade
-  });
-  
-  player.attach(o.AvPlayer);
-
-  // --- ULTIMATE PAUSE KILLER FIX ---
-  // If the video pauses for ANY reason (OS, keyboard, click event that slipped through), force it back to play.
-  o.AvPlayer.addEventListener('pause', (e) => {
-    if (isSessionActive && !o.AvPlayer.ended) {
-        // e.preventDefault(); // Sometimes necessary, sometimes causes errors, relying on play()
-        o.AvPlayer.play().catch(err => console.log("Pause override failed:", err));
-    }
-  });
-  // --- END PAUSE KILLER FIX ---
-
-  player.configure({
-    abr: { defaultBandwidthEstimate: 3000000 }, 
-    streaming: {
-      rebufferingGoal: 5, 
-      bufferingGoal: 10 
-    }
-  });
-
-  player.addEventListener('error', e => {
-      console.error('Shaka Error:', e.detail);
-      if (o.ChannelLoader) {
-        clearTimeout(loaderFadeTimeout);
-        o.ChannelLoader.classList.add('HIDDEN');
-        o.ChannelLoader.style.opacity = '1';
-        o.ChannelLoader.classList.remove('fade-out');
-      }
-      if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
-  });
-
-  player.addEventListener('trackschanged', renderChannelSettings);
-  player.addEventListener('buffering', handleBuffering);
-  player.addEventListener('playing', handlePlaying);
-  player.addEventListener('adaptation', updateStreamInfo);
-  player.addEventListener('streaming', updateStreamInfo);
 
   setupControls();
   
@@ -193,34 +194,38 @@ async function initPlayer() {
 // --- Simplified handleBuffering ---
 function handleBuffering(event) {
   clearTimeout(loaderFadeTimeout);
-  if (!event.buffering) {
+  if (!event.buffer) {
+    // When buffering stops, video should be showing.
     hideLoaderAndShowVideo(); 
   }
 }
 
 // --- Simplified handlePlaying ---
 function handlePlaying() {
-  hideLoaderAndShowVideo();
+  // When playback starts, video is confirmed.
+  if (isSessionActive) {
+      hideLoaderAndShowVideo(); 
+      // Ensure continuous playback is active after the stream starts
+      startContinuousPlayback(); 
+  }
 }
 
 // --- Aggressive and Simplified hideLoaderAndShowVideo function ---
 function hideLoaderAndShowVideo() { 
       clearTimeout(loaderFadeTimeout);
       
-      if (o.AvPlayer) o.AvPlayer.style.opacity = '1';
+      // 1. Ensure player area visibility
+      if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
 
       hideIdleAnimation(); 
 
       if (o.ChannelLoader) {
-          o.ChannelLoader.classList.add('fade-out');
-
-          loaderFadeTimeout = setTimeout(() => {
-              if (o.ChannelLoader) {
-                o.ChannelLoader.classList.add('HIDDEN');
-                o.ChannelLoader.style.opacity = '1';
-                o.ChannelLoader.classList.remove('fade-out');
-              }
-          }, 500);
+          // 2. Clear all classes and immediately set display/visibility to HIDDEN.
+          o.ChannelLoader.classList.remove('fade-out');
+          o.ChannelLoader.classList.add('HIDDEN');
+          
+          // 3. Reset opacity for next load cycle (HIDDEN sets opacity:0 in CSS)
+          // Note: Since .HIDDEN already sets display:none, this ensures the loader is gone.
       }
 }
 // --- END Aggressive function ---
@@ -228,7 +233,6 @@ function hideLoaderAndShowVideo() {
 function setupControls() {
   const playerContainer = o.PlayerContainer;
 
-  // Touch and Swipe handling remains the same
   playerContainer.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
       touchStartX = e.touches[0].clientX;
@@ -249,7 +253,12 @@ function setupControls() {
     if (e.changedTouches.length !== 1) return;
 
     const targetElement = document.elementFromPoint(touchStartX, touchStartY);
-    if (targetElement && (targetElement.closest('#nav') || targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay') || targetElement.closest('#PlayButton'))) {
+    if (targetElement && (targetElement.closest('#nav') || targetElement.closest('#ChannelSettings') || targetElement.closest('#SettingsModal') || targetElement.closest('#Guide') || targetElement.closest('#EpgOverlay'))) {
+      touchStartX = touchStartY = touchEndX = touchEndY = 0;
+      return;
+    }
+   
+    if (targetElement && targetElement.closest('#PlayButton')) {
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
       return;
     }
@@ -270,7 +279,7 @@ function setupControls() {
 
     if (absDeltaX < TAP_THRESHOLD && absDeltaY < TAP_THRESHOLD) {
       const currentTime = new Date().getTime();
-      if (currentTime - lastTapTime < 300) { 
+      if (currentTime - lastTapTime < 300) {
         e.preventDefault();
         handleDoubleTapAction();
         lastTapTime = 0;
@@ -282,9 +291,10 @@ function setupControls() {
     touchStartX = touchStartY = touchEndX = touchEndY = 0;
   }, { passive: false });
 
-  // Single Click/Tap Handler (Only triggered if not a double click and not over a UI panel)
   playerContainer.addEventListener('click', e => {
-    if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay') || e.target.closest('#PlayButton'))) {
+    if (e.target && e.target.closest('#PlayButton')) return;
+   
+    if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay'))) {
       return;
     }
 
@@ -295,7 +305,6 @@ function setupControls() {
       handleSingleTapAction();
     } else {
       if (currentTime - lastTapTime < 300) {
-        // Double-click handled by dblclick listener below
       } else {
         handleSingleTapAction();
         lastTapTime = currentTime;
@@ -305,23 +314,18 @@ function setupControls() {
 
   playerContainer.addEventListener('dblclick', e => {
     e.preventDefault();
-    handleDoubleTapAction(); // DOUBLE-TAP/CLICK Fullscreen
+    handleDoubleTapAction();
   });
-  
-  // Prevent default native video element pause/play on click (essential for the pause fix)
-  if (o.AvPlayer) {
-      o.AvPlayer.addEventListener('click', (e) => e.preventDefault());
-  }
 }
 
-// --- SWIPE LOGIC (Copied from the last provided file) ---
+// --- SWIPE LOGIC ---
 function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
   const isHorizontal = absDeltaX > absDeltaY;
   
   if (bGuideOpened || bEpgOpened || bSettingsModalOpened) return;
 
   if (isHorizontal) {
-    if (deltaX > 0) { // --- Swipe Left-to-Right ---
+    if (deltaX > 0) {
       
       if (bChannelSettingsOpened) {
         hideChannelSettings();
@@ -331,7 +335,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
         showNav();
       }
 
-    } else if (deltaX < 0) { // --- Swipe Right-to-Left ---
+    } else if (deltaX < 0) {
       
       if (bNavOpened && bGroupsOpened) {
         hideGroups();
@@ -342,7 +346,7 @@ function handleSwipeGesture(deltaX, deltaY, absDeltaX, absDeltaY) {
       }
     }
   
-  } else { // Vertical Swipe
+  } else {
     if (!bNavOpened && !bChannelSettingsOpened) {
       if (deltaY > 0) {
           loadChannel(iCurrentChannel + 1);
@@ -409,13 +413,13 @@ function loadInitialChannel() {
 }
 
 
-// --- Reconstructed loadChannel for Shaka Player ---
+// --- Reconstructed loadChannel for JWPlayer ---
 async function loadChannel(index, options = {}) {
   clearTimeout(loaderFadeTimeout);
 
   if (!aFilteredChannelKeys || aFilteredChannelKeys.length === 0) {
     console.warn("loadChannel called with no filtered channels available.");
-    try { await player?.unload(); } catch {} 
+    try { player?.stop(); } catch {} 
     showIdleAnimation(true);
     return;
   }
@@ -435,17 +439,14 @@ async function loadChannel(index, options = {}) {
   }
 
   if (options.isInitialLoad && !isSessionActive) {
+      console.log("Initial load: Setting channel but not loading stream.");
       localStorage.setItem('iptvLastWatched', newChannelKey);
      
-      if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
+      const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+      if (jwVideoElement) jwVideoElement.style.opacity = '0';
      
-      if (o.ChannelLoader) { 
-        clearTimeout(loaderFadeTimeout);
-        o.ChannelLoader.classList.add('HIDDEN');
-        o.ChannelLoader.style.opacity = '1';
-        o.ChannelLoader.classList.remove('fade-out');
-      }
-      
+      hideLoaderAndShowVideo(); // Ensure loader is hidden from previous session
+     
       hideChannelName();
       updateSelectedChannelInNav(); 
       showIdleAnimation(true); 
@@ -456,6 +457,7 @@ async function loadChannel(index, options = {}) {
   if (isSessionActive) {
       hideIdleAnimation();
       
+      // SHOW LOADER (Restored visual feedback)
       if (o.ChannelLoader) {
         const loaderText = document.getElementById('loading-channel-name');
         if (loaderText) {
@@ -478,50 +480,82 @@ async function loadChannel(index, options = {}) {
 
   localStorage.setItem('iptvLastWatched', newChannelKey);
 
-  if (o.AvPlayer) o.AvPlayer.style.opacity = '0';
+  const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+  if (jwVideoElement) jwVideoElement.style.opacity = '0';
+
 
   hideChannelName();
   updateSelectedChannelInNav();
 
   try {
-    // 1. Configure DRM/ClearKeys
-    player.configure('drm.clearKeys', {});
-    if (newChannel.type === 'clearkey' && newChannel.keyId && newChannel.key) {
-      player.configure({ drm: { clearKeys: { [newChannel.keyId]: newChannel.key } } });
-    }
+    // --- CORE JW PLAYER SETUP LOGIC ---
+    const drmConfig = {};
+    let playerType = newChannel.type === "hls" ? "hls" : "dash";
 
-    // 2. Configure User-Agent
-    player.getNetworkingEngine()?.clearAllRequestFilters();
-    if (newChannel.userAgent) {
-      player.getNetworkingEngine()?.registerRequestFilter((type, request) => {
-        request.headers['User-Agent'] = newChannel.userAgent;
-      });
-    }
-
-    // 3. Load the stream
-    await player.load(newChannel.manifestUrl);
-
-    if (isSessionActive && o.AvPlayer) {
-      // FIX 1: Explicitly UNMUTE the video element on stream start.
-      o.AvPlayer.muted = false; 
-      
-      // Force play after load
-      o.AvPlayer.play().catch(e => console.warn("Autoplay after load prevented:", e));
-      
-      showChannelName();
+    if (newChannel.type === "widevine") {
+        drmConfig.widevine = { url: newChannel.licenseServerUri };
+        playerType = "dash";
+    } else if (newChannel.type === "clearkey") {
+        if (newChannel.keyId && newChannel.key) {
+            // Note: JW Player expects clearkey config directly in the file block for clear streams
+            // We'll set it up as generic DRM for compliance, though JW typically handles clear keys via `license` property.
+            drmConfig.clearkey = {
+                keyId: newChannel.keyId, 
+                key: newChannel.key      
+            };
+        }
+        playerType = "dash";
+    } else if (newChannel.type === "dash") {
+        playerType = "dash";
     }
     
+    // FIX 1: Use controls: false to hide native controls (helps prevent accidental pause)
+    player.setup({
+        file: newChannel.manifestUrl,
+        type: playerType,
+        drm: Object.keys(drmConfig).length ? drmConfig : undefined,
+        autostart: isSessionActive, 
+        width: "100%",
+        aspectratio: "16:9",
+        controls: false // Hide controls to prevent native pause actions
+    });
+    // --- END CORE JW PLAYER SETUP LOGIC ---
+    
+    // --- BUFFERRING FIX: Enforce playback right after setup ---
+    if (isSessionActive) {
+        // FIX 2: Explicitly UNMUTE the player when starting a new stream
+        player.setMute(false); 
+
+        // Ensure the continuous playback interval starts/runs
+        startContinuousPlayback();
+        
+        // Use a short delay to ensure JW Player has processed the manifest
+        setTimeout(() => {
+            const currentState = player.getState();
+            // Force play if needed
+            if (currentState === 'buffering' || currentState === 'paused' || currentState === 'idle') {
+                player.play(true);
+            }
+            // Aggressive cleanup after forced play/buffer
+            hideLoaderAndShowVideo(); 
+        }, 500); // 500ms delay
+        
+        showChannelName();
+    }
+    // --- END BUFFERRING FIX ---
+
   } catch (error) {
     console.error(`Error loading channel "${newChannel?.name}":`, error);
     showIdleAnimation(true);
+    // Aggressive cleanup on fail
     hideLoaderAndShowVideo(); 
-    if (o.AvPlayer) o.AvPlayer.style.opacity = '1'; 
+    if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1'; 
   }
 }
 // --- END loadChannel ---
 
 /* -------------------------
-    UI and Navigation (omitted for brevity, assume correctly linked)
+    UI and Navigation
     ------------------------- */
 function setupMainMenuControls() {
   const guideBtn = getEl('guide_button');
@@ -634,7 +668,7 @@ function selectGroup(index) {
       updateSelectedChannelInNav();
       if (isSessionActive) { hideIdleAnimation(); }
     } else {
-      try { player?.unload(); } catch {}
+      try { player?.stop(); } catch {}
       showIdleAnimation(true);
     }
   };
@@ -781,10 +815,12 @@ function renderChannelSettings() {
   const currentChannel = channels[currentChannelKey];
   if (!currentChannel) return;
 
+  const isPlayerLoaded = player?.getPlaylistItem();
+
   if (o.SettingsMainMenu) {
       o.SettingsMainMenu.innerHTML = `
-        <div class="settings-item" onclick="showSettingsModal('subtitles')">Subtitle / Audio</div>
-        <div class="settings-item" onclick="showVideoFormatMenu()">Video / Format</div>
+        <div class="settings-item ${isPlayerLoaded ? '' : 'disabled'}" onclick="${isPlayerLoaded ? "showSettingsModal('subtitles')" : ""}">Subtitle / Audio</div>
+        <div class="settings-item ${isPlayerLoaded ? '' : 'disabled'}" onclick="${isPlayerLoaded ? "showVideoFormatMenu()" : ""}">Video / Format</div>
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
         <div class="settings-item" onclick="showSettingsModal('edit')">Edit Channel Info</div>
       `;
@@ -827,8 +863,9 @@ function renderVideoFormatMenu() {
 }
 
 function getAspectRatio() {
-    if (!o.AvPlayer) return 'Original';
-    const style = o.AvPlayer.style;
+    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+    if (!jwVideoElement) return 'Original';
+    const style = jwVideoElement.style;
     if (style.objectFit === 'fill') return 'Stretch';
     if (style.objectFit === 'cover' && style.transform === 'scale(1.15)') return 'Zoom';
     if (style.objectFit === 'cover') return 'Fill';
@@ -836,29 +873,30 @@ function getAspectRatio() {
 }
 
 function setAspectRatio(format) {
-    if (!o.AvPlayer) return;
-    o.AvPlayer.style.transform = 'scale(1)';
+    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+    if (!jwVideoElement) return;
+    jwVideoElement.style.transform = 'scale(1)';
     let formatName = 'Original';
     switch(format) {
       case 'stretch':
-        o.AvPlayer.style.objectFit = 'fill';
+        jwVideoElement.style.objectFit = 'fill';
         formatName = 'Stretch';
         break;
       case '16:9':
-        o.AvPlayer.style.objectFit = 'contain';
+        jwVideoElement.style.objectFit = 'contain';
         formatName = '16:9';
         break;
       case 'fill':
-        o.AvPlayer.style.objectFit = 'cover';
+        jwVideoElement.style.objectFit = 'cover';
         formatName = 'Fill';
         break;
       case 'zoom':
-        o.AvPlayer.style.objectFit = 'cover';
-        o.AvPlayer.style.transform = 'scale(1.15)';
+        jwVideoElement.style.objectFit = 'cover';
+        jwVideoElement.style.transform = 'scale(1.15)';
         formatName = 'Zoom';
         break;
       default:
-        o.AvPlayer.style.objectFit = 'contain';
+        jwVideoElement.style.objectFit = 'contain';
         formatName = 'Original';
     }
     localStorage.setItem('iptvAspectRatio', formatName);
@@ -898,32 +936,38 @@ window.hideSettingsModal = () => {
   if (o.BlurOverlay) o.BlurOverlay.classList.remove('visible');
 };
 
-function setQuality(selected) {
-    if (!player) return hideSettingsModal();
-    
-    try {
-      if (selected === 'auto') {
-        player.configure({ abr: { enabled: true } });
-      } else {
-        player.configure({ abr: { enabled: false } });
-        // Use the track ID provided as 'selected'
-        const trackToSelect = (player.getVariantTracks() || []).find(t => t.id == selected);
-        if (trackToSelect) { player.selectVariantTrack(trackToSelect, true); }
-        else { console.warn("Selected quality track not found:", selected); player.configure({ abr: { enabled: true } }); }
-      }
-    } catch(error) { 
-        console.error("Error applying quality setting:", error); 
-        try { player.configure({ abr: { enabled: true } }); } catch {}
-    }
-    
-    hideSettingsModal(); 
-}
+// --- setQuality logic updated for JWPlayer ---
+window.setQuality = (selected) => {
+  if (!player || !player.getPlaylistItem()) return hideSettingsModal();
+  
+  try {
+    if (selected === 'auto') {
+      player.setQuality(0); // 0 for auto
+    } else {
+      const levels = player.getQualityLevels() || [];
+      const levelIndex = levels.findIndex(level => level.label === selected); 
 
-// --- renderModalContent logic updated for Shaka Player ---
+      if (levelIndex !== -1) { 
+          player.setQuality(levelIndex + 1); // JW Player uses 1-based index for quality tracks
+      } else { 
+          console.warn("Selected quality track not found:", selected); 
+          player.setQuality(0); 
+      }
+    }
+  } catch(error) { 
+      console.error("Error applying quality setting:", error); 
+      try { player.setQuality(0); } catch {}
+  }
+  
+  hideSettingsModal(); 
+}
+// --- END setQuality ---
+
+// --- renderModalContent logic updated for JWPlayer ---
 function renderModalContent(type) {
   let contentHtml = '';
   try {
-      if (!player) return '<p>Please start playing a channel first.</p>';
+      if (!player || !player.getPlaylistItem()) return '<p>Please start playing a channel first.</p>';
 
       if (type === 'aspect_ratio') {
           const currentFormat = getAspectRatio();
@@ -952,42 +996,39 @@ function renderModalContent(type) {
                        </div>`;
       
       } else if (type === 'quality') {
-        // Filter and sort tracks by height/resolution
-        const tracks = [...new Map((player.getVariantTracks() || []).filter(t => t.height).map(t => [t.height, t])).values()].sort((a,b)=>b.height-a.height);
-        const abrEnabled = player.getConfiguration()?.abr?.enabled;
-        const activeTrack = player.getVariantTracks().find(t => t.active);
+        const levels = player.getQualityLevels() || [];
+        const currentLevelIndex = player.getCurrentQuality();
         
-        let itemsHtml = `<li class="modal-selectable" data-action="quality" data-value="auto" onclick="setQuality('auto')">Auto <input type="radio" name="quality" value="auto" ${abrEnabled ? 'checked' : ''}></li>`;
+        let itemsHtml = `<li class="modal-selectable" data-action="quality" data-value="auto" onclick="setQuality('auto')">Auto <input type="radio" name="quality" value="auto" ${currentLevelIndex === 0 ? 'checked' : ''}></li>`;
         
-        tracks.forEach(track => {
-          const bps = track.bandwidth > 1000000 ? `${(track.bandwidth/1e6).toFixed(2)} Mbps` : `${Math.round(track.bandwidth/1e3)} Kbps`;
-          // Use track.id as the data-value for manual selection
-          const isChecked = !abrEnabled && activeTrack && activeTrack.id === track.id; 
+        levels.forEach((track, index) => {
+          const bps = track.bitrate > 1000000 ? `${(track.bitrate/1e6).toFixed(2)} Mbps` : `${Math.round(track.bitrate/1e3)} Kbps`;
+          const label = track.label || `${track.height}p`; 
+          const isChecked = (index + 1) === currentLevelIndex; 
           
-          itemsHtml += `<li class="modal-selectable" data-action="quality" data-value='${track.id}' onclick="setQuality('${track.id}')">${track.height}p, ${bps} <input type="radio" name="quality" value='${track.id}' ${isChecked ? 'checked' : ''}></li>`;
+          itemsHtml += `<li class="modal-selectable" data-action="quality" data-value='${label}' onclick="setQuality('${label}')">${label}, ${bps} <input type="radio" name="quality" value='${label}' ${isChecked ? 'checked' : ''}></li>`;
         });
         
         contentHtml = `<h2>Video Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
       } else if (type === 'subtitles') {
-        const textTracks = player.getTextTracks() || []; 
-        const audioTracks = player.getAudioLanguagesAndRoles() || [];
-        const textTrackVisible = player.isTextTrackVisible();
-        const activeTextTrack = player.getTextTracks().find(t => t.active);
-        const activeAudioTrack = player.getAudioLanguagesAndRoles().find(t => t.active);
+        const textTracks = player.getCaptionList() || []; 
+        const audioTracks = player.getAudioTracks() || [];
+        const currentTextTrackIndex = player.getCurrentCaptions(); 
+        const currentAudioTrackIndex = player.getCurrentAudioTrack(); 
 
-
-        let subItemsHtml = `<li class="modal-selectable" data-action="subtitle_off" onclick="setSubtitles(null, false)">Off ${!textTrackVisible || !activeTextTrack ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
-        textTracks.forEach(track => {
-            const safeTrackData = { id: track.id, label: track.label, language: track.language };
-            const safeTrack = JSON.stringify(safeTrackData).replace(/'/g, '&#39;');
-            const isChecked = textTrackVisible && activeTextTrack?.id === track.id;
-            subItemsHtml += `<li class="modal-selectable" data-action="subtitle_on" onclick="setSubtitles(${safeTrack}, true)">${track.label || track.language} ${isChecked ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
+        let subItemsHtml = `<li class="modal-selectable" data-action="subtitle_off" onclick="setSubtitles(0, false)">Off ${currentTextTrackIndex === 0 ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
+        textTracks.forEach((track, index) => {
+          // JW Player track index is 1-based relative to this list
+          const isChecked = (index + 1) === currentTextTrackIndex;
+          const safeTrackLabel = (track.label || track.name).replace(/'/g, '&#39;');
+          subItemsHtml += `<li class="modal-selectable" data-action="subtitle_on" onclick="setSubtitles(${index + 1}, true)">${safeTrackLabel} ${isChecked ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
         });
 
-        let audioItemsHtml = audioTracks.map(track => {
-            const isChecked = activeAudioTrack?.language === track.language;
-            return `<li class="modal-selectable" data-action="audio" onclick="setAudio('${track.language}')">${track.language} (Audio) ${isChecked ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
+        let audioItemsHtml = audioTracks.map((track, index) => {
+            const isChecked = index === currentAudioTrackIndex;
+            const safeTrackLabel = (track.label || track.name).replace(/'/g, '&#39;');
+            return `<li class="modal-selectable" data-action="audio" onclick="setAudio(${index})">${safeTrackLabel} ${isChecked ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
         }).join('');
         
         contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
@@ -1028,25 +1069,24 @@ window.applyChannelEdit = () => {
   hideSettingsModal();
 };
 
-window.setSubtitles = (track, isVisible) => {
-    if (!player) return hideSettingsModal();
+window.setSubtitles = (trackIndex, isVisible) => {
+    if (!player || !player.getPlaylistItem()) return hideSettingsModal();
     try {
-        player.setTextTrackVisibility(isVisible);
-        if (isVisible && track && typeof track.id !== 'undefined') {
-            const trackToSelect = (player.getTextTracks() || []).find(t => t.id === track.id);
-            if (trackToSelect) { player.selectTextTrack(trackToSelect); }
-            else { console.warn("Subtitle track not found:", track.id); }
+        if (!isVisible || trackIndex === 0) {
+             player.setCaptions(0);
+        } else {
+             player.setCaptions(trackIndex);
         }
     } catch(error) { console.error("Error setting subtitles:", error); }
     hideSettingsModal();
 };
 
-window.setAudio = lang => {
-    if (!player) return hideSettingsModal();
-    if (typeof lang === 'string' && lang) {
-        try { player.selectAudioLanguage(lang); }
+window.setAudio = index => {
+    if (!player || !player.getPlaylistItem()) return hideSettingsModal();
+    if (typeof index === 'number') {
+        try { player.setAudioTrack(index); }
         catch(error) { console.error("Error setting audio language:", error); }
-    } else { console.warn("Invalid audio language provided:", lang); }
+    } else { console.warn("Invalid audio track index provided:", index); }
     hideSettingsModal();
 };
 
@@ -1463,7 +1503,7 @@ if (o.SearchField) {
         if (isSessionActive) { loadChannel(0); }
         updateSelectedChannelInNav();
       } else {
-        try { player?.unload(); } catch {}
+        try { player?.stop(); } catch {}
         showIdleAnimation(true);
       }
     });
@@ -1636,7 +1676,7 @@ document.addEventListener('keydown', (e) => {
         break;
     case 'Enter': 
     case ' ': // Spacebar
-        // Stream remains playing due to the AvPlayer.addEventListener('pause', ...) listener.
+        // Stream remains playing due to the continuous playback interval.
         showChannelName(); // Only show channel info on tap/enter
         break;
     case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
@@ -1650,32 +1690,33 @@ document.addEventListener('keydown', (e) => {
 
 
 /**
- * Gets stats from Shaka Player and updates the Stream Info overlay.
+ * Gets stats from JW Player and updates the Stream Info overlay.
  */
 function updateStreamInfo() {
   const infoOverlay = o.CodecInfo; 
   if (!infoOverlay) return; 
  
-  if (!player) {
-    infoOverlay.textContent = 'Player Info: N/A';
+  if (!player || !player.getPlaylistItem()) {
+    infoOverlay.textContent = 'Player Info: N/A (No content playing)';
     return;
   }
 
   try {
-    const variant = player.getVariantTracks().find(t => t.active);
     const stats = player.getStats();
-
-    if (!variant || !stats) {
-      infoOverlay.textContent = 'Player Info: N/A';
-      return;
+    // JW Player returns 1-based index for quality levels, so we adjust to get the current level object
+    const currentQuality = player.getQualityLevels()[player.getCurrentQuality() - 1]; 
+    
+    if (!stats || !currentQuality) {
+        infoOverlay.textContent = 'Player Info: N/A';
+        return;
     }
 
-    const codecs = variant.codecs || 'N/A';
-    const resolution = `${variant.width}x${variant.height}`;
-    const bandwidth = (stats.estimatedBandwidth / 1000000).toFixed(2); 
+    const codecs = currentQuality.codecs || 'N/A';
+    const resolution = `${currentQuality.width}x${currentQuality.height}`;
+    const bandwidth = (currentQuality.bitrate / 1000000).toFixed(2); 
 
     infoOverlay.textContent = `Video: ${resolution} (${codecs}) | Bandwidth: ${bandwidth} Mbit/s`;
-  
+ 
   } catch (error) {
     console.warn("Could not get stream info:", error);
     infoOverlay.textContent = 'Player Info: Error';
