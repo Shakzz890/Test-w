@@ -94,39 +94,43 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// FIX: Function to enforce the video element style (Aspect Ratio)
+// --- Enforce Aspect Ratio ---
 function ensureVideoElementStyle() {
-    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
-    if (!jwVideoElement) return;
+  const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+  if (!jwVideoElement) return;
 
-    const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
-    
-    // We target the style property directly for high precedence
-    const style = jwVideoElement.style;
-    
-    // Reset properties first
-    style.setProperty('transform', 'scale(1)', 'important');
-    // Set to 'contain' initially, which correctly handles 'Original' and '16:9'
-    style.setProperty('object-fit', 'contain', 'important'); 
+  const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
+  const style = jwVideoElement.style;
 
-    switch(currentFormat) {
-      case 'Stretch':
-        style.setProperty('object-fit', 'fill', 'important');
-        break;
-      case 'Fill':
-        style.setProperty('object-fit', 'cover', 'important');
-        break;
-      case 'Zoom':
-        style.setProperty('object-fit', 'cover', 'important');
-        style.setProperty('transform', 'scale(1.15)', 'important');
-        break;
-      case 'Original':
-      case '16:9':
-        // The default 'contain' is already set with !important
-        break;
-    }
+  style.setProperty('transform', 'scale(1)', 'important');
+  style.setProperty('object-fit', 'contain', 'important');
+
+  switch(currentFormat) {
+    case 'Stretch':
+      style.setProperty('object-fit', 'fill', 'important');
+      break;
+    case 'Fill':
+      style.setProperty('object-fit', 'cover', 'important');
+      break;
+    case 'Zoom':
+      style.setProperty('object-fit', 'cover', 'important');
+      style.setProperty('transform', 'scale(1.15)', 'important');
+      break;
+  }
 }
 
+// --- Attach to JWPlayer lifecycle ---
+o.JwPlayerInstance.on('ready', ensureVideoElementStyle);
+o.JwPlayerInstance.on('play', ensureVideoElementStyle);
+
+// --- When aspect format is changed manually ---
+function changeAspectFormat(format) {
+  localStorage.setItem('iptvAspectRatio', format);
+  ensureVideoElementStyle();
+}
+
+// --- Fullscreen reapply ---
+document.addEventListener('fullscreenchange', ensureVideoElementStyle);
 
 /* -------------------------
     Core Player Functions
