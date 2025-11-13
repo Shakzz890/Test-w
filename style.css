@@ -52,9 +52,11 @@
 
 /* --- JWPLAYER CONTAINER BASE --- */
 #jwplayer-container {
-  width: 100%;
+  /* FIX: Ensure the JW container is 100% of the parent container's size */
+  width: 100% !important;
+  height: 100% !important;
   max-width: 100%;
-  aspect-ratio: 16 / 9; /* default fallback ratio */
+  aspect-ratio: auto !important; /* IMPORTANT: Must be auto to allow it to fill 100% height/width */
   position: relative;
   overflow: hidden;
   background: #000; /* avoid white flash before load */
@@ -93,9 +95,9 @@
 /* --- LANDSCAPE FIX (Smart TV & Android TV) --- */
 @media (orientation: landscape) {
   #jwplayer-container {
-    aspect-ratio: auto; /* allow flexible ratio for full screen TVs */
-    height: 100vh;      /* occupy full screen height */
-    width: 100vw;
+    aspect-ratio: auto !important; /* allow flexible ratio for full screen TVs */
+    height: 100vh !important;      /* occupy full screen height */
+    width: 100vw !important;
   }
 
   #jwplayer-container video {
@@ -108,9 +110,9 @@
 /* --- PORTRAIT (mobile fallback) --- */
 @media (orientation: portrait) {
   #jwplayer-container {
-    aspect-ratio: 16 / 9;
-    height: auto;
-    max-height: 50vh;
+    aspect-ratio: auto !important;
+    height: 100vh !important;
+    max-height: 100vh;
   }
 
   #jwplayer-container video {
