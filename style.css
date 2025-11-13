@@ -56,7 +56,7 @@
   width: 100% !important;
   height: 100% !important;
   max-width: 100%;
-  aspect-ratio: auto !important; /* IMPORTANT: Must be auto to allow it to fill 100% height/width */
+  /* REMOVED: aspect-ratio: auto !important; */
   position: relative;
   overflow: hidden;
   background: #000; /* avoid white flash before load */
