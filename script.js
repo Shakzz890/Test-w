@@ -96,15 +96,15 @@ function scrollToListItem(oListItem) {
 
 // FIX: Function to enforce the video element style (Aspect Ratio)
 function ensureVideoElementStyle() {
-    // FIX: Target the video element inside the JW container
-    // We rely mostly on the high-priority CSS now, but use JS to apply changes for specific modes.
-    const jwVideoElement = o.JwPlayerContainer.querySelector('video, .jw-media');
+    // FIX: Target the video element inside the JW container using the strong CSS selector
+    const jwVideoElement = o.JwPlayerContainer.querySelector('.jw-wrapper video');
     if (!jwVideoElement) return;
 
     const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
     const style = jwVideoElement.style;
     
     // Clear previously applied style properties to let the CSS default take over for 'Original'
+    // Note: The external CSS provides the base `object-fit: contain !important` now.
     style.setProperty('object-fit', '');
     style.setProperty('transform', '');
     
@@ -121,7 +121,8 @@ function ensureVideoElementStyle() {
         break;
       case 'Original':
       case '16:9':
-        // For Original/16:9, we explicitly enforce 'contain' via JS to beat low-priority inline JW styles
+        // For Original/16:9, rely on the CSS rule: #jwplayer-container .jw-wrapper video { object-fit: contain !important; }
+        // We ensure no competing inline style exists by setting it explicitly here too.
         style.setProperty('object-fit', 'contain', 'important'); 
         style.setProperty('transform', 'scale(1)', 'important'); 
         break;
