@@ -50,90 +50,80 @@
             z-index: 1; 
         }
 
-        /* --- JWPLAYER CONTAINER BASE --- */
-        #jwplayer-container {
-          /* FIX: Ensure the JW container is 100% of the parent container's size */
-          width: 100% !important;
-          height: 100% !important;
-          max-width: 100%;
-          aspect-ratio: auto !important; /* IMPORTANT: Must be auto to allow it to fill 100% height/width */
-          position: relative;
-          overflow: hidden;
-          background: #000; /* avoid white flash before load */
-          border-radius: 0; /* optional: keep sharp edges for TVs */
-        }
+/* --- JWPLAYER CONTAINER BASE --- */
+#jwplayer-container {
+  /* FIX: Ensure the JW container is 100% of the parent container's size */
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  aspect-ratio: auto !important; /* IMPORTANT: Must be auto to allow it to fill 100% height/width */
+  position: relative;
+  overflow: hidden;
+  background: #000; /* avoid white flash before load */
+  border-radius: 0; /* optional: keep sharp edges for TVs */
+}
 
-        /* --- FIX: Target the video element directly using the highest specificity and !important --- */
-        /* This forces the original aspect ratio (contain) unless JS overrides it. */
-        /* REMOVED: Problematic CSS that prevented JS from overriding styles */
+/* --- FIX: Target the video element directly. Rely on JW Player's stretching: 'exactfit' property. */
+#jwplayer-container .jw-wrapper video {
+  width: 100% !important;
+  height: 100% !important;
+  /* Rely on JW Player's 'exactfit' setting in the script.js setup */
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  opacity: 1;
+  background-color: #000;
+}
+/* ------------------------------------------------------------------------------------------ */
 
-        /* --- NEW: JWPLAYER VIDEO ELEMENT STYLING --- */
-        #jwplayer-container,
-        #jwplayer-container .jw-wrapper,
-        #jwplayer-container .jw-media {
-          width: 100% !important;
-          height: 100% !important;
-        }
 
-        /* Base video styling - NO !important on object-fit/transform */
-        #jwplayer-container video,
-        #jwplayer-container .jw-video {
-          width: 100% !important;
-          height: 100% !important;
-          object-fit: contain; /* Default state */
-          transform: scale(1); /* Default state */
-          transition: opacity 0.3s ease-in-out, object-fit 0.3s ease-in-out, transform 0.3s ease-in-out;
-          opacity: 1;
-          background-color: #000;
-        }
+/* --- HIDE DEFAULT JWPLAYER CONTROLS --- */
+.jw-controls {
+  display: none !important;
+  pointer-events: none !important;
+}
 
-        /* Ensure video is visible when playing */
-        #jwplayer-container.jw-state-playing video {
-          opacity: 1;
-        }
+/* --- FULLSCREEN BEHAVIOR --- */
+:fullscreen #jwplayer-container video,
+#jwplayer-container:fullscreen video {
+  width: 100%;
+  height: 100%;
+  /* Use 'contain' by default in fullscreen until JS overrides it */
+  object-fit: contain; 
+}
 
-        /* --- HIDE DEFAULT JWPLAYER CONTROLS --- */
-        .jw-controls {
-          display: none !important;
-          pointer-events: none !important;
-        }
+/* --- LANDSCAPE FIX (Smart TV & Android TV) --- */
+@media (orientation: landscape) {
+  #jwplayer-container {
+    aspect-ratio: auto !important; /* allow flexible ratio for full screen TVs */
+    height: 100vh !important;      /* occupy full screen height */
+    width: 100vw !important;
+  }
 
-        /* --- FULLSCREEN BEHAVIOR --- */
-        :fullscreen #jwplayer-container video,
-        #jwplayer-container:fullscreen video {
-          width: 100%;
-          height: 100%;
-          /* Use 'contain' by default in fullscreen until JS overrides it */
-          object-fit: contain; 
-        }
+  #jwplayer-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* your JS still overrides this when needed */
+  }
+}
 
-        /* --- LANDSCAPE FIX (Smart TV & Android TV) --- */
-        @media (orientation: landscape) {
-          #jwplayer-container {
-            aspect-ratio: auto !important; /* allow flexible ratio for full screen TVs */
-            height: 100vh !important;      /* occupy full screen height */
-            width: 100vw !important;
-          }
+/* --- PORTRAIT (mobile fallback) --- */
+@media (orientation: portrait) {
+  #jwplayer-container {
+    aspect-ratio: auto !important;
+    height: 100vh !important;
+    max-height: 100vh;
+  }
 
-          #jwplayer-container video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* your JS still overrides this when needed */
-          }
-        }
+  #jwplayer-container video {
+    object-fit: contain;
+  }
+} 
 
-        /* --- PORTRAIT (mobile fallback) --- */
-        @media (orientation: portrait) {
-          #jwplayer-container {
-            aspect-ratio: auto !important;
-            height: 100vh !important;
-            max-height: 100vh;
-          }
-
-          #jwplayer-container video {
-            object-fit: contain;
-          }
-        } 
+/* Removed redundant CSS block */
+/*
+  #jwplayer-container video {
+    object-fit: contain;
+  }
+*/
 
         /* ------------------------- UTILITY CLASSES ------------------------- */
         .fullscreen {
@@ -288,7 +278,7 @@
           position: absolute; 
           top: 0; left: 0; width: 100%; height: 100%;
           
-          background-image: url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg ');
+          background-image: url('https://static0.gamerantimages.com/wordpress/wp-content/uploads/2025/04/sung-jinwoo-solo-leveling.jpg');
           background-size: cover;
           background-position: center;
           background-color: var(--bg-primary); 
@@ -443,16 +433,19 @@
             padding-top: 60px;
         }
 
+        /* FIX: Hide the submenu area as it's no longer used */
         #SettingsVideoFormatMenu {
             transform: translateX(100%);
+            display: none; 
         }
 
+        /* FIX: Removed submenu-visible classes */
         #settings_container.submenu-visible #SettingsMainMenu {
-            transform: translateX(-100%);
+            transform: translateX(0);
         }
 
         #settings_container.submenu-visible #SettingsVideoFormatMenu {
-            transform: translateX(0);
+            transform: translateX(100%);
         }
 
         /* ------------------------- LISTS & ITEMS ------------------------- */
@@ -590,7 +583,7 @@
             font-weight:600;
         }
 
-        #SearchField:focus, #main_nav li:focus-visible, #DynamicGroupsList li:focus-visible, .channel-item:focus-visible, .settings-item:focus-visible, .close-button:focus-visible, #PlayButton:focus-visible {
+        #SearchField:focus, #main_nav li:focus-visible, #DynamicGroupsList li:focus-visible, .channel-item:focus-visible, .settings-item:focus-visible, .modal-selectable:focus-visible, .close-button:focus-visible, #PlayButton:focus-visible {
             outline: 2px solid var(--bg-focus);
             outline-offset: -2px;
             box-shadow: 0 0 10px var(--bg-focus);
@@ -833,4 +826,4 @@
         .edit-modal-field:focus {
             outline:none;
             border-color:var(--bg-focus);
-        } 
+        }
