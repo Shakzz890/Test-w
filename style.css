@@ -68,7 +68,7 @@
 #jwplayer-container .jw-wrapper video {
   width: 100% !important;
   height: 100% !important;
-  object-fit: contain !important; /* Forces Original/Fit by default */
+  object-fit: contain !important; /* FORCES Original/Fit */
   transform: scale(1) !important;
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
   opacity: 1;
