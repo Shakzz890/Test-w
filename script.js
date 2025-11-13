@@ -97,35 +97,52 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// FIX: Helper to get video element
-const getVideoElement = () => {
-    return o.JwPlayerContainer.querySelector('video') || 
-           o.JwPlayerContainer.querySelector('.jw-video') ||
-           o.JwPlayerContainer.querySelector('.jw-wrapper video');
+// FIX: Helper to get video element and its immediate container
+const getVideoElements = () => {
+    const video = o.JwPlayerContainer.querySelector('video') || 
+                  o.JwPlayerContainer.querySelector('.jw-video') ||
+                  o.JwPlayerContainer.querySelector('.jw-wrapper video');
+    
+    // The media element often sits inside the 'jw-media' div
+    const mediaContainer = video ? video.closest('.jw-media') : null;
+    
+    return { video, mediaContainer };
 };
 
 // FIX: Helper to get the correct style values
 const getDesiredStyles = (formatKey) => {
     switch(formatKey) {
-        case 'stretch': return { fit: 'fill', transform: 'scale(1)' };
-        case 'fill': return { fit: 'cover', transform: 'scale(1)' };
-        case 'zoom': return { fit: 'cover', transform: 'scale(1.15)' };
+        case 'stretch': return { videoFit: 'fill', videoTransform: 'scale(1)', containerOverflow: 'hidden' };
+        case 'fill': return { videoFit: 'cover', videoTransform: 'scale(1)', containerOverflow: 'hidden' };
+        case 'zoom': return { videoFit: 'cover', videoTransform: 'scale(1.15)', containerOverflow: 'visible' };
         case '16:9': 
         case 'original':
-        default: return { fit: 'contain', transform: 'scale(1)' };
+        default: return { videoFit: 'contain', videoTransform: 'scale(1)', containerOverflow: 'hidden' };
     }
 };
 
-// FIX: Function to apply styles to the video element
+// FIX: Function to apply styles to the video element AND its container
 function applyStylesToVideoElement(formatKey) {
-    const jwVideoElement = getVideoElement();
+    const { video: jwVideoElement, mediaContainer } = getVideoElements();
     if (!jwVideoElement) return;
 
     const desiredStyles = getDesiredStyles(formatKey);
 
-    // Apply new styles
-    jwVideoElement.style.objectFit = desiredStyles.fit;
-    jwVideoElement.style.transform = desiredStyles.transform;
+    // 1. Apply styles to the video element itself
+    jwVideoElement.style.objectFit = desiredStyles.videoFit;
+    jwVideoElement.style.transform = desiredStyles.videoTransform;
+    // Ensure the video element occupies the full container space before object-fit applies
+    jwVideoElement.style.width = '100%';
+    jwVideoElement.style.height = '100%';
+
+    // 2. Apply aggressive styles to the container element (jw-media)
+    if (mediaContainer) {
+        mediaContainer.style.overflow = desiredStyles.containerOverflow;
+        // Crucial: Resetting dimensions/positioning of the container to ensure video fills it
+        mediaContainer.style.width = '100%';
+        mediaContainer.style.height = '100%';
+        mediaContainer.style.position = 'relative'; // Ensure media container is positioned correctly
+    }
 }
 
 // FIX: Function to start the MutationObserver
@@ -137,7 +154,7 @@ function observeAspectRatio(formatKey) {
         aspectRatioObserver = null;
     }
 
-    const jwVideoElement = getVideoElement();
+    const { video: jwVideoElement, mediaContainer } = getVideoElements();
     if (!jwVideoElement) return;
 
     // Get the initial desired style properties
@@ -145,16 +162,25 @@ function observeAspectRatio(formatKey) {
 
     // Define the observer callback
     const callback = (mutationsList, observer) => {
+        // We only observe the video element, but we check and correct both it and the container.
         mutationsList.forEach(mutation => {
             if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                 const currentFit = jwVideoElement.style.objectFit;
                 const currentTransform = jwVideoElement.style.transform;
+                const currentContainerOverflow = mediaContainer ? mediaContainer.style.overflow : desiredStyles.containerOverflow;
 
                 // Check if the current style deviates from the desired setting
-                if (currentFit !== desiredStyles.fit || currentTransform !== desiredStyles.transform) {
+                if (currentFit !== desiredStyles.videoFit || 
+                    currentTransform !== desiredStyles.videoTransform ||
+                    currentContainerOverflow !== desiredStyles.containerOverflow) 
+                {
                     // Force the desired style back immediately
-                    jwVideoElement.style.objectFit = desiredStyles.fit;
-                    jwVideoElement.style.transform = desiredStyles.transform;
+                    jwVideoElement.style.objectFit = desiredStyles.videoFit;
+                    jwVideoElement.style.transform = desiredStyles.videoTransform;
+                    
+                    if (mediaContainer) {
+                        mediaContainer.style.overflow = desiredStyles.containerOverflow;
+                    }
                     console.log(`[Observer] Corrected aspect ratio to: ${formatKey}`);
                 }
             }
@@ -164,7 +190,7 @@ function observeAspectRatio(formatKey) {
     // Create and start the observer
     aspectRatioObserver = new MutationObserver(callback);
     
-    // Configuration: Observe only 'style' attribute changes
+    // Configuration: Observe only 'style' attribute changes on the video element
     const config = { attributes: true, attributeFilter: ['style'] };
     
     aspectRatioObserver.observe(jwVideoElement, config);
@@ -174,7 +200,7 @@ function observeAspectRatio(formatKey) {
 // FIX: Robust video element selector with retry logic (now calls applyStylesToVideoElement)
 function ensureVideoElementStyle(retries = 5) {
     const applyStyleWithRetry = () => {
-        const jwVideoElement = getVideoElement();
+        const { video: jwVideoElement } = getVideoElements();
         
         if (!jwVideoElement && retries > 0) {
             console.log(`Video element not found, retrying... (${retries} attempts left)`);
