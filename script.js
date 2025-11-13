@@ -100,12 +100,11 @@ function ensureVideoElementStyle() {
     const jwVideoElement = o.JwPlayerContainer.querySelector('.jw-wrapper video');
     if (!jwVideoElement) return;
 
-    // FIX: Read the currently stored format.
-    const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
+    // FIX: Read the currently stored *key*. Default to 'original' if not found.
+    const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
 
-    // FIX: Directly call setAspectRatio to apply the current setting using !important.
-    // The format needs to be lowercase for setAspectRatio() to match the switch cases.
-    setAspectRatio(currentFormat.toLowerCase().replace(' (default)', '')); 
+    // FIX: Directly call setAspectRatio to apply the current setting using the key.
+    setAspectRatio(currentFormatKey); 
 }
 
 
@@ -884,6 +883,7 @@ function hideVideoFormatMenu() {
 
 function renderVideoFormatMenu() {
   if (o.SettingsVideoFormatMenu) {
+// FIX: getAspectRatio now returns the display name, which is correct here.
       const currentFormat = getAspectRatio();
       o.SettingsVideoFormatMenu.innerHTML = `
         <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
@@ -898,45 +898,62 @@ function renderVideoFormatMenu() {
   } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
 
-function getAspectRatio() {
-    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
-    if (!jwVideoElement) return 'Original';
-    // We read the last set value from localStorage or default to 'Original'
-    return localStorage.getItem('iptvAspectRatio') || 'Original';
+// FIX: Helper function to map internal key to display name
+function getAspectRatioDisplayName(formatKey) {
+    switch (formatKey) {
+        case 'stretch': return 'Stretch';
+        case 'fill': return 'Fill';
+        case 'zoom': return 'Zoom';
+        case '16:9': return '16:9 (Default)';
+        case 'original':
+        default: return 'Original';
+    }
 }
 
+// FIX: getAspectRatio now reads the stored key and returns the display name
+function getAspectRatio() {
+    // Read the stored internal key (e.g., '16:9', 'fill', 'original')
+    const formatKey = localStorage.getItem('iptvAspectRatio') || 'original';
+    
+    // Return the corresponding display name for the UI
+    return getAspectRatioDisplayName(formatKey);
+}
+
+// FIX: setAspectRatio now uses the format key consistently for setting styles and storage
 function setAspectRatio(format) {
     const jwVideoElement = o.JwPlayerContainer.querySelector('.jw-wrapper video');
     if (!jwVideoElement) return;
     
-    let formatName = 'Original';
+    let formatKey = format; // e.g., 'original', '16:9', 'stretch'
     
     // Apply style using setProperty('...', '...','!important') for maximum CSS priority
-    switch(format) {
+    switch(formatKey) {
       case 'stretch':
         jwVideoElement.style.setProperty('object-fit', 'fill', 'important');
         jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        formatName = 'Stretch';
-        break;
-      case '16:9':
-      case 'original': // Original and 16:9 are both 'contain'
-        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        formatName = (format === '16:9' ? '16:9 (Default)' : 'Original');
         break;
       case 'fill':
         jwVideoElement.style.setProperty('object-fit', 'cover', 'important');
         jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        formatName = 'Fill';
         break;
       case 'zoom':
         jwVideoElement.style.setProperty('object-fit', 'cover', 'important');
         jwVideoElement.style.setProperty('transform', 'scale(1.15)', 'important');
-        formatName = 'Zoom';
+        break;
+      case '16:9':
+        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
+        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
+        break;
+      case 'original':
+      default: // Default case also uses 'original' key
+        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
+        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
+        formatKey = 'original'; // Ensure it saves the correct key if format was invalid
         break;
     }
     
-    localStorage.setItem('iptvAspectRatio', formatName);
+    // Save the internal key, not the display name, to storage
+    localStorage.setItem('iptvAspectRatio', formatKey);
     
     // Call the enforcer explicitly just in case
     ensureVideoElementStyle(); 
@@ -1010,22 +1027,24 @@ function renderModalContent(type) {
       if (!player || !player.getPlaylistItem()) return '<p>Please start playing a channel first.</p>';
 
       if (type === 'aspect_ratio') {
-          const currentFormat = getAspectRatio();
+// FIX: Read the internal key from storage for checking the selected radio button
+          const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
+          
           let itemsHtml = `
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('original')">
-                Original ${currentFormat === 'Original' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Original ${currentFormatKey === 'original' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('16:9')">
-                16:9 (Default) ${currentFormat === '16:9 (Default)' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                16:9 (Default) ${currentFormatKey === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('fill')">
-                Fill ${currentFormat === 'Fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Fill ${currentFormatKey === 'fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('stretch')">
-                Stretch ${currentFormat === 'Stretch' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Stretch ${currentFormatKey === 'stretch' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('zoom')">
-                Zoom ${currentFormat === 'Zoom' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Zoom ${currentFormatKey === 'zoom' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
           `;
           
