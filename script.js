@@ -94,17 +94,35 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// FIX: Function to enforce the video element style (Aspect Ratio)
-function ensureVideoElementStyle() {
-    // FIX: Target the video element inside the JW container using the strong CSS selector
-    const jwVideoElement = o.JwPlayerContainer.querySelector('.jw-wrapper video');
-    if (!jwVideoElement) return;
+// FIX: Robust video element selector with retry logic
+function ensureVideoElementStyle(retries = 3) {
+    const getVideoElement = () => {
+        return o.JwPlayerContainer.querySelector('video') || 
+               o.JwPlayerContainer.querySelector('.jw-video') ||
+               o.JwPlayerContainer.querySelector('.jw-wrapper video');
+    };
 
-    // FIX: Read the currently stored *key*. Default to 'original' if not found.
-    const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
+    const applyStyle = () => {
+        const jwVideoElement = getVideoElement();
+        
+        if (!jwVideoElement && retries > 0) {
+            console.log(`Video element not found, retrying... (${retries} attempts left)`);
+            setTimeout(() => ensureVideoElementStyle(retries - 1), 100);
+            return;
+        }
+        
+        if (!jwVideoElement) {
+            console.error("Video element could not be found after retries");
+            return;
+        }
 
-    // FIX: Directly call setAspectRatio to apply the current setting using the key.
-    setAspectRatio(currentFormatKey); 
+        const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
+        console.log("Applying aspect ratio:", currentFormatKey); // Debug log
+        // Call the setAspectRatio function using the found element
+        setAspectRatio(currentFormatKey);
+    };
+    
+    applyStyle();
 }
 
 
@@ -183,8 +201,9 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // FIX: Ensure aspect ratio is applied when the player is ready/reloaded
-      player.on('ready', () => {
+      // FIX: Use .once() for initial setup after the first player video is created
+      player.once('ready', () => {
+          console.log("JW Player ready, applying aspect ratio...");
           // Immediately apply aspect ratio after JWPlayer initializes the video tag
           ensureVideoElementStyle(); 
           if (isSessionActive) {
@@ -881,23 +900,6 @@ function hideVideoFormatMenu() {
   } else { console.error("SettingsContainer element not found."); }
 }
 
-function renderVideoFormatMenu() {
-  if (o.SettingsVideoFormatMenu) {
-// FIX: getAspectRatio now returns the display name, which is correct here.
-      const currentFormat = getAspectRatio();
-      o.SettingsVideoFormatMenu.innerHTML = `
-        <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
-        <div class="settings-item-header">Video Format</div>
-        <div class="settings-item" onclick="showSettingsModal('aspect_ratio')">
-          <span>Aspect Ratio</span>
-          <span style="color: var(--text-secondary);">${currentFormat}</span>
-        </div>
-        <div class="settings-item" onclick="showSettingsModal('quality')">Video Quality</div>
-      `;
-      updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-  } else { console.error("SettingsVideoFormatMenu element not found."); }
-}
-
 // FIX: Helper function to map internal key to display name
 function getAspectRatioDisplayName(formatKey) {
     switch (formatKey) {
@@ -919,47 +921,76 @@ function getAspectRatio() {
     return getAspectRatioDisplayName(formatKey);
 }
 
-// FIX: setAspectRatio now uses the format key consistently for setting styles and storage
+// UPDATE renderVideoFormatMenu to use it:
+function renderVideoFormatMenu() {
+  if (o.SettingsVideoFormatMenu) {
+      const currentFormat = getAspectRatio();
+      o.SettingsVideoFormatMenu.innerHTML = `
+        <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
+        <div class="settings-item-header">Video Format</div>
+        <div class="settings-item" onclick="showSettingsModal('aspect_ratio')">
+          <span>Aspect Ratio</span>
+          <span style="color: var(--text-secondary);">${currentFormat}</span>
+        </div>
+        <div class="settings-item" onclick="showSettingsModal('quality')">Video Quality</div>
+      `;
+      updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
+  } else { console.error("SettingsVideoFormatMenu element not found."); }
+}
+
+
+// FIX: Simplified and more reliable style application
 function setAspectRatio(format) {
-    const jwVideoElement = o.JwPlayerContainer.querySelector('.jw-wrapper video');
-    if (!jwVideoElement) return;
+    const getVideoElement = () => {
+        return o.JwPlayerContainer.querySelector('video') || 
+               o.JwPlayerContainer.querySelector('.jw-video') ||
+               o.JwPlayerContainer.querySelector('.jw-wrapper video');
+    };
+
+    const jwVideoElement = getVideoElement();
+    if (!jwVideoElement) {
+        console.warn("Video element not found for aspect ratio change");
+        return;
+    }
+
+    // Reset styles first
+    jwVideoElement.style.objectFit = '';
+    jwVideoElement.style.transform = '';
     
-    let formatKey = format; // e.g., 'original', '16:9', 'stretch'
-    
-    // Apply style using setProperty('...', '...','!important') for maximum CSS priority
-    switch(formatKey) {
-      case 'stretch':
-        jwVideoElement.style.setProperty('object-fit', 'fill', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        break;
-      case 'fill':
-        jwVideoElement.style.setProperty('object-fit', 'cover', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        break;
-      case 'zoom':
-        jwVideoElement.style.setProperty('object-fit', 'cover', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1.15)', 'important');
-        break;
-      case '16:9':
-        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        break;
-      case 'original':
-      default: // Default case also uses 'original' key
-        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        formatKey = 'original'; // Ensure it saves the correct key if format was invalid
-        break;
+    // Apply new styles based on format
+    switch(format) {
+        case 'stretch':
+            jwVideoElement.style.objectFit = 'fill';
+            jwVideoElement.style.transform = 'scale(1)';
+            break;
+        case 'fill':
+            jwVideoElement.style.objectFit = 'cover';
+            jwVideoElement.style.transform = 'scale(1)';
+            break;
+        case 'zoom':
+            jwVideoElement.style.objectFit = 'cover';
+            jwVideoElement.style.transform = 'scale(1.15)';
+            break;
+        case '16:9':
+            jwVideoElement.style.objectFit = 'contain';
+            jwVideoElement.style.transform = 'scale(1)';
+            break;
+        case 'original':
+        default:
+            jwVideoElement.style.objectFit = 'contain';
+            jwVideoElement.style.transform = 'scale(1)';
+            format = 'original'; // Normalize invalid values
+            break;
     }
     
-    // Save the internal key, not the display name, to storage
-    localStorage.setItem('iptvAspectRatio', formatKey);
+    console.log(`Applied ${format} aspect ratio to video element`, jwVideoElement); // Debug log
     
-    // Call the enforcer explicitly just in case
-    ensureVideoElementStyle(); 
-
+    // Save the internal key to storage
+    localStorage.setItem('iptvAspectRatio', format);
+    
+    // Update the UI to reflect the change
     hideSettingsModal();
-    renderVideoFormatMenu(); 
+    renderVideoFormatMenu();
 }
 
 function togglePlaybackControls() {
