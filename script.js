@@ -3,6 +3,9 @@ let ui = null;
 // Added to maintain consistent state tracking outside of JW Player controls
 let continuousPlayInterval = null; 
 
+// FIX: Global variable for the aspect ratio observer
+let aspectRatioObserver = null; 
+
 const o = {
   PlayerContainer: document.getElementById('playerContainer'),
   // Correctly mapping to the HTML ID: jwplayer-container
@@ -94,15 +97,83 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// FIX: Robust video element selector with retry logic
-function ensureVideoElementStyle(retries = 3) {
-    const getVideoElement = () => {
-        return o.JwPlayerContainer.querySelector('video') || 
-               o.JwPlayerContainer.querySelector('.jw-video') ||
-               o.JwPlayerContainer.querySelector('.jw-wrapper video');
+// FIX: Helper to get video element
+const getVideoElement = () => {
+    return o.JwPlayerContainer.querySelector('video') || 
+           o.JwPlayerContainer.querySelector('.jw-video') ||
+           o.JwPlayerContainer.querySelector('.jw-wrapper video');
+};
+
+// FIX: Helper to get the correct style values
+const getDesiredStyles = (formatKey) => {
+    switch(formatKey) {
+        case 'stretch': return { fit: 'fill', transform: 'scale(1)' };
+        case 'fill': return { fit: 'cover', transform: 'scale(1)' };
+        case 'zoom': return { fit: 'cover', transform: 'scale(1.15)' };
+        case '16:9': 
+        case 'original':
+        default: return { fit: 'contain', transform: 'scale(1)' };
+    }
+};
+
+// FIX: Function to apply styles to the video element
+function applyStylesToVideoElement(formatKey) {
+    const jwVideoElement = getVideoElement();
+    if (!jwVideoElement) return;
+
+    const desiredStyles = getDesiredStyles(formatKey);
+
+    // Apply new styles
+    jwVideoElement.style.objectFit = desiredStyles.fit;
+    jwVideoElement.style.transform = desiredStyles.transform;
+}
+
+// FIX: Function to start the MutationObserver
+function observeAspectRatio(formatKey) {
+    
+    // Stop any existing observer
+    if (aspectRatioObserver) {
+        aspectRatioObserver.disconnect();
+        aspectRatioObserver = null;
+    }
+
+    const jwVideoElement = getVideoElement();
+    if (!jwVideoElement) return;
+
+    // Get the initial desired style properties
+    const desiredStyles = getDesiredStyles(formatKey);
+
+    // Define the observer callback
+    const callback = (mutationsList, observer) => {
+        mutationsList.forEach(mutation => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                const currentFit = jwVideoElement.style.objectFit;
+                const currentTransform = jwVideoElement.style.transform;
+
+                // Check if the current style deviates from the desired setting
+                if (currentFit !== desiredStyles.fit || currentTransform !== desiredStyles.transform) {
+                    // Force the desired style back immediately
+                    jwVideoElement.style.objectFit = desiredStyles.fit;
+                    jwVideoElement.style.transform = desiredStyles.transform;
+                    console.log(`[Observer] Corrected aspect ratio to: ${formatKey}`);
+                }
+            }
+        });
     };
 
-    const applyStyle = () => {
+    // Create and start the observer
+    aspectRatioObserver = new MutationObserver(callback);
+    
+    // Configuration: Observe only 'style' attribute changes
+    const config = { attributes: true, attributeFilter: ['style'] };
+    
+    aspectRatioObserver.observe(jwVideoElement, config);
+    console.log(`[Observer] Started watching video element for style changes.`);
+}
+
+// FIX: Robust video element selector with retry logic (now calls applyStylesToVideoElement)
+function ensureVideoElementStyle(retries = 5) {
+    const applyStyleWithRetry = () => {
         const jwVideoElement = getVideoElement();
         
         if (!jwVideoElement && retries > 0) {
@@ -118,13 +189,15 @@ function ensureVideoElementStyle(retries = 3) {
 
         const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
         console.log("Applying aspect ratio:", currentFormatKey); // Debug log
-        // Call the setAspectRatio function using the found element
-        setAspectRatio(currentFormatKey);
+        
+        applyStylesToVideoElement(currentFormatKey);
+
+        // Start observer immediately after successful application
+        observeAspectRatio(currentFormatKey);
     };
     
-    applyStyle();
+    applyStyleWithRetry();
 }
-
 
 /* -------------------------
     Core Player Functions
@@ -213,6 +286,8 @@ async function initPlayer() {
 
       player.on('remove', () => {
           stopContinuousPlayback();
+          // FIX: Stop observer when player is removed
+          if (aspectRatioObserver) aspectRatioObserver.disconnect();
       });
       // --- END JWPLAYER EVENT LISTENERS ---
 
@@ -573,7 +648,7 @@ async function loadChannel(index, options = {}) {
     
     // --- BUFFERRING FIX: Enforce playback right after setup ---
     if (isSessionActive) {
-        // FIX: Re-enforce style immediately after setup, when video tag exists
+        // FIX: Re-enforce style and START OBSERVER
         ensureVideoElementStyle(); 
         
         // FIX 2: Explicitly UNMUTE the player when starting a new stream
@@ -941,56 +1016,26 @@ function renderVideoFormatMenu() {
 
 // FIX: Simplified and more reliable style application
 function setAspectRatio(format) {
-    const getVideoElement = () => {
-        return o.JwPlayerContainer.querySelector('video') || 
-               o.JwPlayerContainer.querySelector('.jw-video') ||
-               o.JwPlayerContainer.querySelector('.jw-wrapper video');
-    };
+    // Apply new styles
+    applyStylesToVideoElement(format);
 
-    const jwVideoElement = getVideoElement();
-    if (!jwVideoElement) {
-        console.warn("Video element not found for aspect ratio change");
-        return;
-    }
-
-    // Reset styles first
-    jwVideoElement.style.objectFit = '';
-    jwVideoElement.style.transform = '';
-    
-    // Apply new styles based on format
-    switch(format) {
-        case 'stretch':
-            jwVideoElement.style.objectFit = 'fill';
-            jwVideoElement.style.transform = 'scale(1)';
-            break;
-        case 'fill':
-            jwVideoElement.style.objectFit = 'cover';
-            jwVideoElement.style.transform = 'scale(1)';
-            break;
-        case 'zoom':
-            jwVideoElement.style.objectFit = 'cover';
-            jwVideoElement.style.transform = 'scale(1.15)';
-            break;
-        case '16:9':
-            jwVideoElement.style.objectFit = 'contain';
-            jwVideoElement.style.transform = 'scale(1)';
-            break;
-        case 'original':
-        default:
-            jwVideoElement.style.objectFit = 'contain';
-            jwVideoElement.style.transform = 'scale(1)';
-            format = 'original'; // Normalize invalid values
-            break;
+    // FIX: Get the final format key in case 'default' was passed or invalid
+    let formatKey = format;
+    if (!['stretch', 'fill', 'zoom', '16:9', 'original'].includes(formatKey)) {
+        formatKey = 'original';
     }
     
-    console.log(`Applied ${format} aspect ratio to video element`, jwVideoElement); // Debug log
+    console.log(`Applied ${formatKey} aspect ratio to video element`); // Debug log
     
     // Save the internal key to storage
-    localStorage.setItem('iptvAspectRatio', format);
+    localStorage.setItem('iptvAspectRatio', formatKey);
     
     // Update the UI to reflect the change
     hideSettingsModal();
     renderVideoFormatMenu();
+    
+    // FIX: Re-start the observer with the new setting
+    observeAspectRatio(formatKey);
 }
 
 function togglePlaybackControls() {
