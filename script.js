@@ -121,23 +121,23 @@ const getDesiredStyles = (formatKey) => {
     }
 };
 
-// FIX: Function to apply styles to the video element AND its container
+// FIX: Function to apply styles to the video element AND its container using !important
 function applyStylesToVideoElement(formatKey) {
     const { video: jwVideoElement, mediaContainer } = getVideoElements();
     if (!jwVideoElement) return;
 
     const desiredStyles = getDesiredStyles(formatKey);
 
-    // 1. Apply styles to the video element itself
-    jwVideoElement.style.objectFit = desiredStyles.videoFit;
-    jwVideoElement.style.transform = desiredStyles.videoTransform;
+    // 1. Apply styles to the video element itself using !important
+    jwVideoElement.style.setProperty('object-fit', desiredStyles.videoFit, 'important');
+    jwVideoElement.style.setProperty('transform', desiredStyles.videoTransform, 'important');
     // Ensure the video element occupies the full container space before object-fit applies
     jwVideoElement.style.width = '100%';
     jwVideoElement.style.height = '100%';
 
-    // 2. Apply aggressive styles to the container element (jw-media)
+    // 2. Apply aggressive styles to the container element (jw-media) using !important
     if (mediaContainer) {
-        mediaContainer.style.overflow = desiredStyles.containerOverflow;
+        mediaContainer.style.setProperty('overflow', desiredStyles.containerOverflow, 'important');
         // Crucial: Resetting dimensions/positioning of the container to ensure video fills it
         mediaContainer.style.width = '100%';
         mediaContainer.style.height = '100%';
@@ -170,16 +170,17 @@ function observeAspectRatio(formatKey) {
                 const currentContainerOverflow = mediaContainer ? mediaContainer.style.overflow : desiredStyles.containerOverflow;
 
                 // Check if the current style deviates from the desired setting
+                // We use the inline style property directly for checking consistency
                 if (currentFit !== desiredStyles.videoFit || 
                     currentTransform !== desiredStyles.videoTransform ||
                     currentContainerOverflow !== desiredStyles.containerOverflow) 
                 {
-                    // Force the desired style back immediately
-                    jwVideoElement.style.objectFit = desiredStyles.videoFit;
-                    jwVideoElement.style.transform = desiredStyles.videoTransform;
+                    // Force the desired style back immediately using !important
+                    jwVideoElement.style.setProperty('object-fit', desiredStyles.videoFit, 'important');
+                    jwVideoElement.style.setProperty('transform', desiredStyles.videoTransform, 'important');
                     
                     if (mediaContainer) {
-                        mediaContainer.style.overflow = desiredStyles.containerOverflow;
+                        mediaContainer.style.setProperty('overflow', desiredStyles.containerOverflow, 'important');
                     }
                     console.log(`[Observer] Corrected aspect ratio to: ${formatKey}`);
                 }
