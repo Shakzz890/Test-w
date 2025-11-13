@@ -3,8 +3,7 @@ let ui = null;
 // Added to maintain consistent state tracking outside of JW Player controls
 let continuousPlayInterval = null; 
 
-// FIX: Global variable for the aspect ratio observer
-let aspectRatioObserver = null; 
+// FIX: Removed aspectRatioObserver global as custom aspect ratio logic is deleted.
 
 const o = {
   PlayerContainer: document.getElementById('playerContainer'),
@@ -78,7 +77,7 @@ let bSettingsModalOpened = false;
 let bGuideOpened = false;
 let bEpgOpened = false;
 let iChannelSettingsIndex = 0;
-let iVideoSettingsIndex = 0;
+// FIX: Removed iVideoSettingsIndex as the submenu is gone
 let iEpgChannelIndex = 0;
 let iSettingsModalIndex = 0;
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
@@ -97,134 +96,7 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// FIX: Helper to get video element and its immediate container
-const getVideoElements = () => {
-    const video = o.JwPlayerContainer.querySelector('video') || 
-                  o.JwPlayerContainer.querySelector('.jw-video') ||
-                  o.JwPlayerContainer.querySelector('.jw-wrapper video');
-    
-    // The media element often sits inside the 'jw-media' div
-    const mediaContainer = video ? video.closest('.jw-media') : null;
-    
-    return { video, mediaContainer };
-};
-
-// FIX: Helper to get the correct style values
-const getDesiredStyles = (formatKey) => {
-    switch(formatKey) {
-        case 'stretch': return { videoFit: 'fill', videoTransform: 'scale(1)', containerOverflow: 'hidden' };
-        case 'fill': return { videoFit: 'cover', videoTransform: 'scale(1)', containerOverflow: 'hidden' };
-        case 'zoom': return { videoFit: 'cover', videoTransform: 'scale(1.15)', containerOverflow: 'visible' };
-        case '16:9': 
-        case 'original':
-        default: return { videoFit: 'contain', videoTransform: 'scale(1)', containerOverflow: 'hidden' };
-    }
-};
-
-// FIX: Function to apply styles to the video element AND its container using !important
-function applyStylesToVideoElement(formatKey) {
-    const { video: jwVideoElement, mediaContainer } = getVideoElements();
-    if (!jwVideoElement) return;
-
-    const desiredStyles = getDesiredStyles(formatKey);
-
-    // 1. Apply styles to the video element itself using !important
-    jwVideoElement.style.setProperty('object-fit', desiredStyles.videoFit, 'important');
-    jwVideoElement.style.setProperty('transform', desiredStyles.videoTransform, 'important');
-    // Ensure the video element occupies the full container space before object-fit applies
-    jwVideoElement.style.width = '100%';
-    jwVideoElement.style.height = '100%';
-
-    // 2. Apply aggressive styles to the container element (jw-media) using !important
-    if (mediaContainer) {
-        mediaContainer.style.setProperty('overflow', desiredStyles.containerOverflow, 'important');
-        // Crucial: Resetting dimensions/positioning of the container to ensure video fills it
-        mediaContainer.style.width = '100%';
-        mediaContainer.style.height = '100%';
-        mediaContainer.style.position = 'relative'; // Ensure media container is positioned correctly
-    }
-}
-
-// FIX: Function to start the MutationObserver
-function observeAspectRatio(formatKey) {
-    
-    // Stop any existing observer
-    if (aspectRatioObserver) {
-        aspectRatioObserver.disconnect();
-        aspectRatioObserver = null;
-    }
-
-    const { video: jwVideoElement, mediaContainer } = getVideoElements();
-    if (!jwVideoElement) return;
-
-    // Get the initial desired style properties
-    const desiredStyles = getDesiredStyles(formatKey);
-
-    // Define the observer callback
-    const callback = (mutationsList, observer) => {
-        // We only observe the video element, but we check and correct both it and the container.
-        mutationsList.forEach(mutation => {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                const currentFit = jwVideoElement.style.objectFit;
-                const currentTransform = jwVideoElement.style.transform;
-                const currentContainerOverflow = mediaContainer ? mediaContainer.style.overflow : desiredStyles.containerOverflow;
-
-                // Check if the current style deviates from the desired setting
-                // We use the inline style property directly for checking consistency
-                if (currentFit !== desiredStyles.videoFit || 
-                    currentTransform !== desiredStyles.videoTransform ||
-                    currentContainerOverflow !== desiredStyles.containerOverflow) 
-                {
-                    // Force the desired style back immediately using !important
-                    jwVideoElement.style.setProperty('object-fit', desiredStyles.videoFit, 'important');
-                    jwVideoElement.style.setProperty('transform', desiredStyles.videoTransform, 'important');
-                    
-                    if (mediaContainer) {
-                        mediaContainer.style.setProperty('overflow', desiredStyles.containerOverflow, 'important');
-                    }
-                    console.log(`[Observer] Corrected aspect ratio to: ${formatKey}`);
-                }
-            }
-        });
-    };
-
-    // Create and start the observer
-    aspectRatioObserver = new MutationObserver(callback);
-    
-    // Configuration: Observe only 'style' attribute changes on the video element
-    const config = { attributes: true, attributeFilter: ['style'] };
-    
-    aspectRatioObserver.observe(jwVideoElement, config);
-    console.log(`[Observer] Started watching video element for style changes.`);
-}
-
-// FIX: Robust video element selector with retry logic (now calls applyStylesToVideoElement)
-function ensureVideoElementStyle(retries = 5) {
-    const applyStyleWithRetry = () => {
-        const { video: jwVideoElement } = getVideoElements();
-        
-        if (!jwVideoElement && retries > 0) {
-            console.log(`Video element not found, retrying... (${retries} attempts left)`);
-            setTimeout(() => ensureVideoElementStyle(retries - 1), 100);
-            return;
-        }
-        
-        if (!jwVideoElement) {
-            console.error("Video element could not be found after retries");
-            return;
-        }
-
-        const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
-        console.log("Applying aspect ratio:", currentFormatKey); // Debug log
-        
-        applyStylesToVideoElement(currentFormatKey);
-
-        // Start observer immediately after successful application
-        observeAspectRatio(currentFormatKey);
-    };
-    
-    applyStyleWithRetry();
-}
+// FIX: Removed all aspect ratio/styling functions (getVideoElements, getDesiredStyles, applyStylesToVideoElement, observeAspectRatio, ensureVideoElementStyle, getAspectRatioDisplayName, getAspectRatio, setAspectRatio)
 
 /* -------------------------
     Core Player Functions
@@ -301,11 +173,9 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // FIX: Use .once() for initial setup after the first player video is created
+      // FIX: Removed ensureVideoElementStyle call
       player.once('ready', () => {
-          console.log("JW Player ready, applying aspect ratio...");
-          // Immediately apply aspect ratio after JWPlayer initializes the video tag
-          ensureVideoElementStyle(); 
+          console.log("JW Player ready.");
           if (isSessionActive) {
               startContinuousPlayback();
           }
@@ -313,8 +183,7 @@ async function initPlayer() {
 
       player.on('remove', () => {
           stopContinuousPlayback();
-          // FIX: Stop observer when player is removed
-          if (aspectRatioObserver) aspectRatioObserver.disconnect();
+          // FIX: Removed observer disconnect
       });
       // --- END JWPLAYER EVENT LISTENERS ---
 
@@ -624,7 +493,7 @@ async function loadChannel(index, options = {}) {
           player.on('bufferChange', handleBuffering);
           player.on('play', handlePlaying); 
           player.on('levelsChanged', updateStreamInfo);
-          player.on('ready', ensureVideoElementStyle); // Ensure style is applied on ready
+          player.on('ready', () => { /* Cleaned up ready handler */ if (isSessionActive) startContinuousPlayback(); });
           player.on('remove', stopContinuousPlayback);
       } else {
           console.error("Player not initialized and JWPlayer library missing.");
@@ -669,14 +538,14 @@ async function loadChannel(index, options = {}) {
         autostart: isSessionActive, 
         width: "100%",
         aspectratio: "16:9",
+        stretching: 'exactfit', // FIX: Use exactfit as requested
         controls: false // Hide controls to prevent native pause actions
     });
     // --- END CORE JW PLAYER SETUP LOGIC ---
     
     // --- BUFFERRING FIX: Enforce playback right after setup ---
     if (isSessionActive) {
-        // FIX: Re-enforce style and START OBSERVER
-        ensureVideoElementStyle(); 
+        // FIX: Removed call to ensureVideoElementStyle
         
         // FIX 2: Explicitly UNMUTE the player when starting a new stream
         player.setMute(false); 
@@ -974,9 +843,10 @@ function renderChannelSettings() {
   const isPlayerLoaded = player?.getPlaylistItem();
 
   if (o.SettingsMainMenu) {
+      // FIX: Changed "Video / Format" to "Video Quality" and linked directly to modal('quality')
       o.SettingsMainMenu.innerHTML = `
         <div class="settings-item ${isPlayerLoaded ? '' : 'disabled'}" onclick="${isPlayerLoaded ? "showSettingsModal('subtitles')" : ""}">Subtitle / Audio</div>
-        <div class="settings-item ${isPlayerLoaded ? '' : 'disabled'}" onclick="${isPlayerLoaded ? "showVideoFormatMenu()" : ""}">Video / Format</div>
+        <div class="settings-item ${isPlayerLoaded ? '' : 'disabled'}" onclick="${isPlayerLoaded ? "showSettingsModal('quality')" : ""}">Video Quality</div>
         <div class="settings-item" onclick="toggleFavourite()">${currentChannel.favorite ? 'Remove from Favorites' : 'Add to Favorites'}</div>
         <div class="settings-item" onclick="showSettingsModal('edit')">Edit Channel Info</div>
       `;
@@ -984,86 +854,17 @@ function renderChannelSettings() {
   } else { console.error("SettingsMainMenu element not found"); }
 }
 
-function showVideoFormatMenu() {
-  if (o.SettingsContainer) {
-    o.SettingsContainer.classList.add('submenu-visible');
-    iVideoSettingsIndex = 0;
-    renderVideoFormatMenu();
-  } else { console.error("SettingsContainer element not found."); }
-}
+// FIX: Removed showVideoFormatMenu function
 
-function hideVideoFormatMenu() {
-  if (o.SettingsContainer) {
-      o.SettingsContainer.classList.remove('submenu-visible');
-      iChannelSettingsIndex = 1; 
-      if (o.SettingsMainMenu) {
-          updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
-      } else { console.error("SettingsMainMenu element not found for focus update."); }
-  } else { console.error("SettingsContainer element not found."); }
-}
+// FIX: Removed hideVideoFormatMenu function
 
-// FIX: Helper function to map internal key to display name
-function getAspectRatioDisplayName(formatKey) {
-    switch (formatKey) {
-        case 'stretch': return 'Stretch';
-        case 'fill': return 'Fill';
-        case 'zoom': return 'Zoom';
-        case '16:9': return '16:9 (Default)';
-        case 'original':
-        default: return 'Original';
-    }
-}
+// FIX: Removed getAspectRatioDisplayName function
 
-// FIX: getAspectRatio now reads the stored key and returns the display name
-function getAspectRatio() {
-    // Read the stored internal key (e.g., '16:9', 'fill', 'original')
-    const formatKey = localStorage.getItem('iptvAspectRatio') || 'original';
-    
-    // Return the corresponding display name for the UI
-    return getAspectRatioDisplayName(formatKey);
-}
+// FIX: Removed getAspectRatio function
 
-// UPDATE renderVideoFormatMenu to use it:
-function renderVideoFormatMenu() {
-  if (o.SettingsVideoFormatMenu) {
-      const currentFormat = getAspectRatio();
-      o.SettingsVideoFormatMenu.innerHTML = `
-        <div class="settings-item" onclick="hideVideoFormatMenu()">&#8592; Back</div>
-        <div class="settings-item-header">Video Format</div>
-        <div class="settings-item" onclick="showSettingsModal('aspect_ratio')">
-          <span>Aspect Ratio</span>
-          <span style="color: var(--text-secondary);">${currentFormat}</span>
-        </div>
-        <div class="settings-item" onclick="showSettingsModal('quality')">Video Quality</div>
-      `;
-      updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-  } else { console.error("SettingsVideoFormatMenu element not found."); }
-}
+// FIX: Removed renderVideoFormatMenu function
 
-
-// FIX: Simplified and more reliable style application
-function setAspectRatio(format) {
-    // Apply new styles
-    applyStylesToVideoElement(format);
-
-    // FIX: Get the final format key in case 'default' was passed or invalid
-    let formatKey = format;
-    if (!['stretch', 'fill', 'zoom', '16:9', 'original'].includes(formatKey)) {
-        formatKey = 'original';
-    }
-    
-    console.log(`Applied ${formatKey} aspect ratio to video element`); // Debug log
-    
-    // Save the internal key to storage
-    localStorage.setItem('iptvAspectRatio', formatKey);
-    
-    // Update the UI to reflect the change
-    hideSettingsModal();
-    renderVideoFormatMenu();
-    
-    // FIX: Re-start the observer with the new setting
-    observeAspectRatio(formatKey);
-}
+// FIX: Removed setAspectRatio function
 
 function togglePlaybackControls() {
     hideChannelSettings();
@@ -1129,35 +930,8 @@ function renderModalContent(type) {
   try {
       if (!player || !player.getPlaylistItem()) return '<p>Please start playing a channel first.</p>';
 
-      if (type === 'aspect_ratio') {
-// FIX: Read the internal key from storage for checking the selected radio button
-          const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
-          
-          let itemsHtml = `
-            <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('original')">
-                Original ${currentFormatKey === 'original' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
-            </li>
-            <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('16:9')">
-                16:9 (Default) ${currentFormatKey === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
-            </li>
-            <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('fill')">
-                Fill ${currentFormatKey === 'fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
-            </li>
-            <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('stretch')">
-                Stretch ${currentFormatKey === 'stretch' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
-            </li>
-            <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('zoom')">
-                Zoom ${currentFormatKey === 'zoom' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
-            </li>
-          `;
-          
-          contentHtml = `<h2>Aspect Ratio</h2>
-                       <ul class="popup-content-list">${itemsHtml}</ul>
-                       <div class="popup-buttons">
-                         <button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button>
-                       </div>`;
-      
-      } else if (type === 'quality') {
+      // FIX: Removed 'aspect_ratio' case
+      if (type === 'quality') {
         const levels = player.getQualityLevels() || [];
         const currentLevelIndex = player.getCurrentQuality();
         
@@ -1388,7 +1162,7 @@ function showChannelSettings() {
   if (!o.ChannelSettings) return;
 
   clearUi('channelSettings');
-  hideVideoFormatMenu(); 
+  // FIX: Removed hideVideoFormatMenu call
   iChannelSettingsIndex = 0;
   renderChannelSettings();
   bChannelSettingsOpened = true;
@@ -1793,41 +1567,19 @@ document.addEventListener('keydown', (e) => {
   // Logic inside CHANNEL SETTINGS PANEL (Right)
   if (bChannelSettingsOpened) {
     e.preventDefault();
-    const isSubmenu = o.SettingsContainer?.classList.contains('submenu-visible');
-    const ARROW_KEYS = ['Escape', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Enter', 'ArrowRight'];
+    // FIX: Simplified logic to only handle main settings menu (no submenu)
+    const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
     
-    if (!ARROW_KEYS.includes(e.key)) return;
-
-    if (isSubmenu) {
-        const submenuItems = o.SettingsVideoFormatMenu?.querySelectorAll('.settings-item') ?? [];
-        if (e.key === 'ArrowUp') {
-            iVideoSettingsIndex = Math.max(0, iVideoSettingsIndex - 1);
-        } else if (e.key === 'ArrowDown') {
-            iVideoSettingsIndex = Math.min(submenuItems.length - 1, iVideoSettingsIndex + 1);
-        } else if (e.key === 'Enter') { 
-            submenuItems[iVideoSettingsIndex]?.click();
-        } else if (e.key === 'ArrowLeft' || e.key === 'Escape') { 
-            hideVideoFormatMenu();
-        }
-        updateSettingsSelection(o.SettingsVideoFormatMenu, iVideoSettingsIndex);
-    } else { 
-        const mainItems = o.SettingsMainMenu?.querySelectorAll('.settings-item') ?? [];
-        if (e.key === 'ArrowUp') {
-            iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
-        } else if (e.key === 'ArrowDown') {
-            iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
-        } else if (e.key === 'Enter') {
-            mainItems[iChannelSettingsIndex]?.click();
-        } else if (e.key === 'ArrowRight') {
-            if (iChannelSettingsIndex === 1) {
-                mainItems[iChannelSettingsIndex]?.click();
-            }
-        }
-        else if (e.key === 'ArrowLeft' || e.key === 'Escape') { 
-             hideChannelSettings();
-        }
-        updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
+    if (e.key === 'ArrowUp') {
+        iChannelSettingsIndex = Math.max(0, iChannelSettingsIndex - 1);
+    } else if (e.key === 'ArrowDown') {
+        iChannelSettingsIndex = Math.min(mainItems.length - 1, iChannelSettingsIndex + 1);
+    } else if (e.key === 'Enter') {
+        mainItems[iChannelSettingsIndex]?.click();
+    } else if (e.key === 'ArrowRight' || e.key === 'Escape' || e.key === 'ArrowLeft') { 
+         hideChannelSettings();
     }
+    updateSettingsSelection(o.SettingsMainMenu, iChannelSettingsIndex);
     return;
   }
 
