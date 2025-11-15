@@ -217,83 +217,32 @@ body.modal-open {
 }
 
 #IdleAnimation {
-    /* Set display to block to allow absolute children positioning */
     display: block;
-    /* The rest of the fixed positioning styles */
     background:transparent;
     z-index:7; 
     position: fixed;
     width: 100%;
     height: 100%; 
+    /* Make IdleAnimation a positioning context for its pseudo-elements */
+    position: relative; 
 }
 
-/* --- OLD IDLE BRANDING (Disabled in favor of new look) --- */
-.idle-branding {
-    display: none !important;
-}
-/* ------------------------------------------------------------ */
-
-/* --- NEW BRANDING PLACEMENT STYLES (MATCHES IMAGE) --- */
-.idle-branding-new {
+/* --- Shader/Gradient Overlay --- */
+#IdleAnimation::after {
+    content: '';
     position: absolute;
-    top: 50%;
-    right: 18%; /* Adjusted: Pushed 3% more to the right (from 15% to 18%) */
-    transform: translateY(-50%); /* Center vertically */
-    text-align: right;
-    text-shadow: 0 0 15px rgba(0, 0, 0, 1);
-    pointer-events: none;
-    z-index: 2; /* Needs to be above the background image */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Gradient from a slightly transparent black on the left to fully transparent on the right */
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0)); 
+    z-index: 1; /* Below text, above background image */
+    opacity: 1; /* Ensure it's visible */
+    pointer-events: none; /* Allows interaction with elements beneath it */
 }
 
-.branding-main-line {
-    font-size: 6.5rem; /* Adjusted: Made "SHAKZZ" significantly bigger (from 5.5rem to 6.5rem) */
-    font-weight: 900;
-    line-height: 1;
-    color: var(--text-primary);
-    margin: 0;
-    padding: 0;
-    letter-spacing: 2px;
-}
-
-.branding-sub-line {
-    font-size: 2.5rem; 
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-    padding: 0;
-    letter-spacing: 1px;
-    display: block; 
-}
-/* ------------------------------------------------------------ */
-
-
-#PlayButton {
-    /* The play button still needs to be centered on the screen */
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    
-    width:100px;
-    height:100px;
-    border-radius:50%;
-    background:rgba(255,255,255,0.1);
-    border:2px solid white;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    transition:transform .2s, background .2s;
-    z-index: 2; /* Needs to be above the background image */
-}
-
-#PlayButton svg {
-    width:50px;
-    height:50px;
-    fill:white;
-    margin-left:8px;
-}
-
+/* --- Background Image --- */
 #IdleAnimation::before {
     content: '';
     position: absolute; 
@@ -307,7 +256,7 @@ body.modal-open {
     opacity: 0;
     transition: opacity 0.8s ease-in;
     
-    z-index: 1; 
+    z-index: 0; /* Ensures it's the very bottom layer */
     
     pointer-events: none;
 }
@@ -315,6 +264,78 @@ body.modal-open {
 #IdleAnimation:not(.HIDDEN)::before {
     opacity: 1;
 }
+
+/* --- OLD IDLE BRANDING (Disabled in favor of new look) --- */
+.idle-branding {
+    display: none !important;
+}
+/* ------------------------------------------------------------ */
+
+/* --- NEW BRANDING PLACEMENT STYLES (MATCHES IMAGE) --- */
+.idle-branding-new {
+    position: absolute;
+    top: 50%;
+    right: 12%; /* Adjusted: Moved further right. Use a percentage for responsiveness. */
+    transform: translateY(-50%); /* Center vertically */
+    text-align: right; /* Aligns both lines to the right */
+    text-shadow: 0 0 15px rgba(0, 0, 0, 1);
+    pointer-events: none;
+    z-index: 2; /* Needs to be above the background image and shader */
+    display: flex; /* Use flexbox to arrange lines vertically */
+    flex-direction: column; /* Stack them on top of each other */
+    align-items: flex-end; /* Align items to the right end */
+    justify-content: center; /* Center them within their own column */
+}
+
+.branding-main-line {
+    font-size: 8rem; /* Adjusted: Made "SHAKZZ" even bigger */
+    font-weight: 900;
+    line-height: 0.9; /* Reduced line height to bring "CUTE PH MODDER" closer */
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+    letter-spacing: 2px;
+}
+
+.branding-sub-line {
+    font-size: 2.8rem; /* Adjusted: Slightly bigger for better readability */
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 5px; /* Small margin from "SHAKZZ" */
+    padding: 0;
+    letter-spacing: 1px;
+    display: block; 
+}
+/* ------------------------------------------------------------ */
+
+
+#PlayButton {
+    /* The play button still needs to be centered on the screen */
+    position: absolute;
+    top: 50%;
+    left: 20%; /* Adjusted to be on the left side, mirroring image */
+    transform: translate(-50%, -50%);
+    
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.1);
+    border:2px solid white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:transform .2s, background .2s;
+    z-index: 2; /* Needs to be above the background image and shader */
+}
+
+#PlayButton svg {
+    width:50px;
+    height:50px;
+    fill:white;
+    margin-left:8px;
+}
+
 
 /* ------------------------- PANELS (NAV & SETTINGS) - overlay slide-out panels ------------------------- */
 #nav, #ChannelSettings {
