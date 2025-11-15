@@ -237,7 +237,7 @@ body.modal-open {
 .idle-branding-new {
     position: absolute;
     top: 50%;
-    right: 15%; /* Adjust distance from right edge */
+    right: 18%; /* Adjusted: Pushed 3% more to the right (from 15% to 18%) */
     transform: translateY(-50%); /* Center vertically */
     text-align: right;
     text-shadow: 0 0 15px rgba(0, 0, 0, 1);
@@ -246,7 +246,7 @@ body.modal-open {
 }
 
 .branding-main-line {
-    font-size: 5.5rem; 
+    font-size: 6.5rem; /* Adjusted: Made "SHAKZZ" significantly bigger (from 5.5rem to 6.5rem) */
     font-weight: 900;
     line-height: 1;
     color: var(--text-primary);
@@ -311,15 +311,6 @@ body.modal-open {
     
     pointer-events: none;
 }
-
-/* Removing the block below as .idle-branding-new is already positioned */
-/*
-.idle-branding,
-#PlayButton {
-    position: relative;
-    z-index: 2; 
-}
-*/
 
 #IdleAnimation:not(.HIDDEN)::before {
     opacity: 1;
