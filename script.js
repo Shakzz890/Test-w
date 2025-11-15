@@ -1,8 +1,5 @@
 let player = null; 
 let ui = null; 
-// Added to maintain consistent state tracking outside of JW Player controls
-let continuousPlayInterval = null; 
-
 const o = {
   PlayerContainer: document.getElementById('playerContainer'),
   // Correctly mapping to the HTML ID: jwplayer-container
@@ -58,6 +55,9 @@ anione: { name: "Ani One", type: "hls", manifestUrl: "https://amg19223-amg19223c
 aniplus: { name: "Aniplus", type: "hls", manifestUrl: "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJj494OpI0bKrTrvcHqEkzMYzqtfLNdWjQrg&s", group: ["cartoons & animations"], },
 sinemanila: { name: "SineManila", type: "hls", manifestUrl: "https://live20.bozztv.com/giatv/giatv-sinemanila/sinemanila/chunks.m3u8", logo: "", group:["movies", "entertainment"], },
 mrbeanlive: { name: "MR Bean Live Action", type: "hls", manifestUrl: "https://amg00627-amg00627c40-rakuten-uk-5725.playouts.now.amagi.tv/ts-eu-w1-n2/playlist/amg00627-banijayfast-mrbeanpopupcc-rakutenuk/cb573d1d7d6c648b92d43b66cef24582847b3dcb0e6c886470af4a9765d96300dbf9b9c8fd3ab13c1ec0468a710b6d5a4d1cd209af3c419b8b1dfd034f25536b9f9bb565da9f0211c9a06b5756af6a4208a55b05a7700079d6a05a2b8d2fba74005cb95a3c1862c3ed47ad662f9ad253d72a39e8fc8b307b24455a9c5a43e6a64cb7abe95810893aa5b00140c12e14fa83439fd401b388d50f8315d775a514c893a182da1187e4205293728aecdb5f581fa9a83bf8f955bfd6937929957f2d556c3a8cc1b2cd3ef702da21269cded8b6648560a63ebb89125a980194408b338b65ea2aaef557e2dad320aaea5ad6a60b315dccc8a59ee93a739067f5abe5dc391af392452c179b3f994a5f491a999f65d2ff58b6cf8d6d06d79d67feb10ff0bca18aeeffa04b922cc6c6ce7a5c28414e0b188f51ae9b228e678d38e0e21a2f49551fedbb5bc094d65734221ed6db1eff5a5b98cb9b8fda393ec84b124ea7358a0c4b3f9a742457cd19d4b6702c852f0180751afe5b3e8f0bbc9b24e7a8d6e0496ae68c8912b13fa1e54afff900a061391931b2f42d4d4c032883b9285e660bae2f83f2c4e5650609e885afaf9029580d5a460a586b835790052ba668aed8b933cf2257196f9860690e20e9/184/1280x720_3329040/index.m3u8", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdSj6OHTQv9_53OX9ZwSjCqOTkYj5dDUZUW0irJhXranWx7zI1YhEIwg&s=10", group:["cartoons & animations", "entertainment"], },
+iQIYI: { name:"iQIYI", type: "clearkey", manifestUrl: "https://linearjitp-playback.astro.com.my/dash-wv/linear/1006/default_ott.mpd", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSs3X1_D_GkWQbMiZzbmaoFets_gAeM6zKGhvtuAD7y46OH9zcqWCnLoG3K&s=10", group: ["entertainment"], userAgent: "Mozilla/5.0 (Linux; Android 14; 27821-67832-42-315-4231-233-21-43-12-1312-321-23-21-232-) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36", keyId: "7ef7e913ce85a1131b27036069169a10", key: "77d98ed71db7524c27875a09a975f9e6" },
+tv5: { name: "TV 5 HD", type: "clearkey", manifestUrl: "https://qp-pldt-live-bpk-02-prod.akamaized.net/bpk-tv/tv5_hd/default1/index.mpd", keyId: "2615129ef2c846a9bbd43a641c7303ef", key: "07c7f996b1734ea288641a68e1cfdc4d", logo: "https://vignette.wikia.nocookie.net/russel/images/f/f9/TV5_Logo_2011.png/revision/latest?cb=20161204035016", group:["news", "entertainment"], },
+kapamilya: { name: "Kapamilya Channel HD", type: "clearkey", manifestUrl: "https://d1uf7s78uqso1e.cloudfront.net/out/v1/efa01372657648be830e7c23ff68bea2/index.mpd", keyId: "bd17afb5dc9648a39be79ee3634dd4b8", key: "3ecf305d54a7729299b93a3d69c02ea5", logo: "https://cms.cignal.tv/Upload/Images/Kapamilya Channel Logo alpha.png", group:["news", "entertainment"], },
     
 };
     
@@ -94,63 +94,9 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// FIX: Robust video element selector with retry logic
-function ensureVideoElementStyle(retries = 3) {
-    const getVideoElement = () => {
-        return o.JwPlayerContainer.querySelector('video') || 
-               o.JwPlayerContainer.querySelector('.jw-video') ||
-               o.JwPlayerContainer.querySelector('.jw-wrapper video');
-    };
-
-    const applyStyle = () => {
-        const jwVideoElement = getVideoElement();
-        
-        if (!jwVideoElement && retries > 0) {
-            console.log(`Video element not found, retrying... (${retries} attempts left)`);
-            setTimeout(() => ensureVideoElementStyle(retries - 1), 100);
-            return;
-        }
-        
-        if (!jwVideoElement) {
-            console.error("Video element could not be found after retries");
-            return;
-        }
-
-        const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
-        console.log("Applying aspect ratio:", currentFormatKey); // Debug log
-        // Call the setAspectRatio function using the found element
-        setAspectRatio(currentFormatKey);
-    };
-    
-    applyStyle();
-}
-
-
 /* -------------------------
     Core Player Functions
     ------------------------- */
-
-// Function to force continuous playback (FIX: Disables all pausing)
-function startContinuousPlayback() {
-    // Clear any previous interval just in case
-    if (continuousPlayInterval) clearInterval(continuousPlayInterval);
-    
-    // Check and force play every 200ms if the player is paused
-    continuousPlayInterval = setInterval(() => {
-        // We only try to force play if a session is active and the player exists
-        if (player && isSessionActive && player.getState() === 'paused') {
-            player.play(true);
-        }
-    }, 200); 
-}
-
-function stopContinuousPlayback() {
-    if (continuousPlayInterval) {
-        clearInterval(continuousPlayInterval);
-        continuousPlayInterval = null;
-    }
-}
-
 async function initPlayer() {
   Object.keys(channels).forEach((key, i) => {
     channels[key].number = i + 1;
@@ -191,9 +137,7 @@ async function initPlayer() {
           console.error('JW Player Error:', e.message || e);
           if (o.JwPlayerContainer) o.JwPlayerContainer.style.opacity = '1';
           showIdleAnimation(true);
-          // Aggressive loader hide on error (in case it was still visible)
           hideLoaderAndShowVideo(); 
-          stopContinuousPlayback(); // Stop aggressive playback on error
       });
       
       player.on('levels', renderChannelSettings);
@@ -201,20 +145,13 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // FIX: Use .once() for initial setup after the first player video is created
-      player.once('ready', () => {
-          console.log("JW Player ready, applying aspect ratio...");
-          // Immediately apply aspect ratio after JWPlayer initializes the video tag
-          ensureVideoElementStyle(); 
-          if (isSessionActive) {
-              startContinuousPlayback();
-          }
+      // --- FIX: Disable Pause Button on Taps/Clicks ---
+      player.on('pause', () => { 
+        if (player.getState() !== 'idle' && player.getState() !== 'complete') {
+            player.play(true);
+        }
       });
-
-      player.on('remove', () => {
-          stopContinuousPlayback();
-      });
-      // --- END JWPLAYER EVENT LISTENERS ---
+      // --- END FIX ---
 
   } else {
       console.error("JWPlayer library not loaded.");
@@ -231,22 +168,18 @@ async function initPlayer() {
 function handleBuffering(event) {
   clearTimeout(loaderFadeTimeout);
   if (!event.buffer) {
-    // When buffering stops, video should be showing.
     hideLoaderAndShowVideo(); 
   }
 }
 
-// --- Simplified handlePlaying ---
+// --- Simplified handlePlaying (Triggered when video starts playing) ---
 function handlePlaying() {
-  // When playback starts, video is confirmed.
   if (isSessionActive) {
       hideLoaderAndShowVideo(); 
-      // Ensure continuous playback is active after the stream starts
-      startContinuousPlayback(); 
   }
 }
 
-// --- Aggressive and Simplified hideLoaderAndShowVideo function ---
+// --- Aggressive Loader Hide Logic (Restored and fixed) ---
 function hideLoaderAndShowVideo() { 
       clearTimeout(loaderFadeTimeout);
       
@@ -260,8 +193,7 @@ function hideLoaderAndShowVideo() {
           o.ChannelLoader.classList.remove('fade-out');
           o.ChannelLoader.classList.add('HIDDEN');
           
-          // 3. Reset opacity for next load cycle (HIDDEN sets opacity:0 in CSS)
-          // Note: Since .HIDDEN already sets display:none, this ensures the loader is gone.
+          // 3. Reset opacity for next load cycle
       }
 }
 // --- END Aggressive function ---
@@ -294,7 +226,6 @@ function setupControls() {
       return;
     }
    
-    // FIX: Removed PlayButton check here, handleFirstPlay is now solely on mousedown
     if (targetElement && targetElement.closest('#PlayButton')) {
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
       return;
@@ -329,10 +260,7 @@ function setupControls() {
   }, { passive: false });
 
   playerContainer.addEventListener('click', e => {
-    // FIX: Allow click event propagation if target is PlayButton, as handleFirstPlay is on mousedown
-    // But prevent default behavior on the main container click if not clicking the play button
-    // This maintains your single-tap/double-tap logic below:
-    if (e.target && e.target.closest('#PlayButton')) return; 
+    if (e.target && e.target.closest('#PlayButton')) return;
    
     if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay'))) {
       return;
@@ -415,15 +343,15 @@ function handleDoubleTapAction() {
 
 function loadInitialChannel() {
   const storedLast = localStorage.getItem('iptvLastWatched');
-  // FIX: Simplified initial channel key logic to ensure a key is found.
-  let initialChannelKey = Object.keys(channels)[0]; 
-  
-  if (!initialChannelKey) {
-    console.error("No channels defined.");
-    return;
+  let initialChannelKey = 'kapamilya'; 
+  if (!channels[initialChannelKey]) {
+    initialChannelKey = Object.keys(channels)[0];
+    if (!initialChannelKey) {
+      console.error("No channels defined.");
+      return;
+    }
   }
 
-  // Ensure initialChannelKey is in the filtered list if loaded later
   if (aFilteredChannelKeys.length === 0) {
     sSelectedGroup = '__all';
     buildNav();
@@ -433,13 +361,16 @@ function loadInitialChannel() {
     }
   }
 
-  // Use stored key only if it's currently in the filtered list
   if (storedLast && channels[storedLast] && aFilteredChannelKeys.includes(storedLast)) {
       initialChannelKey = storedLast;
   }
   else if (!aFilteredChannelKeys.includes(initialChannelKey)) {
-      // Fallback to the first filtered channel
       initialChannelKey = aFilteredChannelKeys[0];
+  }
+
+  if (!initialChannelKey || !aFilteredChannelKeys.includes(initialChannelKey)) {
+      console.error("Could not determine a valid initial channel from filtered list.");
+      return;
   }
 
   const initialIndex = aFilteredChannelKeys.indexOf(initialChannelKey);
@@ -476,18 +407,21 @@ async function loadChannel(index, options = {}) {
   }
 
   if (options.isInitialLoad && !isSessionActive) {
-      // FIX: THIS IS THE KEY POINT. When not active, we just update the UI, not the player.
       console.log("Initial load: Setting channel but not loading stream.");
       localStorage.setItem('iptvLastWatched', newChannelKey);
      
-      hideLoaderAndShowVideo();
+      const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+      if (jwVideoElement) jwVideoElement.style.opacity = '0';
+     
+      hideLoaderAndShowVideo(); // Ensure loader is hidden from previous session
+     
       hideChannelName();
       updateSelectedChannelInNav(); 
       showIdleAnimation(true); 
       return;
   }
 
-  // --- START Loading Visuals (Only runs if isSessionActive is true) ---
+  // --- START Loading Visuals (Restored) ---
   if (isSessionActive) {
       hideIdleAnimation();
       
@@ -508,26 +442,8 @@ async function loadChannel(index, options = {}) {
 
 
   if (!player) {
-      // FIX: If player is null on an active session load, initialize it now
-      if (typeof jwplayer !== 'undefined') {
-          player = jwplayer(o.JwPlayerContainer); 
-          // Re-attach listeners now that player exists
-          player.on('error', e => {
-              console.error('JW Player Error:', e.message || e);
-              showIdleAnimation(true);
-              hideLoaderAndShowVideo(); 
-              stopContinuousPlayback();
-          });
-          player.on('levels', renderChannelSettings);
-          player.on('bufferChange', handleBuffering);
-          player.on('play', handlePlaying); 
-          player.on('levelsChanged', updateStreamInfo);
-          player.on('ready', ensureVideoElementStyle); // Ensure style is applied on ready
-          player.on('remove', stopContinuousPlayback);
-      } else {
-          console.error("Player not initialized and JWPlayer library missing.");
-          return;
-      }
+      console.error("Player not initialized before loading channel.");
+      return;
   }
 
   localStorage.setItem('iptvLastWatched', newChannelKey);
@@ -558,8 +474,7 @@ async function loadChannel(index, options = {}) {
     } else if (newChannel.type === "dash") {
         playerType = "dash";
     }
-    
-    // Use controls: false to hide native controls (helps prevent accidental pause)
+
     player.setup({
         file: newChannel.manifestUrl,
         type: playerType,
@@ -567,25 +482,17 @@ async function loadChannel(index, options = {}) {
         autostart: isSessionActive, 
         width: "100%",
         aspectratio: "16:9",
-        controls: false // Hide controls to prevent native pause actions
+        // FIX for Aspect Ratio: Removed the stretching property to ensure CSS/JS takes precedence.
+        // The default JWPlayer behavior is 'stretch' which is often overridden by CSS object-fit.
     });
     // --- END CORE JW PLAYER SETUP LOGIC ---
     
     // --- BUFFERRING FIX: Enforce playback right after setup ---
     if (isSessionActive) {
-        // FIX: Re-enforce style immediately after setup, when video tag exists
-        ensureVideoElementStyle(); 
-        
-        // FIX 2: Explicitly UNMUTE the player when starting a new stream
-        player.setMute(false); 
-
-        // Ensure the continuous playback interval starts/runs
-        startContinuousPlayback();
-        
         // Use a short delay to ensure JW Player has processed the manifest
         setTimeout(() => {
             const currentState = player.getState();
-            // Force play if needed
+            // If the player is 'buffering' or 'paused' but isSessionActive is true, force play.
             if (currentState === 'buffering' || currentState === 'paused' || currentState === 'idle') {
                 player.play(true);
             }
@@ -625,7 +532,6 @@ function setupMainMenuControls() {
   }
 
   if (o.PlayButton) {
-      // FIX: mousedown event handler is correctly attached below
       o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
       o.PlayButton.addEventListener('mousedown', handleFirstPlay);
   } else {
@@ -900,28 +806,6 @@ function hideVideoFormatMenu() {
   } else { console.error("SettingsContainer element not found."); }
 }
 
-// FIX: Helper function to map internal key to display name
-function getAspectRatioDisplayName(formatKey) {
-    switch (formatKey) {
-        case 'stretch': return 'Stretch';
-        case 'fill': return 'Fill';
-        case 'zoom': return 'Zoom';
-        case '16:9': return '16:9 (Default)';
-        case 'original':
-        default: return 'Original';
-    }
-}
-
-// FIX: getAspectRatio now reads the stored key and returns the display name
-function getAspectRatio() {
-    // Read the stored internal key (e.g., '16:9', 'fill', 'original')
-    const formatKey = localStorage.getItem('iptvAspectRatio') || 'original';
-    
-    // Return the corresponding display name for the UI
-    return getAspectRatioDisplayName(formatKey);
-}
-
-// UPDATE renderVideoFormatMenu to use it:
 function renderVideoFormatMenu() {
   if (o.SettingsVideoFormatMenu) {
       const currentFormat = getAspectRatio();
@@ -938,59 +822,48 @@ function renderVideoFormatMenu() {
   } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
 
+function getAspectRatio() {
+    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+    if (!jwVideoElement) return 'Original';
+    const style = jwVideoElement.style;
+    if (style.objectFit === 'fill') return 'Stretch';
+    if (style.objectFit === 'cover' && style.transform === 'scale(1.15)') return 'Zoom';
+    if (style.objectFit === 'cover') return 'Fill';
+    return localStorage.getItem('iptvAspectRatio') || 'Original';
+}
 
-// FIX: Simplified and more reliable style application
 function setAspectRatio(format) {
-    const getVideoElement = () => {
-        return o.JwPlayerContainer.querySelector('video') || 
-               o.JwPlayerContainer.querySelector('.jw-video') ||
-               o.JwPlayerContainer.querySelector('.jw-wrapper video');
-    };
-
-    const jwVideoElement = getVideoElement();
-    if (!jwVideoElement) {
-        console.warn("Video element not found for aspect ratio change");
-        return;
-    }
-
-    // Reset styles first
-    jwVideoElement.style.objectFit = '';
-    jwVideoElement.style.transform = '';
-    
-    // Apply new styles based on format
+    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
+    if (!jwVideoElement) return;
+    jwVideoElement.style.transform = 'scale(1)';
+    let formatName = 'Original';
     switch(format) {
-        case 'stretch':
-            jwVideoElement.style.objectFit = 'fill';
-            jwVideoElement.style.transform = 'scale(1)';
-            break;
-        case 'fill':
-            jwVideoElement.style.objectFit = 'cover';
-            jwVideoElement.style.transform = 'scale(1)';
-            break;
-        case 'zoom':
-            jwVideoElement.style.objectFit = 'cover';
-            jwVideoElement.style.transform = 'scale(1.15)';
-            break;
-        case '16:9':
-            jwVideoElement.style.objectFit = 'contain';
-            jwVideoElement.style.transform = 'scale(1)';
-            break;
-        case 'original':
-        default:
-            jwVideoElement.style.objectFit = 'contain';
-            jwVideoElement.style.transform = 'scale(1)';
-            format = 'original'; // Normalize invalid values
-            break;
+      case 'stretch':
+        jwVideoElement.style.objectFit = 'fill';
+        formatName = 'Stretch';
+        break;
+      case '16:9':
+        jwVideoElement.style.objectFit = 'contain';
+        formatName = '16:9';
+        break;
+      case 'fill':
+        jwVideoElement.style.objectFit = 'cover';
+        formatName = 'Fill';
+        break;
+      case 'zoom':
+        jwVideoElement.style.objectFit = 'cover';
+        jwVideoElement.style.transform = 'scale(1.15)';
+        formatName = 'Zoom';
+        break;
+      default:
+        // Set back to the default 'contain' to honor the original aspect ratio
+        jwVideoElement.style.objectFit = 'contain';
+        formatName = 'Original';
     }
+    localStorage.setItem('iptvAspectRatio', formatName);
     
-    console.log(`Applied ${format} aspect ratio to video element`, jwVideoElement); // Debug log
-    
-    // Save the internal key to storage
-    localStorage.setItem('iptvAspectRatio', format);
-    
-    // Update the UI to reflect the change
     hideSettingsModal();
-    renderVideoFormatMenu();
+    renderVideoFormatMenu(); 
 }
 
 function togglePlaybackControls() {
@@ -1036,7 +909,7 @@ window.setQuality = (selected) => {
       const levelIndex = levels.findIndex(level => level.label === selected); 
 
       if (levelIndex !== -1) { 
-          player.setQuality(levelIndex + 1); // JW Player uses 1-based index for quality tracks
+          player.setQuality(levelIndex); // 1-based index
       } else { 
           console.warn("Selected quality track not found:", selected); 
           player.setQuality(0); 
@@ -1058,24 +931,22 @@ function renderModalContent(type) {
       if (!player || !player.getPlaylistItem()) return '<p>Please start playing a channel first.</p>';
 
       if (type === 'aspect_ratio') {
-// FIX: Read the internal key from storage for checking the selected radio button
-          const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
-          
+          const currentFormat = getAspectRatio();
           let itemsHtml = `
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('original')">
-                Original ${currentFormatKey === 'original' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Original ${currentFormat === 'Original' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('16:9')">
-                16:9 (Default) ${currentFormatKey === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                16:9 ${currentFormat === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('fill')">
-                Fill ${currentFormatKey === 'fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Fill ${currentFormat === 'Fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('stretch')">
-                Stretch ${currentFormatKey === 'stretch' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Stretch ${currentFormat === 'Stretch' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('zoom')">
-                Zoom ${currentFormatKey === 'zoom' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Zoom ${currentFormat === 'Zoom' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
           `;
           
@@ -1087,14 +958,14 @@ function renderModalContent(type) {
       
       } else if (type === 'quality') {
         const levels = player.getQualityLevels() || [];
-        const currentLevelIndex = player.getCurrentQuality();
+        const currentLevel = player.getCurrentQuality();
         
-        let itemsHtml = `<li class="modal-selectable" data-action="quality" data-value="auto" onclick="setQuality('auto')">Auto <input type="radio" name="quality" value="auto" ${currentLevelIndex === 0 ? 'checked' : ''}></li>`;
+        let itemsHtml = `<li class="modal-selectable" data-action="quality" data-value="auto" onclick="setQuality('auto')">Auto <input type="radio" name="quality" value="auto" ${currentLevel === 0 ? 'checked' : ''}></li>`;
         
         levels.forEach((track, index) => {
           const bps = track.bitrate > 1000000 ? `${(track.bitrate/1e6).toFixed(2)} Mbps` : `${Math.round(track.bitrate/1e3)} Kbps`;
-          const label = track.label || `${track.height}p`; 
-          const isChecked = (index + 1) === currentLevelIndex; 
+          const label = track.label || `${index+1}`; 
+          const isChecked = (index + 1) === currentLevel; 
           
           itemsHtml += `<li class="modal-selectable" data-action="quality" data-value='${label}' onclick="setQuality('${label}')">${label}, ${bps} <input type="radio" name="quality" value='${label}' ${isChecked ? 'checked' : ''}></li>`;
         });
@@ -1102,28 +973,24 @@ function renderModalContent(type) {
         contentHtml = `<h2>Video Quality</h2><ul class="popup-content-list">${itemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
 
       } else if (type === 'subtitles') {
-        // FIX: Subtitle/Audio logic restored
         const textTracks = player.getCaptionList() || []; 
         const audioTracks = player.getAudioTracks() || [];
-        const currentTextTrackIndex = player.getCurrentCaptions(); 
-        const currentAudioTrackIndex = player.getCurrentAudioTrack(); 
+        const currentTextTrack = player.getCurrentCaptions(); 
+        const currentAudioTrack = player.getCurrentAudioTrack(); 
 
-        let subItemsHtml = `<li class="modal-selectable" data-action="subtitle_off" onclick="setSubtitles(0, false)">Off ${currentTextTrackIndex === 0 ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
+        let subItemsHtml = `<li class="modal-selectable" data-action="subtitle_off" onclick="setSubtitles(0, false)">Off ${currentTextTrack === 0 ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
         textTracks.forEach((track, index) => {
-          // JW Player track index is 1-based relative to this list
-          const isChecked = (index + 1) === currentTextTrackIndex;
-          const safeTrackLabel = (track.label || track.name).replace(/'/g, '&#39;');
-          subItemsHtml += `<li class="modal-selectable" data-action="subtitle_on" onclick="setSubtitles(${index + 1}, true)">${safeTrackLabel} ${isChecked ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
+          const isChecked = (index + 1) === currentTextTrack;
+          subItemsHtml += `<li class="modal-selectable" data-action="subtitle_on" onclick="setSubtitles(${index + 1}, true)">${track.label || track.name} ${isChecked ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
         });
 
         let audioItemsHtml = audioTracks.map((track, index) => {
-            const isChecked = index === currentAudioTrackIndex;
-            const safeTrackLabel = (track.label || track.name).replace(/'/g, '&#39;');
-            return `<li class="modal-selectable" data-action="audio" onclick="setAudio(${index})">${safeTrackLabel} ${isChecked ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
+            const isChecked = index === currentAudioTrack;
+            return `<li class="modal-selectable" data-action="audio" onclick="setAudio(${index})">${track.label || track.name} ${isChecked ? '<span style="color: var(--bg-focus)">✓</span>' : ''}</li>`;
         }).join('');
         
         contentHtml = `<h2>Subtitles & Audio</h2><ul class="popup-content-list">${subItemsHtml}${audioItemsHtml}</ul><div class="popup-buttons"><button class="modal-selectable" data-action="close" onclick="hideSettingsModal()">CLOSE</button></div>`;
-        // END FIX
+
       } else if (type === 'edit') {
         if (!aFilteredChannelKeys || iPlayingChannelIndex >= aFilteredChannelKeys.length || iPlayingChannelIndex < 0) return '<p>No channel selected.</p>'; 
         const currentChannel = channels[aFilteredChannelKeys[iPlayingChannelIndex]]; 
@@ -1478,12 +1345,7 @@ function saveFavoritesToStorage() {
     First Play handling
     ------------------------- */
 function handleFirstPlay() {
-  // FIX: Added logic to prevent re-initializing player if already active
-  if (isSessionActive && player) {
-      console.log("Session already active, ignoring extra play attempt.");
-      return;
-  }
-  
+  if (isSessionActive) return;
   isSessionActive = true;
 
   hideIdleAnimation();
@@ -1588,8 +1450,6 @@ function toggleFullScreen() {
     Event Listeners
     ------------------------- */
 if (o.PlayButton) {
-    // This is the main play trigger
-    o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
 } else { console.error("PlayButton element not found."); }
 
@@ -1607,7 +1467,7 @@ if (o.SearchField) {
     });
 } else { console.error("SearchField element not found."); }
 
-// --- TV REMOTE KEYDOWN LOGIC (Includes 'Enter' key fix) ---
+// --- TV REMOTE KEYDOWN LOGIC ---
 document.addEventListener('keydown', (e) => {
 
   if (document.activeElement === o.SearchField ||
@@ -1761,7 +1621,7 @@ document.addEventListener('keydown', (e) => {
 
 
   // DEFAULT PLAYER KEYS (Panels are closed)
-  const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm', ' '];
+  const PLAYER_KEYS = ['ArrowLeft', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowDown', 'h', 'e', 'Escape', 'm'];
   if (!PLAYER_KEYS.includes(e.key)) return;
 
   e.preventDefault();
@@ -1772,11 +1632,7 @@ document.addEventListener('keydown', (e) => {
     case 'ArrowRight': 
         showChannelSettings();
         break;
-    case 'Enter': 
-    case ' ': // Spacebar
-        // Stream remains playing due to the continuous playback interval.
-        showChannelName(); // Only show channel info on tap/enter
-        break;
+    case 'Enter': showChannelName(); break;
     case 'ArrowUp': loadChannel(iCurrentChannel - 1); break;
     case 'ArrowDown': loadChannel(iCurrentChannel + 1); break;
     case 'h': window.showGuide(); break;
@@ -1801,7 +1657,6 @@ function updateStreamInfo() {
 
   try {
     const stats = player.getStats();
-    // JW Player returns 1-based index for quality levels, so we adjust to get the current level object
     const currentQuality = player.getQualityLevels()[player.getCurrentQuality() - 1]; 
     
     if (!stats || !currentQuality) {
