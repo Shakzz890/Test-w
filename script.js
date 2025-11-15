@@ -94,37 +94,35 @@ function scrollToListItem(oListItem) {
     }
 }
 
-// FIX: Function to enforce the video element style (Aspect Ratio)
-function ensureVideoElementStyle() {
-    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
-    if (!jwVideoElement) return;
+// FIX: Robust video element selector with retry logic
+function ensureVideoElementStyle(retries = 3) {
+    const getVideoElement = () => {
+        return o.JwPlayerContainer.querySelector('video') || 
+               o.JwPlayerContainer.querySelector('.jw-video') ||
+               o.JwPlayerContainer.querySelector('.jw-wrapper video');
+    };
 
-    const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
-    
-    // We target the style property directly for high precedence
-    const style = jwVideoElement.style;
-    
-    // Reset properties first
-    style.setProperty('transform', 'scale(1)', 'important');
-    // Set to 'contain' initially, which correctly handles 'Original' and '16:9'
-    style.setProperty('object-fit', 'contain', 'important'); 
+    const applyStyle = () => {
+        const jwVideoElement = getVideoElement();
+        
+        if (!jwVideoElement && retries > 0) {
+            console.log(`Video element not found, retrying... (${retries} attempts left)`);
+            setTimeout(() => ensureVideoElementStyle(retries - 1), 100);
+            return;
+        }
+        
+        if (!jwVideoElement) {
+            console.error("Video element could not be found after retries");
+            return;
+        }
 
-    switch(currentFormat) {
-      case 'Stretch':
-        style.setProperty('object-fit', 'fill', 'important');
-        break;
-      case 'Fill':
-        style.setProperty('object-fit', 'cover', 'important');
-        break;
-      case 'Zoom':
-        style.setProperty('object-fit', 'cover', 'important');
-        style.setProperty('transform', 'scale(1.15)', 'important');
-        break;
-      case 'Original':
-      case '16:9':
-        // The default 'contain' is already set with !important
-        break;
-    }
+        const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
+        console.log("Applying aspect ratio:", currentFormatKey); // Debug log
+        // Call the setAspectRatio function using the found element
+        setAspectRatio(currentFormatKey);
+    };
+    
+    applyStyle();
 }
 
 
@@ -139,6 +137,7 @@ function startContinuousPlayback() {
     
     // Check and force play every 200ms if the player is paused
     continuousPlayInterval = setInterval(() => {
+        // We only try to force play if a session is active and the player exists
         if (player && isSessionActive && player.getState() === 'paused') {
             player.play(true);
         }
@@ -202,8 +201,9 @@ async function initPlayer() {
       player.on('play', handlePlaying); 
       player.on('levelsChanged', updateStreamInfo);
       
-      // FIX: Ensure aspect ratio is applied when the player is ready/reloaded
-      player.on('ready', () => {
+      // FIX: Use .once() for initial setup after the first player video is created
+      player.once('ready', () => {
+          console.log("JW Player ready, applying aspect ratio...");
           // Immediately apply aspect ratio after JWPlayer initializes the video tag
           ensureVideoElementStyle(); 
           if (isSessionActive) {
@@ -294,6 +294,7 @@ function setupControls() {
       return;
     }
    
+    // FIX: Removed PlayButton check here, handleFirstPlay is now solely on mousedown
     if (targetElement && targetElement.closest('#PlayButton')) {
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
       return;
@@ -328,7 +329,10 @@ function setupControls() {
   }, { passive: false });
 
   playerContainer.addEventListener('click', e => {
-    if (e.target && e.target.closest('#PlayButton')) return;
+    // FIX: Allow click event propagation if target is PlayButton, as handleFirstPlay is on mousedown
+    // But prevent default behavior on the main container click if not clicking the play button
+    // This maintains your single-tap/double-tap logic below:
+    if (e.target && e.target.closest('#PlayButton')) return; 
    
     if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay'))) {
       return;
@@ -504,8 +508,26 @@ async function loadChannel(index, options = {}) {
 
 
   if (!player) {
-      console.error("Player not initialized before loading channel.");
-      return;
+      // FIX: If player is null on an active session load, initialize it now
+      if (typeof jwplayer !== 'undefined') {
+          player = jwplayer(o.JwPlayerContainer); 
+          // Re-attach listeners now that player exists
+          player.on('error', e => {
+              console.error('JW Player Error:', e.message || e);
+              showIdleAnimation(true);
+              hideLoaderAndShowVideo(); 
+              stopContinuousPlayback();
+          });
+          player.on('levels', renderChannelSettings);
+          player.on('bufferChange', handleBuffering);
+          player.on('play', handlePlaying); 
+          player.on('levelsChanged', updateStreamInfo);
+          player.on('ready', ensureVideoElementStyle); // Ensure style is applied on ready
+          player.on('remove', stopContinuousPlayback);
+      } else {
+          console.error("Player not initialized and JWPlayer library missing.");
+          return;
+      }
   }
 
   localStorage.setItem('iptvLastWatched', newChannelKey);
@@ -603,6 +625,7 @@ function setupMainMenuControls() {
   }
 
   if (o.PlayButton) {
+      // FIX: mousedown event handler is correctly attached below
       o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
       o.PlayButton.addEventListener('mousedown', handleFirstPlay);
   } else {
@@ -877,6 +900,28 @@ function hideVideoFormatMenu() {
   } else { console.error("SettingsContainer element not found."); }
 }
 
+// FIX: Helper function to map internal key to display name
+function getAspectRatioDisplayName(formatKey) {
+    switch (formatKey) {
+        case 'stretch': return 'Stretch';
+        case 'fill': return 'Fill';
+        case 'zoom': return 'Zoom';
+        case '16:9': return '16:9 (Default)';
+        case 'original':
+        default: return 'Original';
+    }
+}
+
+// FIX: getAspectRatio now reads the stored key and returns the display name
+function getAspectRatio() {
+    // Read the stored internal key (e.g., '16:9', 'fill', 'original')
+    const formatKey = localStorage.getItem('iptvAspectRatio') || 'original';
+    
+    // Return the corresponding display name for the UI
+    return getAspectRatioDisplayName(formatKey);
+}
+
+// UPDATE renderVideoFormatMenu to use it:
 function renderVideoFormatMenu() {
   if (o.SettingsVideoFormatMenu) {
       const currentFormat = getAspectRatio();
@@ -893,59 +938,59 @@ function renderVideoFormatMenu() {
   } else { console.error("SettingsVideoFormatMenu element not found."); }
 }
 
-function getAspectRatio() {
-    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
-    if (!jwVideoElement) return 'Original';
-    // Instead of relying on JW's internal state, we read the CSS style we applied manually
-    const style = jwVideoElement.style;
-    if (style.getPropertyValue('object-fit') === 'fill') return 'Stretch';
-    if (style.getPropertyValue('object-fit') === 'cover' && style.getPropertyValue('transform') === 'scale(1.15)') return 'Zoom';
-    if (style.getPropertyValue('object-fit') === 'cover') return 'Fill';
-    // Fallback to what's stored or 'Original' if CSS is not set (i.e., contain)
-    return localStorage.getItem('iptvAspectRatio') || 'Original';
-}
 
+// FIX: Simplified and more reliable style application
 function setAspectRatio(format) {
-    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
-    if (!jwVideoElement) return;
-    
-    let formatName = 'Original';
-    
-    // Apply style using setProperty('...', '...','!important') for maximum CSS priority
-    switch(format) {
-      case 'stretch':
-        jwVideoElement.style.setProperty('object-fit', 'fill', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        formatName = 'Stretch';
-        break;
-      case '16:9':
-        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        formatName = '16:9';
-        break;
-      case 'fill':
-        jwVideoElement.style.setProperty('object-fit', 'cover', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        formatName = 'Fill';
-        break;
-      case 'zoom':
-        jwVideoElement.style.setProperty('object-fit', 'cover', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1.15)', 'important');
-        formatName = 'Zoom';
-        break;
-      default:
-        // Original: uses contain, no transform
-        jwVideoElement.style.setProperty('object-fit', 'contain', 'important');
-        jwVideoElement.style.setProperty('transform', 'scale(1)', 'important');
-        formatName = 'Original';
-    }
-    localStorage.setItem('iptvAspectRatio', formatName);
-    
-    // Call the enforcer explicitly just in case
-    ensureVideoElementStyle();
+    const getVideoElement = () => {
+        return o.JwPlayerContainer.querySelector('video') || 
+               o.JwPlayerContainer.querySelector('.jw-video') ||
+               o.JwPlayerContainer.querySelector('.jw-wrapper video');
+    };
 
+    const jwVideoElement = getVideoElement();
+    if (!jwVideoElement) {
+        console.warn("Video element not found for aspect ratio change");
+        return;
+    }
+
+    // Reset styles first
+    jwVideoElement.style.objectFit = '';
+    jwVideoElement.style.transform = '';
+    
+    // Apply new styles based on format
+    switch(format) {
+        case 'stretch':
+            jwVideoElement.style.objectFit = 'fill';
+            jwVideoElement.style.transform = 'scale(1)';
+            break;
+        case 'fill':
+            jwVideoElement.style.objectFit = 'cover';
+            jwVideoElement.style.transform = 'scale(1)';
+            break;
+        case 'zoom':
+            jwVideoElement.style.objectFit = 'cover';
+            jwVideoElement.style.transform = 'scale(1.15)';
+            break;
+        case '16:9':
+            jwVideoElement.style.objectFit = 'contain';
+            jwVideoElement.style.transform = 'scale(1)';
+            break;
+        case 'original':
+        default:
+            jwVideoElement.style.objectFit = 'contain';
+            jwVideoElement.style.transform = 'scale(1)';
+            format = 'original'; // Normalize invalid values
+            break;
+    }
+    
+    console.log(`Applied ${format} aspect ratio to video element`, jwVideoElement); // Debug log
+    
+    // Save the internal key to storage
+    localStorage.setItem('iptvAspectRatio', format);
+    
+    // Update the UI to reflect the change
     hideSettingsModal();
-    renderVideoFormatMenu(); 
+    renderVideoFormatMenu();
 }
 
 function togglePlaybackControls() {
@@ -1013,22 +1058,24 @@ function renderModalContent(type) {
       if (!player || !player.getPlaylistItem()) return '<p>Please start playing a channel first.</p>';
 
       if (type === 'aspect_ratio') {
-          const currentFormat = getAspectRatio();
+// FIX: Read the internal key from storage for checking the selected radio button
+          const currentFormatKey = localStorage.getItem('iptvAspectRatio') || 'original';
+          
           let itemsHtml = `
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('original')">
-                Original ${currentFormat === 'Original' || currentFormat === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Original ${currentFormatKey === 'original' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('16:9')">
-                16:9 (Default) ${currentFormat === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                16:9 (Default) ${currentFormatKey === '16:9' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('fill')">
-                Fill ${currentFormat === 'Fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Fill ${currentFormatKey === 'fill' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('stretch')">
-                Stretch ${currentFormat === 'Stretch' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Stretch ${currentFormatKey === 'stretch' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
             <li class="modal-selectable" data-action="aspect" onclick="setAspectRatio('zoom')">
-                Zoom ${currentFormat === 'Zoom' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
+                Zoom ${currentFormatKey === 'zoom' ? '<span style="color: var(--bg-focus)">✓</span>' : ''}
             </li>
           `;
           
@@ -1431,7 +1478,12 @@ function saveFavoritesToStorage() {
     First Play handling
     ------------------------- */
 function handleFirstPlay() {
-  if (isSessionActive) return;
+  // FIX: Added logic to prevent re-initializing player if already active
+  if (isSessionActive && player) {
+      console.log("Session already active, ignoring extra play attempt.");
+      return;
+  }
+  
   isSessionActive = true;
 
   hideIdleAnimation();
@@ -1536,6 +1588,8 @@ function toggleFullScreen() {
     Event Listeners
     ------------------------- */
 if (o.PlayButton) {
+    // This is the main play trigger
+    o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
 } else { console.error("PlayButton element not found."); }
 
