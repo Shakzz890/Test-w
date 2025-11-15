@@ -223,6 +223,7 @@ body.modal-open {
     position: fixed;
     width: 100%;
     height: 100%; 
+    /* Make IdleAnimation a positioning context for its pseudo-elements */
     position: relative; 
 }
 
@@ -237,8 +238,8 @@ body.modal-open {
     /* Gradient from a slightly transparent black on the left to fully transparent on the right */
     background: linear-gradient(to right, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0)); 
     z-index: 1; /* Below text, above background image */
-    opacity: 1; 
-    pointer-events: none; 
+    opacity: 1; /* Ensure it's visible */
+    pointer-events: none; /* Allows interaction with elements beneath it */
 }
 
 /* --- Background Image --- */
@@ -255,7 +256,7 @@ body.modal-open {
     opacity: 0;
     transition: opacity 0.8s ease-in;
     
-    z-index: 0; 
+    z-index: 0; /* Ensures it's the very bottom layer */
     
     pointer-events: none;
 }
@@ -274,23 +275,22 @@ body.modal-open {
 .idle-branding-new {
     position: absolute;
     top: 50%;
-    /* Pushed further right based on your request and image comparison */
-    right: 5%; 
+    right: 12%; /* Adjusted: Moved further right. Use a percentage for responsiveness. */
     transform: translateY(-50%); /* Center vertically */
+    text-align: right; /* Aligns both lines to the right */
     text-shadow: 0 0 15px rgba(0, 0, 0, 1);
     pointer-events: none;
-    z-index: 2; 
-    
-    /* Used to position sub-line absolutely relative to this container */
-    width: 450px; /* Give it a fixed width for positioning to work consistently */
-    text-align: right; 
+    z-index: 2; /* Needs to be above the background image and shader */
+    display: flex; /* Use flexbox to arrange lines vertically */
+    flex-direction: column; /* Stack them on top of each other */
+    align-items: flex-end; /* Align items to the right end */
+    justify-content: center; /* Center them within their own column */
 }
 
 .branding-main-line {
-    /* Adjusted: Made "SHAKZZ" much bigger */
-    font-size: 8rem; 
+    font-size: 8rem; /* Adjusted: Made "SHAKZZ" even bigger */
     font-weight: 900;
-    line-height: 0.9;
+    line-height: 0.9; /* Reduced line height to bring "CUTE PH MODDER" closer */
     color: var(--text-primary);
     margin: 0;
     padding: 0;
@@ -298,30 +298,22 @@ body.modal-open {
 }
 
 .branding-sub-line {
-    /* Absolute positioning relative to .idle-branding-new to place it exactly where it needs to be */
-    position: absolute;
-    
-    /* Moves the entire sub-line block to the right edge of the parent */
-    right: 0;
-    
-    /* Moves the sub-line down vertically to align with the center of the main line */
-    /* This calculation (5rem) is based on SHAKZZ being 8rem tall, placing CUTE PH MODDER near the middle-right */
-    top: 5rem; 
-    
-    font-size: 2.5rem; /* Adjusted size */
+    font-size: 2.8rem; /* Adjusted: Slightly bigger for better readability */
     font-weight: 700;
     color: var(--text-primary);
+    margin-top: 5px; /* Small margin from "SHAKZZ" */
+    padding: 0;
     letter-spacing: 1px;
-    white-space: nowrap; /* Keep it on one line */
+    display: block; 
 }
 /* ------------------------------------------------------------ */
 
 
 #PlayButton {
-    /* The play button position */
+    /* The play button still needs to be centered on the screen */
     position: absolute;
     top: 50%;
-    left: 20%; 
+    left: 20%; /* Adjusted to be on the left side, mirroring image */
     transform: translate(-50%, -50%);
     
     width:100px;
@@ -334,7 +326,7 @@ body.modal-open {
     justify-content:center;
     cursor:pointer;
     transition:transform .2s, background .2s;
-    z-index: 2; 
+    z-index: 2; /* Needs to be above the background image and shader */
 }
 
 #PlayButton svg {
