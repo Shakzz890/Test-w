@@ -96,18 +96,19 @@ function scrollToListItem(oListItem) {
 
 // FIX: Function to enforce the video element style (Aspect Ratio)
 function ensureVideoElementStyle() {
-    // FIX: Target the video element inside the JW container
-    // We rely mostly on the high-priority CSS now, but use JS to apply changes for specific modes.
-    const jwVideoElement = o.JwPlayerContainer.querySelector('video, .jw-media');
+    const jwVideoElement = o.JwPlayerContainer.querySelector('video');
     if (!jwVideoElement) return;
 
     const currentFormat = localStorage.getItem('iptvAspectRatio') || 'Original';
+    
+    // We target the style property directly for high precedence
     const style = jwVideoElement.style;
     
-    // Clear previously applied style properties to let the CSS default take over for 'Original'
-    style.setProperty('object-fit', '');
-    style.setProperty('transform', '');
-    
+    // Reset properties first
+    style.setProperty('transform', 'scale(1)', 'important');
+    // Set to 'contain' initially, which correctly handles 'Original' and '16:9'
+    style.setProperty('object-fit', 'contain', 'important'); 
+
     switch(currentFormat) {
       case 'Stretch':
         style.setProperty('object-fit', 'fill', 'important');
@@ -121,9 +122,7 @@ function ensureVideoElementStyle() {
         break;
       case 'Original':
       case '16:9':
-        // For Original/16:9, we explicitly enforce 'contain' via JS to beat low-priority inline JW styles
-        style.setProperty('object-fit', 'contain', 'important'); 
-        style.setProperty('transform', 'scale(1)', 'important'); 
+        // The default 'contain' is already set with !important
         break;
     }
 }
@@ -140,7 +139,6 @@ function startContinuousPlayback() {
     
     // Check and force play every 200ms if the player is paused
     continuousPlayInterval = setInterval(() => {
-        // We only try to force play if a session is active and the player exists
         if (player && isSessionActive && player.getState() === 'paused') {
             player.play(true);
         }
@@ -296,7 +294,6 @@ function setupControls() {
       return;
     }
    
-    // FIX: Removed PlayButton check here, handleFirstPlay is now solely on mousedown
     if (targetElement && targetElement.closest('#PlayButton')) {
       touchStartX = touchStartY = touchEndX = touchEndY = 0;
       return;
@@ -331,10 +328,7 @@ function setupControls() {
   }, { passive: false });
 
   playerContainer.addEventListener('click', e => {
-    // FIX: Allow click event propagation if target is PlayButton, as handleFirstPlay is on mousedown
-    // But prevent default behavior on the main container click if not clicking the play button
-    // This maintains your single-tap/double-tap logic below:
-    if (e.target && e.target.closest('#PlayButton')) return; 
+    if (e.target && e.target.closest('#PlayButton')) return;
    
     if (e.target && (e.target.closest('#nav') || e.target.closest('#ChannelSettings') || e.target.closest('#SettingsModal') || e.target.closest('#Guide') || e.target.closest('#EpgOverlay'))) {
       return;
@@ -510,26 +504,8 @@ async function loadChannel(index, options = {}) {
 
 
   if (!player) {
-      // FIX: If player is null on an active session load, initialize it now
-      if (typeof jwplayer !== 'undefined') {
-          player = jwplayer(o.JwPlayerContainer); 
-          // Re-attach listeners now that player exists
-          player.on('error', e => {
-              console.error('JW Player Error:', e.message || e);
-              showIdleAnimation(true);
-              hideLoaderAndShowVideo(); 
-              stopContinuousPlayback();
-          });
-          player.on('levels', renderChannelSettings);
-          player.on('bufferChange', handleBuffering);
-          player.on('play', handlePlaying); 
-          player.on('levelsChanged', updateStreamInfo);
-          player.on('ready', ensureVideoElementStyle); // Ensure style is applied on ready
-          player.on('remove', stopContinuousPlayback);
-      } else {
-          console.error("Player not initialized and JWPlayer library missing.");
-          return;
-      }
+      console.error("Player not initialized before loading channel.");
+      return;
   }
 
   localStorage.setItem('iptvLastWatched', newChannelKey);
@@ -627,7 +603,6 @@ function setupMainMenuControls() {
   }
 
   if (o.PlayButton) {
-      // FIX: mousedown event handler is correctly attached below
       o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
       o.PlayButton.addEventListener('mousedown', handleFirstPlay);
   } else {
@@ -1456,12 +1431,7 @@ function saveFavoritesToStorage() {
     First Play handling
     ------------------------- */
 function handleFirstPlay() {
-  // FIX: Added logic to prevent re-initializing player if already active
-  if (isSessionActive && player) {
-      console.log("Session already active, ignoring extra play attempt.");
-      return;
-  }
-  
+  if (isSessionActive) return;
   isSessionActive = true;
 
   hideIdleAnimation();
@@ -1566,8 +1536,6 @@ function toggleFullScreen() {
     Event Listeners
     ------------------------- */
 if (o.PlayButton) {
-    // This is the main play trigger
-    o.PlayButton.removeEventListener('mousedown', handleFirstPlay);
     o.PlayButton.addEventListener('mousedown', handleFirstPlay);
 } else { console.error("PlayButton element not found."); }
 
